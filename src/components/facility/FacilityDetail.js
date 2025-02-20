@@ -132,7 +132,10 @@ const FacilityDetail = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setStatusHistory(data);
+        const sortedData = data.sort((a, b) => 
+          new Date(b.statusChangeDate) - new Date(a.statusChangeDate)
+        );
+        setStatusHistory(sortedData);
       }
     } catch (error) {
       console.error('상태 이력 조회 실패:', error);
@@ -380,7 +383,7 @@ const FacilityDetail = () => {
                         minHeight: '120px',
                       }}
                     >
-                      {statusHistory.reverse().map((history, index) => (
+                      {statusHistory.map((history, index) => (
                         <TimelineItem key={index}>
                           <TimelineSeparator>
                             <TimelineDot 
