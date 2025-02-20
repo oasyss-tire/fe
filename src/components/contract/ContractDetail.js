@@ -216,11 +216,11 @@ const ContractDetail = () => {
             </Box>
           </Grid>
 
-          {/* 계약자 정보 */}
+          {/* 본사 정보 */}
           <Grid item xs={12}>  {/* 전체 너비 사용 */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                계약자 정보
+              본사 정보
               </Typography>
               <Stack spacing={2}>
                 <InfoItem label="이름" value={contract.contractorName} />
@@ -230,11 +230,11 @@ const ContractDetail = () => {
             </Box>
           </Grid>
 
-          {/* 피계약자 정보 */}
+          {/* 위수탁자 정보 */}
           <Grid item xs={12}>  {/* 전체 너비 사용 */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                피계약자 정보
+              위수탁자 정보
               </Typography>
               <Stack spacing={2}>
                 <InfoItem label="이름" value={contract.contracteeName} />

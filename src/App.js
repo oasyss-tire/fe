@@ -39,6 +39,7 @@ const GuestInquiryList = React.lazy(() => import('./components/inquiry/GuestInqu
 const FacilityList = React.lazy(() => import('./components/facility/FacilityList'));
 const FacilityCreate = React.lazy(() => import('./components/facility/FacilityCreate'));
 const FacilityDetail = React.lazy(() => import('./components/facility/FacilityDetail'));
+const ServicePreparingPage = React.lazy(() => import('./components/common/ServicePreparingPage'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -96,6 +97,7 @@ function App() {
                   <Route path="/facility" element={<FacilityList />} />
                   <Route path="/facility/create" element={<FacilityCreate />} />
                   <Route path="/facility/:id" element={<FacilityDetail />} />
+                  <Route path="/service-preparing" element={<ServicePreparingPage />} />
                   <Route 
                     path="/admin/inquiries" 
                     element={

@@ -53,7 +53,7 @@ const ServicePreparingPage = () => {
       >
         <Button 
           variant="contained" 
-          onClick={() => navigate('/inspection')}
+          onClick={() => navigate('/')}
           sx={{
             fontWeight: 'bold',
             textTransform: 'none'

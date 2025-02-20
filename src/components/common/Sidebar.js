@@ -74,7 +74,9 @@ const Sidebar = () => {
     {
       category: '계약서 관리',
       items: [
-        { text: '계약서 관리', path: '/contracts' },
+        { text: '위수탁 계약', path: '/contracts' },
+        { text: '임대 계약', path: '/service-preparing' },
+        { text: '근로 계약', path: '/service-preparing' },
       ]
     },
     {

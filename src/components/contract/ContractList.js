@@ -210,7 +210,7 @@ const ContractList = () => {
                           fontSize: 'inherit',
                           flexShrink: 0
                         }}>
-                          계약 당사자
+                          위수탁자
                         </Typography>
                         <Typography component="span" sx={{ fontSize: 'inherit' }}>
                           {contract.contracteeName || '미지정'}

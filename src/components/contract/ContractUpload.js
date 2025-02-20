@@ -28,11 +28,11 @@ const ContractUpload = () => {
     title: '',
     contractType: '',
     description: '',
-    // 피계약자 정보
+    // 위수탁자 정보
     contracteeName: '',
     contracteeEmail: '',
     contracteePhoneNumber: '',
-    // 계약자 정보
+    // 본사 정보
     contractorName: '',
     contractorEmail: '',
     contractorPhoneNumber: '',
@@ -166,17 +166,17 @@ const ContractUpload = () => {
               </LocalizationProvider>
             </Grid>
 
-            {/* 피계약자 정보 */}
+            {/* 위수탁자 정보 */}
             <Grid item xs={12}>
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-                피계약자 정보
+                위수탁자 정보
               </Typography>
             </Grid>
             
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="피계약자 이름"
+                label="위수탁자 이름"
                 name="contracteeName"
                 value={formData.contracteeName}
                 onChange={handleChange}
@@ -187,7 +187,7 @@ const ContractUpload = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="피계약자 이메일"
+                label="위수탁자 이메일"
                 name="contracteeEmail"
                 type="email"
                 value={formData.contracteeEmail}
@@ -199,7 +199,7 @@ const ContractUpload = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="피계약자 연락처"
+                label="위수탁자 연락처"
                 name="contracteePhoneNumber"
                 value={formData.contracteePhoneNumber}
                 onChange={handleChange}
@@ -208,17 +208,17 @@ const ContractUpload = () => {
               />
             </Grid>
 
-            {/* 계약자 정보 */}
+            {/* 본사 정보 */}
             <Grid item xs={12}>
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-                계약자 정보
+              본사 정보
               </Typography>
             </Grid>
             
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="계약자 이름"
+                label="본사 이름"
                 name="contractorName"
                 value={formData.contractorName}
                 onChange={handleChange}
@@ -229,7 +229,7 @@ const ContractUpload = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="계약자 이메일"
+                label="본사 이메일"
                 name="contractorEmail"
                 type="email"
                 value={formData.contractorEmail}
@@ -241,7 +241,7 @@ const ContractUpload = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="계약자 연락처"
+                label="본사 연락처"
                 name="contractorPhoneNumber"
                 value={formData.contractorPhoneNumber}
                 onChange={handleChange}
