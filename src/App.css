@@ -1,0 +1,34 @@
+/*전체적인 스타일 적용 
+Material-UI 클래스의 직접적인 오버라이드 담당*/
+
+
+body {
+    /* 바디 스타일 적용*/
+    margin: 0;
+    font-family: 'Pretendard', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #F5F5F5;
+    color: #2A2A2A;
+}
+
+* {
+    /* 전체 스타일 적용*/
+    box-sizing: border-box;
+}
+
+.MuiStepLabel-label {
+    /* 스탭 레이블 스타일 적용*/
+    font-family: 'Pretendard', sans-serif !important;
+    color: #2A2A2A !important;
+}
+
+.MuiStepIcon-root.Mui-active {
+    /* 활성 스탭 아이콘 스타일 적용*/
+    color: #1C243A !important;
+}
+
+.MuiStepIcon-root.Mui-completed {
+    /* 완료 스탭 아이콘 스타일 적용*/
+    color: #1C243A !important;
+}
