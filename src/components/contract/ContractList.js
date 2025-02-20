@@ -12,7 +12,8 @@ import {
   Tooltip,
   CircularProgress,
   Pagination,
-  Fab
+  Fab,
+  Skeleton
 } from '@mui/material';
 import {
   Description as DescriptionIcon,
@@ -41,18 +42,20 @@ const ContractList = () => {
   const fetchContracts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/contracts?page=${page-1}&size=${itemsPerPage}`, {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+      const response = await fetch(
+        `http://localhost:8080/api/contracts?page=${page-1}&size=${itemsPerPage}&sort=createdDate,desc`,
+        {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
         }
-      });
+      );
       const data = await response.json();
-      // 데이터 구조 확인 및 안전한 처리
       setContracts(Array.isArray(data) ? data : data?.content || []);
       setTotalPages(data?.totalPages || Math.ceil(data?.length / itemsPerPage) || 1);
     } catch (error) {
       console.error('계약서 목록 조회 실패:', error);
-      setContracts([]);  // 에러 시 빈 배열로 초기화
+      setContracts([]);
       setTotalPages(1);
     } finally {
       setLoading(false);
@@ -127,110 +130,78 @@ const ContractList = () => {
       </Box>
 
       <Box sx={{ mt: 2 }}>
-        <Grid container spacing={2.5}>
-          {contracts?.map((contract) => (
-            <Grid item xs={12} sm={6} md={4} key={contract.id}>
-              <Card 
-                onClick={() => handleCardClick(contract.id)}
-                sx={{ 
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: 1,
-                  boxShadow: 'none',
-                  backgroundColor: '#ffffff',
-                  '&:hover': {
-                    borderColor: '#e0e0e0',
-                    backgroundColor: '#fafafa'
-                  }
-                }}
+        <Grid container spacing={2}>
+          {loading ? (
+            // 로딩 스켈레톤
+            [...Array(4)].map((_, index) => (
+              <Grid item xs={12} sm={6} md={6} key={index}>  {/* md를 6으로 변경 */}
+                <Card sx={{ height: '100%' }}>
+                  <Skeleton variant="rectangular" height={140} />
+                  <CardContent>
+                    <Skeleton variant="text" />
+                    <Skeleton variant="text" width="60%" />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            // 실제 계약 데이터
+            contracts.map((contract) => (
+              <Grid 
+                item 
+                xs={12}      // 모바일: 1개
+                sm={6}       // 태블릿: 2개
+                md={6}       // 데스크톱: 2개 (변경)
+                key={contract.id}
               >
-                <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-                  <Typography 
-                    variant="subtitle1" 
-                    component="div" 
-                    noWrap
-                    sx={{ 
-                      fontWeight: 500,
-                      color: '#1a1a1a',
-                      letterSpacing: '-0.3px',
-                      mb: 2
-                    }}
-                  >
-                    {contract.title || '제목 없음'}
-                  </Typography>
-
-                  <Box mb={2}>
-                    <Chip 
-                      label={getStatusText(contract.status)}
-                      color={getStatusColor(contract.status)}
-                      size="small"
+                <Card 
+                  sx={{ 
+                    height: '100%',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      boxShadow: 3
+                    }
+                  }}
+                  onClick={() => navigate(`/contracts/${contract.id}`)}
+                >
+                  <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      component="div" 
+                      noWrap
                       sx={{ 
-                        fontWeight: 400,
-                        px: 1,
-                        height: '24px',
-                        backgroundColor: contract.status === 'PENDING' ? '#fff8e1' : 
-                                      contract.status === 'SIGNED' ? '#e8f5e9' : '#ffebee',
-                        color: contract.status === 'PENDING' ? '#f57c00' : 
-                               contract.status === 'SIGNED' ? '#2e7d32' : '#c62828',
-                        border: 'none'
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        letterSpacing: '-0.3px',
+                        mb: 2
                       }}
-                    />
-                  </Box>
+                    >
+                      {contract.title || '제목 없음'}
+                    </Typography>
 
-                  <Box sx={{ color: '#666', fontSize: '0.875rem', mb: 0.5 }}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      mb: 1,
-                      minHeight: '24px'
-                    }}>
-                      <Typography component="span" sx={{ 
-                        width: '80px',
-                        color: '#999',
-                        fontSize: 'inherit',
-                        flexShrink: 0
-                      }}>
-                        계약 당사자
-                      </Typography>
-                      <Typography component="span" sx={{ fontSize: 'inherit' }}>
-                        {contract.contracteeName || '미지정'}
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      mb: 1,
-                      minHeight: '24px'
-                    }}>
-                      <Typography component="span" sx={{ 
-                        width: '80px',
-                        color: '#999',
-                        fontSize: 'inherit',
-                        flexShrink: 0
-                      }}>
-                        생성일
-                      </Typography>
-                      <Typography 
-                        component="span" 
+                    <Box mb={2}>
+                      <Chip 
+                        label={getStatusText(contract.status)}
+                        color={getStatusColor(contract.status)}
+                        size="small"
                         sx={{ 
-                          fontSize: 'inherit',
-                          whiteSpace: 'nowrap'
+                          fontWeight: 400,
+                          px: 1,
+                          height: '24px',
+                          backgroundColor: contract.status === 'PENDING' ? '#fff8e1' : 
+                                        contract.status === 'SIGNED' ? '#e8f5e9' : '#ffebee',
+                          color: contract.status === 'PENDING' ? '#f57c00' : 
+                                 contract.status === 'SIGNED' ? '#2e7d32' : '#c62828',
+                          border: 'none'
                         }}
-                      >
-                        {formatDate(contract.createdDate)}
-                      </Typography>
+                      />
                     </Box>
 
-                    {contract.signedDate && (
+                    <Box sx={{ color: '#666', fontSize: '0.875rem', mb: 0.5 }}>
                       <Box sx={{ 
                         display: 'flex', 
                         alignItems: 'center',
+                        mb: 1,
                         minHeight: '24px'
                       }}>
                         <Typography component="span" sx={{ 
@@ -239,7 +210,26 @@ const ContractList = () => {
                           fontSize: 'inherit',
                           flexShrink: 0
                         }}>
-                          서명일
+                          계약 당사자
+                        </Typography>
+                        <Typography component="span" sx={{ fontSize: 'inherit' }}>
+                          {contract.contracteeName || '미지정'}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        mb: 1,
+                        minHeight: '24px'
+                      }}>
+                        <Typography component="span" sx={{ 
+                          width: '80px',
+                          color: '#999',
+                          fontSize: 'inherit',
+                          flexShrink: 0
+                        }}>
+                          생성일
                         </Typography>
                         <Typography 
                           component="span" 
@@ -248,25 +238,51 @@ const ContractList = () => {
                             whiteSpace: 'nowrap'
                           }}
                         >
-                          {formatDate(contract.signedDate)}
+                          {formatDate(contract.createdDate)}
                         </Typography>
                       </Box>
-                    )}
-                  </Box>
-                </CardContent>
 
-                <CardActions sx={{ 
-                  justifyContent: 'flex-end', 
-                  p: 1.5,
-                  borderTop: '1px solid #f5f5f5',
-                  bgcolor: '#ffffff'
-                }}>
+                      {contract.signedDate && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          minHeight: '24px'
+                        }}>
+                          <Typography component="span" sx={{ 
+                            width: '80px',
+                            color: '#999',
+                            fontSize: 'inherit',
+                            flexShrink: 0
+                          }}>
+                            서명일
+                          </Typography>
+                          <Typography 
+                            component="span" 
+                            sx={{ 
+                              fontSize: 'inherit',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {formatDate(contract.signedDate)}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </CardContent>
+
+                  <CardActions sx={{ 
+                    justifyContent: 'flex-end', 
+                    p: 1.5,
+                    borderTop: '1px solid #f5f5f5',
+                    bgcolor: '#ffffff'
+                  }}>
 
                   
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))
+          )}
           {(!contracts || contracts.length === 0) && (
             <Grid item xs={12}>
               <Box sx={{ 
@@ -314,12 +330,12 @@ const ContractList = () => {
             page={page} 
             onChange={handlePageChange}
             color="primary"
-            size="small"
+            size="large"
             sx={{
               '& .MuiPaginationItem-root': {
-                width: '26px',
-                height: '26px',
-                minWidth: '26px',
+                width: '30px',
+                height: '30px',
+                minWidth: '30px',
                 fontSize: '0.775rem'
               }
             }}

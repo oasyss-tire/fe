@@ -46,7 +46,7 @@ const ContractDetail = () => {
   useEffect(() => {
     if (id) {
       setPdfFile({
-        url: `https://tirebank.jebee.net/api/contracts/${id}/pdf`,
+        url: `http://localhost:8080/api/contracts/${id}/pdf`,
         httpHeaders: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
           'Accept': 'application/pdf'
@@ -58,7 +58,7 @@ const ContractDetail = () => {
 
   const fetchContractData = async () => {
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/contracts/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/contracts/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -83,8 +83,8 @@ const ContractDetail = () => {
     try {
       // 서명 상태에 따라 다른 엔드포인트 사용
       const endpoint = contract.status === 'SIGNED' 
-        ? `https://tirebank.jebee.net/api/contracts/${id}/signed-pdf`
-        : `https://tirebank.jebee.net/api/contracts/${id}/pdf`;
+        ? `http://localhost:8080/api/contracts/${id}/signed-pdf`
+        : `http://localhost:8080/api/contracts/${id}/pdf`;
 
       const response = await fetch(endpoint, {
         headers: {
@@ -186,32 +186,12 @@ const ContractDetail = () => {
           />
         </Box>
 
-        {/* Grid 컨테이너 수정 */}
-        <Grid container spacing={{ xs: 3, md: 4 }} sx={{ width: '100%' }}>
+        {/* 기본 정보와 다른 정보들을 감싸는 컨테이너 */}
+        <Grid container spacing={3}>
           {/* 기본 정보 */}
-          <Grid item xs={12} md={4}>
-            <Box sx={{ 
-              mb: { xs: 3, md: 0 },
-              width: '100%'
-            }}>
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  mb: 3, 
-                  fontWeight: 600,
-                  color: '#1a1a1a',
-                  position: 'relative',
-                  '&:after': {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: -8,
-                    left: 0,
-                    width: '30px',
-                    height: '2px',
-                    backgroundColor: 'primary.main'
-                  }
-                }}
-              >
+          <Grid item xs={12}>  {/* 전체 너비 사용 */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 기본 정보
               </Typography>
               <Stack spacing={2}>
@@ -237,29 +217,9 @@ const ContractDetail = () => {
           </Grid>
 
           {/* 계약자 정보 */}
-          <Grid item xs={12} md={4}>
-            <Box sx={{ 
-              mb: { xs: 3, md: 0 },
-              width: '100%'
-            }}>
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  mb: 3, 
-                  fontWeight: 600,
-                  color: '#1a1a1a',
-                  position: 'relative',
-                  '&:after': {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: -8,
-                    left: 0,
-                    width: '30px',
-                    height: '2px',
-                    backgroundColor: 'primary.main'
-                  }
-                }}
-              >
+          <Grid item xs={12}>  {/* 전체 너비 사용 */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 계약자 정보
               </Typography>
               <Stack spacing={2}>
@@ -271,28 +231,9 @@ const ContractDetail = () => {
           </Grid>
 
           {/* 피계약자 정보 */}
-          <Grid item xs={12} md={4}>
-            <Box sx={{ 
-              width: '100%'
-            }}>
-              <Typography 
-                variant="subtitle1" 
-                sx={{ 
-                  mb: 3, 
-                  fontWeight: 600,
-                  color: '#1a1a1a',
-                  position: 'relative',
-                  '&:after': {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: -8,
-                    left: 0,
-                    width: '30px',
-                    height: '2px',
-                    backgroundColor: 'primary.main'
-                  }
-                }}
-              >
+          <Grid item xs={12}>  {/* 전체 너비 사용 */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 피계약자 정보
               </Typography>
               <Stack spacing={2}>

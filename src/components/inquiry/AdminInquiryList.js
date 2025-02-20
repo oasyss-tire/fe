@@ -43,7 +43,7 @@ const AdminInquiryList = () => {
 
   const fetchAdminInquiries = async () => {
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/guest-inquiries/admin', {
+      const response = await fetch('http://localhost:8080/api/guest-inquiries/admin', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -61,7 +61,7 @@ const AdminInquiryList = () => {
     if (!answerContent.trim()) return;
 
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/guest-inquiries/${selectedInquiry.id}/answer`, {
+      const response = await fetch(`http://localhost:8080/api/guest-inquiries/${selectedInquiry.id}/answer`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'text/plain',

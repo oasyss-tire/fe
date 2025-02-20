@@ -48,7 +48,7 @@ const CompanyList = () => {
 
   const fetchCompanies = async () => {
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/companies');
+      const response = await fetch('http://localhost:8080/api/companies');
       if (response.ok) {
         let data = await response.json();
         

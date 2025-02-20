@@ -23,7 +23,7 @@ const QnAManagement = () => {
   const fetchQAList = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/chat/qa', {
+      const response = await fetch('http://localhost:8080/api/chat/qa', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -59,7 +59,7 @@ const QnAManagement = () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       setDeletingIndex(index);  // 삭제 시작
       try {
-        const response = await fetch(`https://tirebank.jebee.net/api/chat/qa/${index}`, {
+        const response = await fetch(`http://localhost:8080/api/chat/qa/${index}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ const QnAManagement = () => {
   // 저장 버튼 클릭
   const handleSave = async (formData) => {
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/chat/qa', {  // 전체 URL 지정
+      const response = await fetch('http://localhost:8080/api/chat/qa', {  // 전체 URL 지정
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

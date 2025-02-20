@@ -34,7 +34,7 @@ const KakaoAlertList = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/kakao-alert', {
+      const response = await fetch('http://localhost:8080/api/kakao-alert', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -71,7 +71,7 @@ const KakaoAlertList = () => {
   // 상세보기 열기
   const handleRowClick = async (alertId) => {
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/kakao-alert/${alertId}`, {
+      const response = await fetch(`http://localhost:8080/api/kakao-alert/${alertId}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }

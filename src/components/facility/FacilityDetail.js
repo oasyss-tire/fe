@@ -35,7 +35,8 @@ import {
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DatePicker } from '@mui/x-date-pickers';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Timeline, TimelineItem, TimelineSeparator, TimelineDot, TimelineConnector, TimelineContent } from '@mui/lab';
 
 const FacilityDetail = () => {
   const { id } = useParams();
@@ -76,6 +77,7 @@ const FacilityDetail = () => {
     vendorContact: '',
     description: ''
   });
+  const [statusHistory, setStatusHistory] = useState([]);
 
   const statusColors = {
     IN_USE: 'success',
@@ -95,11 +97,12 @@ const FacilityDetail = () => {
 
   useEffect(() => {
     fetchFacilityDetail();
+    fetchStatusHistory();
   }, [id]);
 
   const fetchFacilityDetail = async () => {
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/facilities/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -120,23 +123,37 @@ const FacilityDetail = () => {
     }
   };
 
+  const fetchStatusHistory = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/facilities/${id}/status-history`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStatusHistory(data);
+      }
+    } catch (error) {
+      console.error('상태 이력 조회 실패:', error);
+    }
+  };
+
   const handleStatusChange = async () => {
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}/status`, {
+      const response = await fetch(`http://localhost:8080/api/facilities/${id}/status?status=${newStatus}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: newStatus,
-          note: statusNote
-        })
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
       });
 
       if (response.ok) {
-        fetchFacilityDetail();
+        await fetchFacilityDetail();
+        await fetchStatusHistory();
         setStatusDialogOpen(false);
+        setNewStatus('');
+        setStatusNote('');
       }
     } catch (error) {
       console.error('상태 변경 실패:', error);
@@ -145,7 +162,7 @@ const FacilityDetail = () => {
 
   const handleContractSubmit = async () => {
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}/contracts`, {
+      const response = await fetch(`http://localhost:8080/api/facilities/${id}/contracts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -175,28 +192,53 @@ const FacilityDetail = () => {
 
   const handleEdit = async () => {
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          currentLocation: editForm.currentLocation,
-          description: editForm.description,
-          status: editForm.status,
-          companyId: facility.companyId,
-          name: facility.name,
-          code: facility.code,
-          location: facility.location,
-          acquisitionCost: facility.acquisitionCost,
-          acquisitionDate: facility.acquisitionDate
-        })
-      });
+      // 상태나 위치가 변경된 경우에만 업데이트 API 호출
+      if (editForm.status !== facility.status || 
+          editForm.currentLocation !== facility.currentLocation) {
+        
+        const response = await fetch(`http://localhost:8080/api/facilities/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...facility,                    // 기존 facility 데이터 모두 포함
+            status: editForm.status,        // 변경된 상태
+            currentLocation: editForm.currentLocation,  // 변경된 위치
+            description: editForm.description,          // 변경된 설명
+            companyId: facility.companyId,  // 기존 회사 ID 유지
+            name: facility.name,            // 기존 이름 유지
+            code: facility.code,            // 기존 코드 유지
+            location: facility.location,     // 기존 위치 유지
+            acquisitionCost: facility.acquisitionCost,  // 기존 비용 유지
+            acquisitionDate: facility.acquisitionDate   // 기존 날짜 유지
+          })
+        });
 
-      if (response.ok) {
-        fetchFacilityDetail();
-        setEditDialogOpen(false);
+        if (response.ok) {
+          await fetchFacilityDetail();
+          await fetchStatusHistory();  // 이력 새로고침
+          setEditDialogOpen(false);
+        }
+      } else {
+        // 상태나 위치 변경이 없는 경우 설명만 업데이트
+        const response = await fetch(`http://localhost:8080/api/facilities/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...facility,
+            description: editForm.description
+          })
+        });
+
+        if (response.ok) {
+          await fetchFacilityDetail();
+          setEditDialogOpen(false);
+        }
       }
     } catch (error) {
       console.error('시설물 정보 수정 실패:', error);
@@ -222,7 +264,7 @@ const FacilityDetail = () => {
   const handleUpdateContract = async () => {
     try {
       const response = await fetch(
-        `https://tirebank.jebee.net/api/facilities/${id}/contracts/${selectedContract.id}`,
+        `http://localhost:8080/api/facilities/${id}/contracts/${selectedContract.id}`,
         {
           method: 'PUT',
           headers: {
@@ -264,9 +306,10 @@ const FacilityDetail = () => {
 
         <Divider sx={{ mb: 3 }} />
 
-        {/* 기본 정보 */}
+        {/* 기본 정보와 상태 변경 이력을 감싸는 컨테이너 */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          {/* 기본 정보 */}
+          <Grid item xs={12}>  {/* 전체 너비 사용 */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 기본 정보
@@ -294,22 +337,119 @@ const FacilityDetail = () => {
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            {/* 상태 변경 이력 */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                상태 변경 이력
-              </Typography>
-              {facility.statusHistory?.map((history, index) => (
-                <Box key={index} sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {new Date(history.changeDate).toLocaleDateString()}
+          {/* 상태 변경 이력 */}
+          <Grid item xs={12}>  {/* 전체 너비 사용 */}
+            <Box sx={{ mt: 2 }}>  {/* 상단 여백 조정 */}
+              <Typography variant="h6" sx={{ mb: 2 }}>상태 변경 이력</Typography>
+              <Box sx={{ 
+                border: '1px solid #eee',
+                borderRadius: 1,
+                p: 2,
+                overflowX: 'auto',
+                '&::-webkit-scrollbar': {
+                  height: '6px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '3px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#ddd',
+                  borderRadius: '3px',
+                  '&:hover': {
+                    background: '#ccc'
+                  }
+                }
+              }}>
+                {statusHistory.length > 0 ? (
+                  <Box sx={{ minWidth: 'fit-content' }}>
+                    <Timeline
+                      sx={{
+                        [`& .MuiTimelineItem-root`]: {
+                          minWidth: '180px',
+                          maxWidth: '250px',
+                        },
+                        [`& .MuiTimelineItem-root:before`]: {
+                          display: 'none',
+                        },
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'flex-start',
+                        p: 0,
+                        m: 0,
+                        minHeight: '120px',
+                      }}
+                    >
+                      {statusHistory.reverse().map((history, index) => (
+                        <TimelineItem key={index}>
+                          <TimelineSeparator>
+                            <TimelineDot 
+                              sx={{ 
+                                width: 8,
+                                height: 8,
+                                bgcolor: history.status === 'IN_USE' ? 'success.main' : 
+                                        history.status === 'DISPOSED' ? 'error.main' :
+                                        history.status === 'LOST' ? 'warning.main' :
+                                        history.status === 'SOLD' ? 'info.main' : 'grey.500',
+                                boxShadow: 'none'
+                              }}
+                            />
+                            {index < statusHistory.length - 1 && (
+                              <TimelineConnector sx={{ 
+                                width: '20px', 
+                                height: '1px',
+                                bgcolor: '#eee'
+                              }} />
+                            )}
+                          </TimelineSeparator>
+                          <TimelineContent>
+                            <Box sx={{ 
+                              bgcolor: index === 0 ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
+                              p: 1.5,
+                              borderRadius: 1,
+                              border: '1px solid #eee',
+                              mr: 2
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+                                  {statusText[history.status]}
+                                </Typography>
+                                {index === 0 && (
+                                  <Chip 
+                                    label="현재" 
+                                    size="small" 
+                                    sx={{ 
+                                      height: '18px',
+                                      px: 0.5,
+                                      bgcolor: 'primary.main',
+                                      color: 'white',
+                                      '& .MuiChip-label': {
+                                        px: 1,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 500
+                                      }
+                                    }} 
+                                  />
+                                )}
+                              </Box>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                {history.currentLocation}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {new Date(history.statusChangeDate).toLocaleString()}
+                              </Typography>
+                            </Box>
+                          </TimelineContent>
+                        </TimelineItem>
+                      ))}
+                    </Timeline>
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                    상태 변경 이력이 없습니다.
                   </Typography>
-                  <Typography>
-                    {statusText[history.status]} - {history.note}
-                  </Typography>
-                </Box>
-              ))}
+                )}
+              </Box>
             </Box>
           </Grid>
         </Grid>
@@ -349,7 +489,7 @@ const FacilityDetail = () => {
                 >
                   <Box
                     component="img"
-                    src={`https://tirebank.jebee.net/api/facilities/images/${image.url}`}
+                    src={`http://localhost:8080/api/facilities/images/${image.url}`}
                     alt={image.description || `시설물 이미지 ${index + 1}`}
                     sx={{
                       position: 'absolute',
@@ -469,7 +609,7 @@ const FacilityDetail = () => {
               '&:hover': { bgcolor: '#3d63b8' }
             }}
           >
-            정보 수정
+            시설물 정보 수정
           </Button>
         </Box>
       </Paper>
@@ -480,8 +620,14 @@ const FacilityDetail = () => {
         onClose={() => setSelectedImage(null)}
         maxWidth="lg"
         fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'black',
+            maxHeight: '90vh'
+          }
+        }}
       >
-        <DialogContent sx={{ p: 0, position: 'relative' }}>
+        <DialogContent sx={{ p: 0, position: 'relative', height: '90vh' }}>
           <IconButton
             onClick={() => setSelectedImage(null)}
             sx={{
@@ -492,7 +638,8 @@ const FacilityDetail = () => {
               bgcolor: 'rgba(0,0,0,0.5)',
               '&:hover': {
                 bgcolor: 'rgba(0,0,0,0.7)'
-              }
+              },
+              zIndex: 1
             }}
           >
             <CloseIcon />
@@ -501,16 +648,17 @@ const FacilityDetail = () => {
             <Box
               sx={{
                 width: '100%',
-                height: '80vh',
+                height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
+                justifyContent: 'center',
                 bgcolor: 'black'
               }}
             >
               <Box
                 component="img"
-                src={`https://tirebank.jebee.net/api/facilities/images/${selectedImage.url}`}
+                src={`http://localhost:8080/api/facilities/images/${selectedImage.url}`}
                 alt={selectedImage.description || "시설물 이미지"}
                 sx={{
                   maxWidth: '100%',

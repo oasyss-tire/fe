@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { ArrowBack as ArrowBackIcon, CloudUpload as CloudUploadIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, CloudUpload as CloudUploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
 const FacilityCreate = () => {
   const navigate = useNavigate();
@@ -31,12 +31,13 @@ const FacilityCreate = () => {
     images: []
   });
   const [companies, setCompanies] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);  // {file, description} 형태의 객체 배열
 
   // 회사 목록 조회
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await fetch('https://tirebank.jebee.net/api/companies', {
+        const response = await fetch('http://localhost:8080/api/companies', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -63,10 +64,17 @@ const FacilityCreate = () => {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, ...files]
+    const newImageFiles = files.map(file => ({
+      file,
+      description: ''
     }));
+    setImageFiles(prev => [...prev, ...newImageFiles]);
+  };
+
+  const handleImageDescriptionChange = (index, description) => {
+    setImageFiles(prev => prev.map((item, i) => 
+      i === index ? { ...item, description } : item
+    ));
   };
 
   const handleSubmit = async (e) => {
@@ -74,10 +82,8 @@ const FacilityCreate = () => {
     setLoading(true);
 
     try {
-      // FormData 객체 생성
       const submitData = new FormData();
       
-      // 기본 정보 추가
       const facilityData = {
         name: formData.name,
         code: formData.code,
@@ -93,12 +99,13 @@ const FacilityCreate = () => {
         type: 'application/json'
       }));
 
-      // 이미지 파일들 추가
-      formData.images.forEach((file, index) => {
-        submitData.append('images', file);
+      // 이미지와 설명 추가
+      imageFiles.forEach((imageFile, index) => {
+        submitData.append('images', imageFile.file);
+        submitData.append(`descriptions[${index}]`, imageFile.description);
       });
 
-      const response = await fetch('https://tirebank.jebee.net/api/facilities', {
+      const response = await fetch('http://localhost:8080/api/facilities', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -114,10 +121,13 @@ const FacilityCreate = () => {
       navigate(`/facility/${result.id}`);
     } catch (error) {
       console.error('시설물 등록 중 오류 발생:', error);
-      // 에러 처리 로직 추가 가능
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRemoveImage = (index) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -233,28 +243,69 @@ const FacilityCreate = () => {
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 이미지 등록
               </Typography>
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={<CloudUploadIcon />}
-                sx={{ width: '100%', height: '100px' }}
-              >
-                이미지 업로드
-                <input
-                  type="file"
-                  hidden
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-              </Button>
-              {formData.images.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    선택된 파일: {formData.images.map(file => file.name).join(', ')}
-                  </Typography>
-                </Box>
-              )}
+              <Box sx={{ mb: 2 }}>
+                <Button
+                  component="label"
+                  variant="outlined"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{ width: '100%', height: '100px' }}
+                >
+                  이미지 업로드
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                  />
+                </Button>
+              </Box>
+              
+              {/* 업로드된 이미지 목록 */}
+              <Grid container spacing={2}>
+                {imageFiles.map((imageFile, index) => (
+                  <Grid item xs={12} sm={6} key={index}>
+                    <Paper sx={{ p: 2 }}>
+                      <Box sx={{ mb: 2, position: 'relative' }}>
+                        <Box
+                          component="img"
+                          src={URL.createObjectURL(imageFile.file)}
+                          alt={`미리보기 ${index + 1}`}
+                          sx={{
+                            width: '100%',
+                            height: '200px',
+                            objectFit: 'cover',
+                            borderRadius: 1
+                          }}
+                        />
+                        <IconButton
+                          onClick={() => handleRemoveImage(index)}
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            bgcolor: 'rgba(0,0,0,0.5)',
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: 'rgba(0,0,0,0.7)'
+                            }
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="이미지 설명"
+                        value={imageFile.description}
+                        onChange={(e) => handleImageDescriptionChange(index, e.target.value)}
+                        placeholder="이미지에 대한 설명을 입력하세요"
+                      />
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
             </Grid>
           </Grid>
 

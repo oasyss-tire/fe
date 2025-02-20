@@ -54,7 +54,7 @@ const Home = () => {
 
   const fetchNotices = async () => {
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/notices');
+      const response = await fetch('http://localhost:8080/api/notices');
       if (response.ok) {
         const data = await response.json();
         setNotices(data.slice(0, 3));
@@ -66,7 +66,7 @@ const Home = () => {
 
   const fetchInquiries = async () => {
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/inquiries');
+      const response = await fetch('http://localhost:8080/api/inquiries');
       if (response.ok) {
         const data = await response.json();
         setInquiries(data.slice(0, 3)); // 최근 4개만
@@ -126,7 +126,7 @@ const Home = () => {
         <Toolbar sx={{ justifyContent: 'center', minHeight: '60px' }}>
           <Box
             component="img"
-            src="/images/dawoo2.png"
+            src="/images/tire-logo.png"
             alt="로고"
             sx={{
               height: '50px',
@@ -415,7 +415,7 @@ const Home = () => {
       {/* 회사 로고 */}
       <Box
         component="img"
-        src="/images/dawoo.png"
+        src="/images/tire-logo.png"
         alt="회사 로고"
         sx={{
           height: 40,
@@ -429,13 +429,13 @@ const Home = () => {
         variant="body2"
         sx={{ fontWeight: 'bold', color: '#333', fontSize: '0.75rem' , mt: 0.5}}
       >
-        (주) 다우
+        (주) 타이어 뱅크
       </Typography>
       <Typography variant="body2" sx={{ color: '#666', fontSize: '0.7rem', mt: 0.5 }}>
-      대전광역시 서구 계룡로 553번안길 63
+      세종 한누리대로 350 8층
       </Typography>
       <Typography variant="body2" sx={{ color: '#666', fontSize: '0.7rem', mt: 0.5 }}>
-      TEL: 042) 526-4805 | FAX: 042) 526-4806
+      TEL: 1599-7181
       </Typography>
 
 

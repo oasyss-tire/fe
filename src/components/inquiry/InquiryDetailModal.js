@@ -158,7 +158,7 @@ const InquiryDetailModal = ({ open, inquiry, onClose }) => {
                       onClick={() => handleImageClick(imageUrl)}
                     >
                       <img 
-                        src={`https://tirebank.jebee.net/uploads/inquiry_images/${imageUrl}`}
+                        src={`http://localhost:8080/uploads/inquiry_images/${imageUrl}`}
                         alt={`문의사항 이미지 ${index + 1}`}
                         style={{
                           position: 'absolute',
@@ -272,7 +272,7 @@ const InquiryDetailModal = ({ open, inquiry, onClose }) => {
       >
         <Box
           component="img"
-          src={selectedImage ? `https://tirebank.jebee.net/uploads/inquiry_images/${selectedImage}` : ''}
+          src={selectedImage ? `http://localhost:8080/uploads/inquiry_images/${selectedImage}` : ''}
           alt="확대된 이미지"
           sx={{
             maxWidth: '90vw',

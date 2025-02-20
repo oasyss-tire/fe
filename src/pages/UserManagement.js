@@ -48,7 +48,7 @@ const UserManagement = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`https://tirebank.jebee.net/api/users/${userId}`, {
+        const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -64,7 +64,7 @@ const UserManagement = () => {
 
     const fetchCompanies = async () => {
       try {
-        const response = await fetch('https://tirebank.jebee.net/api/companies', {
+        const response = await fetch('http://localhost:8080/api/companies', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -104,7 +104,7 @@ const UserManagement = () => {
         }
 
         // 비밀번호 변경 API 호출
-        const passwordResponse = await fetch(`https://tirebank.jebee.net/api/users/${userId}/password`, {
+        const passwordResponse = await fetch(`http://localhost:8080/api/users/${userId}/password`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ const UserManagement = () => {
         active: user.active
       };
 
-      const response = await fetch(`https://tirebank.jebee.net/api/users/${userId}`, {
+      const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ const UserManagement = () => {
 
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`https://tirebank.jebee.net/api/users/${userId}`, {
+        const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`

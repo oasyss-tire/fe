@@ -21,7 +21,7 @@ const NoticeDetail = () => {
 
   const fetchNoticeDetail = async () => {
     try {
-      const response = await fetch(`https://tirebank.jebee.net/api/notices/${noticeId}`);
+      const response = await fetch(`http://localhost:8080/api/notices/${noticeId}`);
       if (response.ok) {
         const data = await response.json();
         setNotice(data);
@@ -77,7 +77,7 @@ const NoticeDetail = () => {
         {notice.imageUrl && (
           <Box sx={{ mb: 2 }}>
             <img 
-              src={`https://tirebank.jebee.net/uploads/images/${notice.imageUrl}`}
+              src={`http://localhost:8080/uploads/images/${notice.imageUrl}`}
               alt="공지사항 이미지"
               style={{ maxWidth: '100%', height: 'auto' }}
             />

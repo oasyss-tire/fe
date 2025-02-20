@@ -56,7 +56,7 @@ const FacilityList = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://tirebank.jebee.net/api/facilities?page=${page-1}&size=12&keyword=${searchKeyword}&status=${statusFilter}`,
+        `http://localhost:8080/api/facilities?page=${page-1}&size=12&keyword=${searchKeyword}&status=${statusFilter}`,
         {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -73,69 +73,69 @@ const FacilityList = () => {
     }
   };
 
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
+
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
-      {/* 검색 및 필터 영역 */}
+      {/* 헤더 추가 */}
       <Box sx={{ 
-        mb: 3, 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: 2,
-        alignItems: 'center',
-        justifyContent: 'space-between'
+        mb: 4, 
+        textAlign: 'center',
+        borderBottom: '1px solid #f0f0f0',
+        pb: 2
       }}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: 2,
-          width: { xs: '100%', sm: 'auto' }
+        <Typography variant="h5" sx={{ 
+          fontWeight: 500,
+          color: '#1a1a1a',
+          letterSpacing: '-0.5px'
         }}>
-          <TextField
-            placeholder="시설물 검색"
-            variant="outlined"
-            size="small"
-            fullWidth
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
-            }}
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            sx={{ maxWidth: { sm: '300px' } }}
-          />
-          <TextField
-            select
-            size="small"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            sx={{ minWidth: '120px' }}
-          >
-            <MenuItem value="">전체 상태</MenuItem>
-            {Object.entries(statusText).map(([key, value]) => (
-              <MenuItem key={key} value={key}>{value}</MenuItem>
-            ))}
-          </TextField>
-        </Box>
+          시설물 관리
+        </Typography>
+      </Box>
+
+      {/* 검색 필터 영역 */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' }, 
+        gap: 2,
+        width: { xs: '100%', sm: 'auto' },
+        mb: 3
+      }}>
         
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/facility/create')}
-          sx={{
-            bgcolor: '#343959',
-            '&:hover': { bgcolor: '#3d63b8' },
-            width: { xs: '100%', sm: 'auto' }
+        <TextField
+          placeholder="시설물 검색"
+          variant="outlined"
+          size="small"
+          fullWidth
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
           }}
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          sx={{ maxWidth: { sm: '300px' } }}
+        />
+        <TextField
+          select
+          size="small"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          sx={{ minWidth: '120px' }}
         >
-          시설물 등록
-        </Button>
+          <MenuItem value="">전체 상태</MenuItem>
+          {Object.entries(statusText).map(([key, value]) => (
+            <MenuItem key={key} value={key}>{value}</MenuItem>
+          ))}
+        </TextField>
       </Box>
 
       {/* 시설물 카드 그리드 */}
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {loading ? (
           // 로딩 스켈레톤
           [...Array(12)].map((_, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+            <Grid item xs={12} sm={6} md={6} key={index}>
               <Card sx={{ height: '100%' }}>
                 <Skeleton variant="rectangular" height={140} />
                 <CardContent>
@@ -148,14 +148,21 @@ const FacilityList = () => {
         ) : (
           // 실제 데이터
           facilities.map((facility) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={facility.id}>
+            <Grid 
+              item 
+              xs={12}      // 가장 작은 화면에서 1개 (12/12)
+              sm={6}       // 중간 화면에서 2개 (6/12)
+              md={6}       // 큰 화면에서도 2개 (6/12)
+              key={facility.id}
+            >
               <Card 
                 sx={{ 
                   height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
                   cursor: 'pointer',
-                  transition: 'transform 0.2s',
                   '&:hover': {
-                    transform: 'translateY(-4px)'
+                    boxShadow: 3
                   }
                 }}
                 onClick={() => navigate(`/facility/${facility.id}`)}
@@ -170,7 +177,7 @@ const FacilityList = () => {
                   <CardMedia
                     component="img"
                     src={facility.thumbnailUrl 
-                      ? `https://tirebank.jebee.net/api/facilities/images/${facility.thumbnailUrl}`
+                      ? `http://localhost:8080/api/facilities/images/${facility.thumbnailUrl}`
                       : '/images/no-image.png'
                     }
                     alt={facility.name}
@@ -223,15 +230,41 @@ const FacilityList = () => {
         )}
       </Grid>
 
-      {/* 페이지네이션 */}
-      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-        <Pagination 
-          count={totalPages} 
-          page={page} 
-          onChange={(_, value) => setPage(value)}
-          color="primary"
-          size="medium"
-        />
+      {/* 버튼과 페이지네이션 컨테이너 */}
+      <Box sx={{ mt: 4 }}>
+        {/* 등록 버튼 */}
+        <Box sx={{ 
+          display: 'flex',
+          justifyContent: 'flex-end',
+          mb: 2  // 페이지네이션과의 간격
+        }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/facility/create')}
+            sx={{
+              bgcolor: '#343959',
+              '&:hover': { bgcolor: '#3d63b8' },
+              minWidth: 'auto',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            시설물 등록
+          </Button>
+        </Box>
+
+        {/* 페이지네이션 */}
+        <Box sx={{ 
+          display: 'flex',
+          justifyContent: 'center'
+        }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+          />
+        </Box>
       </Box>
     </Box>
   );

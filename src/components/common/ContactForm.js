@@ -70,7 +70,7 @@ const ContactForm = () => {
     const formattedPhone = formData.phoneNumber.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
 
     try {
-      const response = await fetch('https://tirebank.jebee.net/api/guest-inquiries', {
+      const response = await fetch('http://localhost:8080/api/guest-inquiries', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
