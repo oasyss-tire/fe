@@ -54,7 +54,7 @@ const Home = () => {
 
   const fetchNotices = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/notices');
+      const response = await fetch('https://tirebank.jebee.net/api/notices');
       if (response.ok) {
         const data = await response.json();
         setNotices(data.slice(0, 3));
@@ -66,7 +66,7 @@ const Home = () => {
 
   const fetchInquiries = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/inquiries');
+      const response = await fetch('https://tirebank.jebee.net/api/inquiries');
       if (response.ok) {
         const data = await response.json();
         setInquiries(data.slice(0, 3)); // 최근 4개만

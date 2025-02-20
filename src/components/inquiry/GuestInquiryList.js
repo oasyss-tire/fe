@@ -39,7 +39,7 @@ const GuestInquiryList = () => {
 
   const fetchInquiries = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/guest-inquiries/all');
+      const response = await fetch('https://tirebank.jebee.net/api/guest-inquiries/all');
       if (response.ok) {
         const data = await response.json();
         setInquiries(data);
@@ -58,7 +58,7 @@ const GuestInquiryList = () => {
 
   const handlePasswordSubmit = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/guest-inquiries/check', {
+      const response = await fetch('https://tirebank.jebee.net/api/guest-inquiries/check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

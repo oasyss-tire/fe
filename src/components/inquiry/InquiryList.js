@@ -90,7 +90,7 @@ const InquiryList = () => {
 
   const fetchInquiries = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/inquiries', {
+      const response = await fetch('https://tirebank.jebee.net/api/inquiries', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }

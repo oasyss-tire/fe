@@ -99,7 +99,7 @@ const FacilityDetail = () => {
 
   const fetchFacilityDetail = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/facilities/${id}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -122,7 +122,7 @@ const FacilityDetail = () => {
 
   const handleStatusChange = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/facilities/${id}/status`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -145,7 +145,7 @@ const FacilityDetail = () => {
 
   const handleContractSubmit = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/facilities/${id}/contracts`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}/contracts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -175,7 +175,7 @@ const FacilityDetail = () => {
 
   const handleEdit = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/facilities/${id}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/facilities/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -222,7 +222,7 @@ const FacilityDetail = () => {
   const handleUpdateContract = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/facilities/${id}/contracts/${selectedContract.id}`,
+        `https://tirebank.jebee.net/api/facilities/${id}/contracts/${selectedContract.id}`,
         {
           method: 'PUT',
           headers: {
@@ -349,7 +349,7 @@ const FacilityDetail = () => {
                 >
                   <Box
                     component="img"
-                    src={`http://localhost:8080/api/facilities/images/${image.url}`}
+                    src={`https://tirebank.jebee.net/api/facilities/images/${image.url}`}
                     alt={image.description || `시설물 이미지 ${index + 1}`}
                     sx={{
                       position: 'absolute',
@@ -510,7 +510,7 @@ const FacilityDetail = () => {
             >
               <Box
                 component="img"
-                src={`http://localhost:8080/api/facilities/images/${selectedImage.url}`}
+                src={`https://tirebank.jebee.net/api/facilities/images/${selectedImage.url}`}
                 alt={selectedImage.description || "시설물 이미지"}
                 sx={{
                   maxWidth: '100%',

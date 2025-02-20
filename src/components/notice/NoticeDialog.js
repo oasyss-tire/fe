@@ -85,7 +85,7 @@ const NoticeDialog = ({ open, onClose, notice, onDelete, onUpdate }) => {
         formData.append('images', image);
       });
 
-      const response = await fetch(`http://localhost:8080/api/notices/${notice.noticeId}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/notices/${notice.noticeId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -118,7 +118,7 @@ const NoticeDialog = ({ open, onClose, notice, onDelete, onUpdate }) => {
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`http://localhost:8080/api/notices/${notice.noticeId}`, {
+        const response = await fetch(`https://tirebank.jebee.net/api/notices/${notice.noticeId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -281,7 +281,7 @@ const NoticeDialog = ({ open, onClose, notice, onDelete, onUpdate }) => {
                           }}
                         >
                           <img
-                            src={`http://localhost:8080/uploads/images/${url}`}
+                            src={`https://tirebank.jebee.net/uploads/images/${url}`}
                             alt={`기존 이미지 ${index + 1}`}
                             style={{
                               width: '100%',
@@ -452,7 +452,7 @@ const NoticeDialog = ({ open, onClose, notice, onDelete, onUpdate }) => {
                       <Box 
                         key={index}
                         component="img"
-                        src={`http://localhost:8080/uploads/images/${url}`}
+                        src={`https://tirebank.jebee.net/uploads/images/${url}`}
                         alt={`첨부이미지 ${index + 1}`}
                         sx={{ 
                           width: '100px',
@@ -540,7 +540,7 @@ const NoticeDialog = ({ open, onClose, notice, onDelete, onUpdate }) => {
       >
         <Box
           component="img"
-          src={selectedImages.length > 0 ? `http://localhost:8080/uploads/images/${selectedImages[0]}` : ''}
+          src={selectedImages.length > 0 ? `https://tirebank.jebee.net/uploads/images/${selectedImages[0]}` : ''}
           alt="선택된 이미지"
           sx={{
             maxWidth: '90vw',

@@ -171,7 +171,7 @@ const InquiryDialog = ({ open, onClose, inquiry, onDelete, onUpdate }) => {
       // console.log('Is Admin:', isAdminOrManager);
       // console.log('Edited Inquiry:', editedInquiry);
 
-      const response = await fetch(`http://localhost:8080/api/inquiries/${inquiry.inquiryId}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/inquiries/${inquiry.inquiryId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -204,7 +204,7 @@ const InquiryDialog = ({ open, onClose, inquiry, onDelete, onUpdate }) => {
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`http://localhost:8080/api/inquiries/${inquiry.inquiryId}`, {
+        const response = await fetch(`https://tirebank.jebee.net/api/inquiries/${inquiry.inquiryId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -263,7 +263,7 @@ const InquiryDialog = ({ open, onClose, inquiry, onDelete, onUpdate }) => {
         formData.append('images', image);
       });
 
-      const response = await fetch('http://localhost:8080/api/inquiries', {
+      const response = await fetch('https://tirebank.jebee.net/api/inquiries', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -533,7 +533,7 @@ const InquiryDialog = ({ open, onClose, inquiry, onDelete, onUpdate }) => {
                           }}
                         >
                           <img
-                            src={`http://localhost:8080/uploads/inquiry_images/${url}`}
+                            src={`https://tirebank.jebee.net/uploads/inquiry_images/${url}`}
                             alt={`기존 이미지 ${index + 1}`}
                             style={{
                               width: '100%',
@@ -710,7 +710,7 @@ const InquiryDialog = ({ open, onClose, inquiry, onDelete, onUpdate }) => {
                       <Box 
                         key={index}
                         component="img"
-                        src={`http://localhost:8080/uploads/inquiry_images/${url}`}
+                        src={`https://tirebank.jebee.net/uploads/inquiry_images/${url}`}
                         alt={`첨부이미지 ${index + 1}`}
                         sx={{ 
                           width: '100px',
@@ -842,7 +842,7 @@ const InquiryDialog = ({ open, onClose, inquiry, onDelete, onUpdate }) => {
       >
         <Box
           component="img"
-          src={`http://localhost:8080/uploads/inquiry_images/${selectedImage}`}
+          src={`https://tirebank.jebee.net/uploads/inquiry_images/${selectedImage}`}
           alt="선택된 이미지"
           sx={{
             maxWidth: '90vw',

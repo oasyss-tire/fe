@@ -46,7 +46,7 @@ const ContractDetail = () => {
   useEffect(() => {
     if (id) {
       setPdfFile({
-        url: `http://localhost:8080/api/contracts/${id}/pdf`,
+        url: `https://tirebank.jebee.net/api/contracts/${id}/pdf`,
         httpHeaders: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
           'Accept': 'application/pdf'
@@ -58,7 +58,7 @@ const ContractDetail = () => {
 
   const fetchContractData = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/contracts/${id}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/contracts/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -83,8 +83,8 @@ const ContractDetail = () => {
     try {
       // 서명 상태에 따라 다른 엔드포인트 사용
       const endpoint = contract.status === 'SIGNED' 
-        ? `http://localhost:8080/api/contracts/${id}/signed-pdf`
-        : `http://localhost:8080/api/contracts/${id}/pdf`;
+        ? `https://tirebank.jebee.net/api/contracts/${id}/signed-pdf`
+        : `https://tirebank.jebee.net/api/contracts/${id}/pdf`;
 
       const response = await fetch(endpoint, {
         headers: {

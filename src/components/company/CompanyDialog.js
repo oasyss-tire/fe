@@ -234,7 +234,7 @@ const CompanyDialog = ({ open, onClose, onSubmit }) => {
         }
       });
 
-      const response = await fetch('http://localhost:8080/api/companies', {
+      const response = await fetch('https://tirebank.jebee.net/api/companies', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`

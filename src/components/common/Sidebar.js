@@ -126,7 +126,7 @@ const Sidebar = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+      const response = await fetch('https://tirebank.jebee.net/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +181,7 @@ const Sidebar = () => {
     try {
       const token = sessionStorage.getItem('token');
       if (token) {
-        await fetch('http://localhost:8080/api/auth/logout', {
+        await fetch('https://tirebank.jebee.net/api/auth/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -263,7 +263,7 @@ const Sidebar = () => {
 //   const testAuthenticatedRequest = async () => {
 //     const token = sessionStorage.getItem('token');
 //     try {
-//       const response = await fetch('http://localhost:8080/api/users', {
+//       const response = await fetch('https://tirebank.jebee.net/api/users', {
 //         headers: {
 //           'Authorization': `Bearer ${token}`
 //         }
@@ -292,7 +292,7 @@ const Sidebar = () => {
   const fetchUserInfo = async () => {
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/auth/me', {
+      const response = await fetch('https://tirebank.jebee.net/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -333,7 +333,7 @@ const Sidebar = () => {
   const handleUpdateUser = async () => {
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/users/${userInfo.userId}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/users/${userInfo.userId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -396,7 +396,7 @@ const Sidebar = () => {
 
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/users/${userInfo.userId}/password`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/users/${userInfo.userId}/password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -447,7 +447,7 @@ const Sidebar = () => {
       const token = sessionStorage.getItem('token');
       if (token) {
         try {
-          const response = await fetch('http://localhost:8080/api/auth/me', {
+          const response = await fetch('https://tirebank.jebee.net/api/auth/me', {
             headers: {
               'Authorization': `Bearer ${token}`
             }

@@ -49,7 +49,7 @@ const UserDialog = ({ open, onClose }) => {
 
   const fetchCompanies = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/companies');
+      const response = await fetch('https://tirebank.jebee.net/api/companies');
       if (response.ok) {
         const data = await response.json();
         setCompanies(data);
@@ -85,7 +85,7 @@ const UserDialog = ({ open, onClose }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/auth/check-username?username=${formData.username}`);
+      const response = await fetch(`https://tirebank.jebee.net/api/auth/check-username?username=${formData.username}`);
       const message = await response.text();
       
       if (response.ok) {
@@ -158,7 +158,7 @@ const UserDialog = ({ open, onClose }) => {
     delete submitData.passwordConfirm;
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/signup', {
+      const response = await fetch('https://tirebank.jebee.net/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -36,7 +36,7 @@ const FacilityCreate = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/companies', {
+        const response = await fetch('https://tirebank.jebee.net/api/companies', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -98,7 +98,7 @@ const FacilityCreate = () => {
         submitData.append('images', file);
       });
 
-      const response = await fetch('http://localhost:8080/api/facilities', {
+      const response = await fetch('https://tirebank.jebee.net/api/facilities', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`

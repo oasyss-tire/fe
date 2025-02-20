@@ -45,7 +45,7 @@ const HomeChatBot = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/chat', {
+      const response = await fetch('https://tirebank.jebee.net/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

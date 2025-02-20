@@ -45,7 +45,7 @@ const UserList = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/users', {
+      const response = await fetch('https://tirebank.jebee.net/api/users', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }

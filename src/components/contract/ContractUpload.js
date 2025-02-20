@@ -72,7 +72,7 @@ const ContractUpload = () => {
       });
       formDataToSend.append('file', file);
 
-      const response = await fetch('http://localhost:8080/api/contracts', {
+      const response = await fetch('https://tirebank.jebee.net/api/contracts', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`

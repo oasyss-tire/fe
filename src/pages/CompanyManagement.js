@@ -50,7 +50,7 @@ const CompanyManagement = () => {
   // fetchEmployees 함수를 컴포넌트 레벨로 이동
   const fetchEmployees = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/companies/${companyId}/employees`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/companies/${companyId}/employees`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -68,7 +68,7 @@ const CompanyManagement = () => {
   useEffect(() => {
     const fetchCompanyData = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
+        const response = await fetch(`https://tirebank.jebee.net/api/companies/${companyId}`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -113,7 +113,7 @@ const CompanyManagement = () => {
       const formData = new FormData();
       formData.append('company', JSON.stringify(formattedData));
 
-      const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/companies/${companyId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -147,7 +147,7 @@ const CompanyManagement = () => {
 
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
+        const response = await fetch(`https://tirebank.jebee.net/api/companies/${companyId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -186,7 +186,7 @@ const CompanyManagement = () => {
   const handleFileView = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/companies/${companyId}/business-license`,
+        `https://tirebank.jebee.net/api/companies/${companyId}/business-license`,
         {
           responseType: 'blob',
           headers: {
@@ -256,7 +256,7 @@ const CompanyManagement = () => {
   // 직원 추가
   const handleAddEmployee = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/companies/${companyId}/employees`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/companies/${companyId}/employees`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -291,7 +291,7 @@ const CompanyManagement = () => {
       const employee = employees.find(emp => emp.employeeId === employeeId);
       
       // 요청 URL과 데이터 로깅
-      const url = `http://localhost:8080/api/companies/${companyId}/employees/${employeeId}`;
+      const url = `https://tirebank.jebee.net/api/companies/${companyId}/employees/${employeeId}`;
       const requestData = {
         name: employee.name,
         phone: employee.phone,

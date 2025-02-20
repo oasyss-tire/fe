@@ -56,7 +56,7 @@ const FacilityList = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:8080/api/facilities?page=${page-1}&size=12&keyword=${searchKeyword}&status=${statusFilter}`,
+        `https://tirebank.jebee.net/api/facilities?page=${page-1}&size=12&keyword=${searchKeyword}&status=${statusFilter}`,
         {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -170,7 +170,7 @@ const FacilityList = () => {
                   <CardMedia
                     component="img"
                     src={facility.thumbnailUrl 
-                      ? `http://localhost:8080/api/facilities/images/${facility.thumbnailUrl}`
+                      ? `https://tirebank.jebee.net/api/facilities/images/${facility.thumbnailUrl}`
                       : '/images/no-image.png'
                     }
                     alt={facility.name}

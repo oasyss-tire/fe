@@ -118,7 +118,7 @@ const NoticeList = () => {
 
   const fetchNotices = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/notices', {
+      const response = await fetch('https://tirebank.jebee.net/api/notices', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -169,7 +169,7 @@ const NoticeList = () => {
         });
       }
 
-      const response = await fetch('http://localhost:8080/api/notices', {
+      const response = await fetch('https://tirebank.jebee.net/api/notices', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -205,7 +205,7 @@ const NoticeList = () => {
   const handleDelete = async (noticeId) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`http://localhost:8080/api/notices/${noticeId}`, {
+        const response = await fetch(`https://tirebank.jebee.net/api/notices/${noticeId}`, {
           method: 'DELETE'
         });
         if (response.ok) {
@@ -232,7 +232,7 @@ const NoticeList = () => {
 
   const handleRowClick = async (noticeId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/notices/${noticeId}`);
+      const response = await fetch(`https://tirebank.jebee.net/api/notices/${noticeId}`);
       if (response.ok) {
         const data = await response.json();
         setSelectedNotice(data);

@@ -64,7 +64,7 @@ const ContractSignature = ({ open, onClose, contractId }) => {
 
       setPdfFile({
 
-        url: `http://localhost:8080/api/contracts/${contractId}/pdf`,
+        url: `https://tirebank.jebee.net/api/contracts/${contractId}/pdf`,
 
         httpHeaders: {
 
@@ -216,7 +216,7 @@ const ContractSignature = ({ open, onClose, contractId }) => {
 
     try {
 
-      const response = await fetch(`http://localhost:8080/api/contracts/${contractId}/sign`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/contracts/${contractId}/sign`, {
 
         method: 'POST',
 

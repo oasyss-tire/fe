@@ -41,7 +41,7 @@ const ContractList = () => {
   const fetchContracts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/contracts?page=${page-1}&size=${itemsPerPage}`, {
+      const response = await fetch(`https://tirebank.jebee.net/api/contracts?page=${page-1}&size=${itemsPerPage}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }

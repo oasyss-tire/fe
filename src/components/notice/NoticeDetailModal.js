@@ -154,7 +154,7 @@ const NoticeDetailModal = ({ open, notice, onClose }) => {
                       onClick={() => handleImageClick(imageUrl)}
                     >
                       <img 
-                        src={`http://localhost:8080/uploads/images/${imageUrl}`}
+                        src={`https://tirebank.jebee.net/uploads/images/${imageUrl}`}
                         alt={`공지사항 이미지 ${index + 1}`}
                         style={{
                           position: 'absolute',
@@ -233,7 +233,7 @@ const NoticeDetailModal = ({ open, notice, onClose }) => {
       >
         <Box
           component="img"
-          src={selectedImage ? `http://localhost:8080/uploads/images/${selectedImage}` : ''}
+          src={selectedImage ? `https://tirebank.jebee.net/uploads/images/${selectedImage}` : ''}
           alt="확대된 이미지"
           sx={{
             maxWidth: '90vw',
