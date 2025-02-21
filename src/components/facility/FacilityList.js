@@ -91,7 +91,7 @@ const FacilityList = () => {
           color: '#1a1a1a',
           letterSpacing: '-0.5px'
         }}>
-          시설물 관리
+          시설물 재고조회
         </Typography>
       </Box>
 

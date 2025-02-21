@@ -82,7 +82,9 @@ const Sidebar = () => {
     {
       category: '시설물 관리',
       items: [
-        { text: '시설물 관리', path: '/facility' },
+        { text: '시설물 신규 등록', path: '/facility/create'},
+        { text: '시설물 재고 조회', path: '/facility' },
+        { text: '시설물 실사', path: '/service-preparing'}
       ]
     },
     // 게시판 메뉴
