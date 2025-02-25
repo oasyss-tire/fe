@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Typography, Card, CardContent, Chip } from '@mui/material';
+import { Box, Grid, Typography, Card, CardContent, Chip, Stack } from '@mui/material';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -7,6 +7,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import BuildIcon from '@mui/icons-material/Build';
 import WarningIcon from '@mui/icons-material/Warning';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 
 const FacilityDashboard = () => {
   // 납품 지점별 시설물 현황
@@ -151,344 +152,331 @@ const FacilityDashboard = () => {
   };
 
   return (
-    <Box sx={{ p: 2, backgroundColor: '#f5f5f5' }}>
+    <Box 
+      sx={{ 
+        p: 4,
+        backgroundColor: '#f5f5f5',
+        width: '100%',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        boxSizing: 'border-box'
+      }}
+    >
       {/* 헤더 */}
-      <Box sx={{ mb: 3, textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          시설물 현황
+      <Box sx={{ mb: 4, textAlign: 'left' }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+          시설물 현황 대시보드
         </Typography>
         <Typography variant="body2" color="text.secondary">
           최근 업데이트: 2024.03.15
         </Typography>
       </Box>
 
-      {/* 주요 통계 카드 */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6}>
+      <Grid container spacing={3}>
+        {/* 주요 통계 카드 3열 배치 */}
+        <Grid item xs={12} md={4}>
           <Card sx={{ 
             borderRadius: 2,
             background: 'linear-gradient(135deg, #3f51b5 0%, #2196f3 100%)',
-            color: 'white'
+            color: 'white',
+            height: '100%'
           }}>
             <CardContent>
-              <Typography variant="body2" sx={{ mb: 1 }}>이번 달 예상 수익</Typography>
-              <Typography variant="h6" sx={{ mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AttachMoneyIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">예상 수익</Typography>
+              </Box>
+              <Typography variant="h4" sx={{ mb: 2 }}>
                 {formatKoreanCurrency(10200000)}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                <Typography variant="body2">전월 대비 12% ↑</Typography>
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">장비 임대</Typography>
+                  <Typography variant="body2">{formatKoreanCurrency(8500000)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">유지보수</Typography>
+                  <Typography variant="body2">{formatKoreanCurrency(1700000)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  <Typography variant="body2">전월 대비 12% ↑</Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #ff9800 0%, #ffc107 100%)',
+            color: 'white',
+            height: '100%'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <BuildIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">점검 현황</Typography>
+              </Box>
+              <Typography variant="h4" sx={{ mb: 2 }}>{inspectionStatus.completed}건</Typography>
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">예정</Typography>
+                  <Typography variant="body2">{inspectionStatus.pending}건</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">지연</Typography>
+                  <Typography variant="body2">{inspectionStatus.overdue}건</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <Typography variant="body2" sx={{ color: '#fff3e0' }}>
+                    다음 점검: {inspectionStatus.nextInspections[0].dueDate}
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #43a047 0%, #66bb6a 100%)',
+            color: 'white',
+            height: '100%'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <LocationOnIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">지점 현황</Typography>
+              </Box>
+              <Typography variant="h4" sx={{ mb: 2 }}>{branchStatus.length}개</Typography>
+              <Stack spacing={1}>
+                {/* 상위 2개 지점 표시 */}
+                {branchStatus.slice(0, 2).map((branch, index) => (
+                  <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2">{branch.name}</Typography>
+                    <Typography variant="body2">{branch.count}대</Typography>
+                  </Box>
+                ))}
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <Typography variant="body2" sx={{ color: '#e8f5e9' }}>
+                    전체 시설물: {facilityStatus.total}대
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 매출 및 미수금 트렌드 차트 */}
+        <Grid item xs={12} md={8}>
+          <Card sx={{ borderRadius: 2, mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 3 }}>매출 및 미수금 추이</Typography>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={financialData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3f51b5" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3f51b5" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorUnpaid" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ff4d4f" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#ff4d4f" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip formatter={(value) => `${value}만원`} />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      name="매출"
+                      stroke="#3f51b5"
+                      fillOpacity={1}
+                      fill="url(#colorRevenue)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="unpaid"
+                      name="미수금"
+                      stroke="#ff4d4f"
+                      fillOpacity={1}
+                      fill="url(#colorUnpaid)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6}>
-          <Card sx={{ 
-            borderRadius: 2,
-            background: 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)',
-            color: 'white'
-          }}>
+
+        {/* 시설물 상태 현황 */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderRadius: 2, height: '100%' }}>
             <CardContent>
-              <Typography variant="body2" sx={{ mb: 1 }}>현재 미수금</Typography>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                {formatKoreanCurrency(1800000)}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingDownIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                <Typography variant="body2">전월 대비 10% ↓</Typography>
+              <Typography variant="h6" sx={{ mb: 3 }}>시설물 상태 현황</Typography>
+              <Box sx={{ height: 200, display: 'flex', justifyContent: 'center' }}>
+                <PieChart width={200} height={200}>
+                  <Pie
+                    data={facilityStatus.statuses}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    dataKey="value"
+                  >
+                    {facilityStatus.statuses.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value, name) => [`${value}대`, name]} />
+                </PieChart>
+              </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1, mt: 2 }}>
+                {facilityStatus.statuses.map((status, index) => (
+                  <Chip
+                    key={index}
+                    label={`${status.name} ${status.value}대`}
+                    size="small"
+                    sx={{ backgroundColor: status.color, color: 'white' }}
+                  />
+                ))}
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6}>
-          <Card sx={{ 
-            borderRadius: 2,
-            background: 'linear-gradient(135deg, #722ed1 0%, #9254de 100%)',
-            color: 'white'
-          }}>
+
+        {/* 지역별 현황 */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ borderRadius: 2, height: '100%' }}>
             <CardContent>
-              <Typography variant="body2" sx={{ mb: 1 }}>총 시설물 가치</Typography>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                {formatKoreanCurrency(assetValue.totalValue)}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingDownIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                <Typography variant="body2">
-                  감가상각 {assetValue.depreciationRate}%
-                </Typography>
-              </Box>
+              <Typography variant="h6" sx={{ mb: 3 }}>납품 지점별 현황</Typography>
+              <Grid container spacing={2}>
+                {branchStatus.map((branch, index) => (
+                  <Grid item xs={6} key={index}>
+                    <Box sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      boxShadow: 1,
+                      transition: 'transform 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: 2
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {branch.name}
+                          </Typography>
+                        </Box>
+                        <Chip 
+                          label={getContractStatus(branch.contractEnd).status}
+                          size="small"
+                          color={getContractStatus(branch.contractEnd).color}
+                          variant="outlined"
+                        />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        보유 시설물: {branch.count}대
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        계약기간: {branch.contractStart} ~ {branch.contractEnd}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 긴급 알림 */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ borderRadius: 2, height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 3 }}>긴급 알림</Typography>
+              {alerts.map((alert, index) => (
+                <Box 
+                  key={index}
+                  sx={{ 
+                    mb: 2,
+                    p: 2,
+                    borderRadius: 2,
+                    backgroundColor: alert.type === 'warning' ? '#fff3f0' : '#f0f7ff',
+                    border: '1px solid',
+                    borderColor: alert.type === 'warning' ? '#ffccc7' : '#91caff'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <WarningIcon 
+                        sx={{ 
+                          mr: 1, 
+                          color: alert.type === 'warning' ? '#ff4d4f' : '#1890ff'
+                        }} 
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {alert.facility} ({alert.location})
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {alert.time}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2">{alert.message}</Typography>
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 최근 수리 이력 */}
+        <Grid item xs={12}>
+          <Card sx={{ borderRadius: 2 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 3 }}>최근 수리 이력</Typography>
+              <Grid container spacing={2}>
+                {repairHistory.map((repair, index) => (
+                  <Grid item xs={12} md={6} key={index}>
+                    <Box sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      boxShadow: 1
+                    }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <BuildIcon sx={{ mr: 1, color: 'primary.main' }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {repair.facility} ({repair.location})
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {repair.date}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {repair.issue}
+                      </Typography>
+                      <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
+                        비용: {formatKoreanCurrency(repair.cost)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-
-      {/* 납품 지점별 현황 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            납품 지점별 현황
-          </Typography>
-          {branchStatus.map((branch, index) => {
-            const contractStatus = getContractStatus(branch.contractEnd);
-            return (
-              <Box 
-                key={index}
-                sx={{ 
-                  mb: 2,
-                  p: 2,
-                  borderRadius: 1,
-                  backgroundColor: '#fff',
-                  border: '1px solid #f0f0f0'
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {branch.name}
-                    </Typography>
-                  </Box>
-                  <Chip 
-                    label={contractStatus.status}
-                    size="small"
-                    color={contractStatus.color}
-                    variant="outlined"
-                  />
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  보유 시설물: {branch.count}대
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  계약기간: {branch.contractStart} ~ {branch.contractEnd}
-                </Typography>
-              </Box>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      {/* 시설물 상태 현황 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            시설물 상태 현황
-          </Typography>
-          <Box sx={{ height: 200, display: 'flex', justifyContent: 'center' }}>
-            <PieChart width={200} height={200}>
-              <Pie
-                data={facilityStatus.statuses}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                dataKey="value"
-              >
-                {facilityStatus.statuses.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value, name) => [`${value}대`, name]} />
-            </PieChart>
-          </Box>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1, mt: 2 }}>
-            {facilityStatus.statuses.map((status, index) => (
-              <Chip
-                key={index}
-                label={`${status.name} ${status.value}대`}
-                size="small"
-                sx={{ backgroundColor: status.color, color: 'white' }}
-              />
-            ))}
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* 매출 및 미수금 트렌드 */}
-      <Card sx={{ borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            매출 및 미수금 현황
-          </Typography>
-          <Box sx={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={financialData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3f51b5" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3f51b5" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorUnpaid" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff4d4f" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#ff4d4f" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip formatter={(value) => `${value}만원`} />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  name="매출"
-                  stroke="#3f51b5"
-                  fillOpacity={1}
-                  fill="url(#colorRevenue)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="unpaid"
-                  name="미수금"
-                  stroke="#ff4d4f"
-                  fillOpacity={1}
-                  fill="url(#colorUnpaid)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* 긴급 알림 섹션 추가 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            긴급 알림
-          </Typography>
-          {alerts.map((alert, index) => (
-            <Box 
-              key={index}
-              sx={{ 
-                mb: 2,
-                p: 2,
-                borderRadius: 1,
-                backgroundColor: alert.type === 'warning' ? '#fff3f0' : '#f0f7ff',
-                border: '1px solid',
-                borderColor: alert.type === 'warning' ? '#ffccc7' : '#91caff'
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <WarningIcon 
-                    sx={{ 
-                      mr: 1, 
-                      color: alert.type === 'warning' ? '#ff4d4f' : '#1890ff'
-                    }} 
-                  />
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {alert.facility} ({alert.location})
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  {alert.time}
-                </Typography>
-              </Box>
-              <Typography variant="body2">{alert.message}</Typography>
-            </Box>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* 점검 현황 섹션 추가 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            점검 현황
-          </Typography>
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="success.main">
-                  {inspectionStatus.completed}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">완료</Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="warning.main">
-                  {inspectionStatus.pending}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">예정</Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="error.main">
-                  {inspectionStatus.overdue}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">지연</Typography>
-              </Box>
-            </Grid>
-          </Grid>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>예정된 점검</Typography>
-          {inspectionStatus.nextInspections.map((inspection, index) => (
-            <Box 
-              key={index}
-              sx={{ 
-                mb: 1,
-                p: 2,
-                borderRadius: 1,
-                backgroundColor: '#fff',
-                border: '1px solid #f0f0f0'
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {inspection.facility} ({inspection.location})
-                </Typography>
-                <Chip 
-                  label={inspection.type}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                />
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                예정일: {inspection.dueDate}
-              </Typography>
-            </Box>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* 최근 수리 이력 섹션 추가 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            최근 수리 이력
-          </Typography>
-          {repairHistory.map((repair, index) => (
-            <Box 
-              key={index}
-              sx={{ 
-                mb: 2,
-                p: 2,
-                borderRadius: 1,
-                backgroundColor: '#fff',
-                border: '1px solid #f0f0f0'
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <BuildIcon sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {repair.facility} ({repair.location})
-                  </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  {repair.date}
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                {repair.issue}
-              </Typography>
-              <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
-                비용: {formatKoreanCurrency(repair.cost)}
-              </Typography>
-            </Box>
-          ))}
-        </CardContent>
-      </Card>
     </Box>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Typography, Card, CardContent, LinearProgress, Chip } from '@mui/material';
+import { Box, Grid, Typography, Card, CardContent, LinearProgress, Chip, Stack } from '@mui/material';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -268,290 +268,462 @@ const ContractDashboard = () => {
     }
   };
 
+  // 지역별 데이터 추가
+  const regionData = {
+    daejeon: {
+      yuseong: {
+        name: '유성구',
+        contracts: 45,
+        revenue: 85000000,
+        activeContracts: 38
+      },
+      dong: {
+        name: '동구',
+        contracts: 32,
+        revenue: 65000000,
+        activeContracts: 28
+      },
+      seo: {
+        name: '서구',
+        contracts: 38,
+        revenue: 72000000,
+        activeContracts: 34
+      },
+      jung: {
+        name: '중구',
+        contracts: 25,
+        revenue: 48000000,
+        activeContracts: 22
+      }
+    },
+    sejong: {
+      all: {
+        name: '세종시',
+        contracts: 42,
+        revenue: 78000000,
+        activeContracts: 36
+      }
+    }
+  };
+
+  // 장비별 데이터 추가
+  const equipmentData = {
+    lift: {
+      name: '리프트',
+      total: 85,
+      active: 75,
+      pending: 8,
+      revenue: 95000000
+    },
+    tireChanger: {
+      name: '탈부착기',
+      total: 65,
+      active: 58,
+      pending: 5,
+      revenue: 72000000
+    },
+    balancer: {
+      name: '밸런스기',
+      total: 70,
+      active: 62,
+      pending: 6,
+      revenue: 78000000
+    },
+    alignment: {
+      name: '얼라이먼트',
+      total: 45,
+      active: 40,
+      pending: 4,
+      revenue: 92000000
+    },
+    tireHotel: {
+      name: '타이어호텔',
+      total: 25,
+      active: 22,
+      pending: 2,
+      revenue: 45000000
+    }
+  };
+
   return (
-    <Box sx={{ p: 2, backgroundColor: '#f5f5f5' }}>
-      {/* 헤더 섹션 - 중앙 정렬로 수정 */}
-      <Box sx={{ mb: 3, textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          계약 현황
+    <Box 
+      sx={{ 
+        p: 4,  // 패딩 증가
+        backgroundColor: '#f5f5f5',
+        width: '100%',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* 헤더 */}
+      <Box sx={{ mb: 4, textAlign: 'left' }}> 
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+          계약 현황 대시보드
         </Typography>
         <Typography variant="body2" color="text.secondary">
           최근 업데이트: 2024.03.15
         </Typography>
       </Box>
 
-      {/* 알림 섹션 */}
-      <AlertSection alertItems={alertItems} />
-
-      {/* 계약 현황 요약 */}
-      <ContractSummary summary={contractSummary} />
-
-      {/* 주요 통계 카드 */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6}>
+      <Grid container spacing={3}>
+        {/* 첫 번째 카드 - 계약 현황 */}
+        <Grid item xs={12} md={4}>
           <Card sx={{ 
             borderRadius: 2,
             background: 'linear-gradient(135deg, #3f51b5 0%, #2196f3 100%)',
-            color: 'white'
+            color: 'white',
+            height: '100%'
           }}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2">이번 달 계약</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AssignmentIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">계약 현황</Typography>
               </Box>
-              <Typography variant="h5" sx={{ mb: 1 }}>85건</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                <Typography variant="body2">전월 대비 12% ↑</Typography>
+              <Typography variant="h4" sx={{ mb: 2 }}>85건</Typography>
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">신규 계약</Typography>
+                  <Typography variant="body2">32건</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">갱신 계약</Typography>
+                  <Typography variant="body2">53건</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  <Typography variant="body2">전월 대비 12% ↑</Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 두 번째 카드 - 매출 현황 */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #43a047 0%, #66bb6a 100%)',
+            color: 'white',
+            height: '100%'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AttachMoneyIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">매출 현황</Typography>
+              </Box>
+              <Typography variant="h4" sx={{ mb: 2 }}>
+                {formatKoreanCurrency(9000000)}
+              </Typography>
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">장비 계약</Typography>
+                  <Typography variant="body2">{formatKoreanCurrency(6500000)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">서비스 계약</Typography>
+                  <Typography variant="body2">{formatKoreanCurrency(2500000)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  <Typography variant="body2">전월 대비 8% ↑</Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 세 번째 카드 - 계약 만료 예정 */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #ff9800 0%, #ffc107 100%)',
+            color: 'white',
+            height: '100%'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AccessTimeIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">만료 예정</Typography>
+              </Box>
+              <Typography variant="h4" sx={{ mb: 2 }}>15건</Typography>
+              <Stack spacing={1}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">7일 이내</Typography>
+                  <Typography variant="body2">5건</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">30일 이내</Typography>
+                  <Typography variant="body2">10건</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <Typography variant="body2" sx={{ color: '#fff3e0' }}>
+                    갱신 예정: 12건
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={8}>
+          <Card sx={{ borderRadius: 2, mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 3 }}>월별 계약 추이</Typography>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={monthlyData}>
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3f51b5" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3f51b5" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      name="계약 건수"
+                      stroke="#3f51b5" 
+                      fillOpacity={1} 
+                      fill="url(#colorCount)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={6}>
-          <Card sx={{ 
-            borderRadius: 2,
-            background: 'linear-gradient(135deg, #43a047 0%, #66bb6a 100%)',
-            color: 'white'
-          }}>
+
+        <Grid item xs={12} md={4}>
+          <Card sx={{ borderRadius: 2, height: '100%' }}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2">계약 금액</Typography>
-              </Box>
-              <Typography variant="h5" sx={{ mb: 1 }}>
-                {formatKoreanCurrency(9000000)}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                <Typography variant="body2">전월 대비 8% ↑</Typography>
-              </Box>
+              <Typography variant="h6" sx={{ mb: 3 }}>계약 유형별 현황</Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 1, 
+                    backgroundColor: '#e6f7ff',
+                    textAlign: 'center'
+                  }}>
+                    <Typography variant="h6" color="primary">
+                      {contractTypes.consignment.total}
+                    </Typography>
+                    <Typography variant="body2">위수탁 계약</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      활성 {contractTypes.consignment.active}건
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={4}>
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 1, 
+                    backgroundColor: '#f6ffed',
+                    textAlign: 'center'
+                  }}>
+                    <Typography variant="h6" color="success.main">
+                      {contractTypes.rental.total}
+                    </Typography>
+                    <Typography variant="body2">임대 계약</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      활성 {contractTypes.rental.active}건
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={4}>
+                  <Box sx={{ 
+                    p: 2, 
+                    borderRadius: 1, 
+                    backgroundColor: '#fff7e6',
+                    textAlign: 'center'
+                  }}>
+                    <Typography variant="h6" color="warning.main">
+                      {contractTypes.labor.total}
+                    </Typography>
+                    <Typography variant="body2">근로 계약</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      활성 {contractTypes.labor.active}건
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 지역별/장비별 현황 - 2열 배치 */}
+        <Grid item xs={12} md={6}>
+          <Card 
+            sx={{ 
+              borderRadius: 2, 
+              height: '100%',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'  // 그림자 개선
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 3 }}>지역별 계약 현황</Typography>
+              <Grid container spacing={2}>
+                {Object.entries({ ...regionData.daejeon, ...regionData.sejong }).map(([key, region]) => (
+                  <Grid item xs={6} key={key}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: 'background.paper',
+                        boxShadow: 1,
+                        transition: 'transform 0.2s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: 2
+                        }
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+                        {region.name}
+                      </Typography>
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="body2" color="text.secondary">총 계약</Typography>
+                          <Typography variant="body2">{region.contracts}건</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="body2" color="text.secondary">진행중</Typography>
+                          <Typography variant="body2" color="primary">
+                            {region.activeContracts}건
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="body2" color="text.secondary">매출</Typography>
+                          <Typography variant="body2" color="success.main">
+                            {formatKoreanCurrency(region.revenue)}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Card 
+            sx={{ 
+              borderRadius: 2, 
+              height: '100%',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 3 }}>장비별 계약 현황</Typography>
+              {Object.values(equipmentData).map((equipment) => (
+                <Box
+                  key={equipment.name}
+                  sx={{
+                    mb: 2,
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: 'background.paper',
+                    boxShadow: 1
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="subtitle2">{equipment.name}</Typography>
+                    <Chip
+                      size="small"
+                      label={`${equipment.active}/${equipment.total}대`}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  </Box>
+                  <Box sx={{ mt: 1 }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={(equipment.active / equipment.total) * 100}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor: 'rgba(0,0,0,0.1)',
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 4
+                        }
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      계약 대기: {equipment.pending}대
+                    </Typography>
+                    <Typography variant="body2" color="success.main">
+                      {formatKoreanCurrency(equipment.revenue)}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 최근 계약 체결 현황 - 전체 너비 */}
+        <Grid item xs={12}>
+          <Card 
+            sx={{ 
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 3 }}>최근 계약 체결 현황</Typography>
+              <Grid container spacing={2}>
+                {Object.values(contractTypes).map(type => 
+                  type.recentContracts.map((contract, index) => (
+                    <Grid item xs={6} key={index}>
+                      <Box 
+                        sx={{ 
+                          mb: 2,
+                          p: 2,
+                          borderRadius: 1,
+                          backgroundColor: '#fff',
+                          border: '1px solid #f0f0f0'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {contract.company}
+                          </Typography>
+                          <Chip 
+                            label={contract.type}
+                            size="small"
+                            color={
+                              contract.type === '위수탁' ? 'primary' :
+                              contract.type === '임대' ? 'success' : 'warning'
+                            }
+                            variant="outlined"
+                          />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            계약금액: {formatKoreanCurrency(contract.amount)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {contract.date} ({contract.period})
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  ))
+                )}
+              </Grid>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-
-      {/* 트렌드 차트 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            월별 계약 추이
-          </Typography>
-          <Box sx={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyData}>
-                <defs>
-                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3f51b5" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3f51b5" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area 
-                  type="monotone" 
-                  dataKey="count" 
-                  name="계약 건수"
-                  stroke="#3f51b5" 
-                  fillOpacity={1} 
-                  fill="url(#colorCount)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* 최근 계약 활동 */}
-      <ActivityTimeline activities={recentActivities} />
-
-      {/* 진행 중인 계약 섹션 수정 */}
-      <Card sx={{ borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            진행 중인 계약
-          </Typography>
-          <Box>
-            {recentContracts.map((contract, index) => (
-              <Box 
-                key={index} 
-                sx={{ 
-                  mb: 2,
-                  p: 2,
-                  borderRadius: 1,
-                  backgroundColor: contract.status === '체결완료' ? '#f0f7ff' : '#fff',
-                  border: '1px solid',
-                  borderColor: contract.status === '체결완료' ? '#1890ff' : '#f0f0f0'
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="subtitle2">{contract.title}</Typography>
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: contract.status === '체결완료' ? 'success.main' : 
-                             contract.status === '진행중' ? 'primary.main' : 'warning.main'
-                    }}
-                  >
-                    {getStatusText(contract.status)}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {contract.date}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {contract.step}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* 계약 유형별 현황 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            계약 유형별 현황
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={4}>
-              <Box sx={{ 
-                p: 2, 
-                borderRadius: 1, 
-                backgroundColor: '#e6f7ff',
-                textAlign: 'center'
-              }}>
-                <Typography variant="h6" color="primary">
-                  {contractTypes.consignment.total}
-                </Typography>
-                <Typography variant="body2">위수탁 계약</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  활성 {contractTypes.consignment.active}건
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={4}>
-              <Box sx={{ 
-                p: 2, 
-                borderRadius: 1, 
-                backgroundColor: '#f6ffed',
-                textAlign: 'center'
-              }}>
-                <Typography variant="h6" color="success.main">
-                  {contractTypes.rental.total}
-                </Typography>
-                <Typography variant="body2">임대 계약</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  활성 {contractTypes.rental.active}건
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={4}>
-              <Box sx={{ 
-                p: 2, 
-                borderRadius: 1, 
-                backgroundColor: '#fff7e6',
-                textAlign: 'center'
-              }}>
-                <Typography variant="h6" color="warning.main">
-                  {contractTypes.labor.total}
-                </Typography>
-                <Typography variant="body2">근로 계약</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  활성 {contractTypes.labor.active}건
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* 최근 계약 체결 현황 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            최근 계약 체결 현황
-          </Typography>
-          {Object.values(contractTypes).map(type => 
-            type.recentContracts.map((contract, index) => (
-              <Box 
-                key={index}
-                sx={{ 
-                  mb: 2,
-                  p: 2,
-                  borderRadius: 1,
-                  backgroundColor: '#fff',
-                  border: '1px solid #f0f0f0'
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {contract.company}
-                  </Typography>
-                  <Chip 
-                    label={contract.type}
-                    size="small"
-                    color={
-                      contract.type === '위수탁' ? 'primary' :
-                      contract.type === '임대' ? 'success' : 'warning'
-                    }
-                    variant="outlined"
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    계약금액: {formatKoreanCurrency(contract.amount)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {contract.date} ({contract.period})
-                  </Typography>
-                </Box>
-              </Box>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 계약 유형별 매출 비교 */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-            계약 유형별 매출
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {Object.entries(contractTypes).map(([key, value]) => (
-              <Box key={key}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">
-                    {key === 'consignment' ? '위수탁' : 
-                     key === 'rental' ? '임대' : '근로'} 계약
-                  </Typography>
-                  <Typography variant="body2" color="primary">
-                    {formatKoreanCurrency(value.revenue)}
-                  </Typography>
-                </Box>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={(value.revenue / 85000000) * 100}
-                  sx={{ 
-                    height: 8, 
-                    borderRadius: 4,
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                    '& .MuiLinearProgress-bar': {
-                      borderRadius: 4,
-                      backgroundColor: 
-                        key === 'consignment' ? '#1890ff' :
-                        key === 'rental' ? '#52c41a' : '#faad14'
-                    }
-                  }}
-                />
-              </Box>
-            ))}
-          </Box>
-        </CardContent>
-      </Card>
     </Box>
   );
 };

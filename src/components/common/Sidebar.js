@@ -92,7 +92,7 @@ const Sidebar = () => {
       category: '게시판',
       items: [
         { text: '공지사항', path: '/notices' },
-        { text: '문의사항', path: '/inquiries' },
+        { text: 'AS / 문의', path: '/inquiries' },
         { text: '고객센터', path: '/customer' },
         { text: '비회원 문의', path: '/guest-inquiries' },
       ]
@@ -104,14 +104,14 @@ const Sidebar = () => {
         { text: '시설물 대시보드', path: '/facility-dashboard' }
       ]
     },
-    {
-      category: '데모',
-      items: [
-        { text: '계약 목록', path: '/demo/contract-list' },
-        { text: '계약서 서명', path: '/demo/sign-contract' },
-        { text: '계약서 업로드', path: '/demo/upload-contract' }
-      ]
-    },
+    // {
+    //   category: '데모',
+    //   items: [
+    //     { text: '계약 목록', path: '/demo/contract-list' },
+    //     { text: '계약서 서명', path: '/demo/sign-contract' },
+    //     { text: '계약서 업로드', path: '/demo/upload-contract' }
+    //   ]
+    // },
     // 관리자 메뉴 (ADMIN과 MANAGER만 볼 수 있음)
     ...(isAdminOrManager ? [{
       category: '관리자 메뉴',

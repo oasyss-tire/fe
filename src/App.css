@@ -32,3 +32,28 @@ body {
     /* 완료 스탭 아이콘 스타일 적용*/
     color: #1C243A !important;
 }
+
+/* 대시보드 경로일 때 적용될 스타일 */
+.dashboard-container {
+  max-width: 1200px !important;
+  width: 100% !important;
+}
+
+/* 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
