@@ -40,6 +40,12 @@ const FacilityList = React.lazy(() => import('./components/facility/FacilityList
 const FacilityCreate = React.lazy(() => import('./components/facility/FacilityCreate'));
 const FacilityDetail = React.lazy(() => import('./components/facility/FacilityDetail'));
 const ServicePreparingPage = React.lazy(() => import('./components/common/ServicePreparingPage'));
+const ContractDashboard = React.lazy(() => import('./components/dashboard/ContractDashboard'));
+const FacilityDashboard = React.lazy(() => import('./components/dashboard/FacilityDashboard'));
+const DemoContractList = React.lazy(() => import('./components/demo/DemoContractList'));
+const DemoSignContract = React.lazy(() => import('./components/demo/DemoSignContract'));
+const DemoUploadContract = React.lazy(() => import('./components/demo/DemoUploadContract'));
+const DemoContractDetail = React.lazy(() => import('./components/demo/DemoContractDetail'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -98,6 +104,12 @@ function App() {
                   <Route path="/facility/create" element={<FacilityCreate />} />
                   <Route path="/facility/:id" element={<FacilityDetail />} />
                   <Route path="/service-preparing" element={<ServicePreparingPage />} />
+                  <Route path="/contract-dashboard" element={<ContractDashboard />} />
+                  <Route path="/facility-dashboard" element={<FacilityDashboard />} />
+                  <Route path="/demo/contract-list" element={<DemoContractList />} />
+                  <Route path="/demo/sign-contract" element={<DemoSignContract />} />
+                  <Route path="/demo/upload-contract" element={<DemoUploadContract />} />
+                  <Route path="/demo/contract-detail" element={<DemoContractDetail />} />
                   <Route 
                     path="/admin/inquiries" 
                     element={

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -16,12 +16,17 @@ import { useNavigate } from 'react-router-dom';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { ko } from 'date-fns/locale';
+import { pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
+import SignatureAreaSelector from './SignatureAreaSelector';
 
 // 계약 번호 자동 생성 함수를 컴포넌트 밖으로 이동
 const generateContractNumber = () => {
   const randomNum = Math.floor(10000000 + Math.random() * 90000000); // 8자리 랜덤 숫자
   return `CT${randomNum}`;
 };
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 const ContractUpload = () => {
   const [formData, setFormData] = useState({
@@ -42,7 +47,18 @@ const ContractUpload = () => {
   });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [pdfContent, setPdfContent] = useState(null);
+  const [signatureAreas, setSignatureAreas] = useState([]);
+  const [isSelectingArea, setIsSelectingArea] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);  // URL state 추가
+  const [pdfAnalysis, setPdfAnalysis] = useState({
+    text: [],        // 페이지별 텍스트 내용
+    forms: [],       // 폼 필드 위치
+    signatures: []   // 추천 서명 위치
+  });
+  const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
+  const containerRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -50,6 +66,79 @@ const ContractUpload = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  // PDF 분석 함수
+  const analyzePdf = async (file) => {
+    const fileUrl = URL.createObjectURL(file);
+    setPdfUrl(fileUrl);
+
+    try {
+      const pdf = await pdfjs.getDocument(fileUrl).promise;
+      const numPages = pdf.numPages;
+      const analysis = {
+        text: [],
+        forms: [],
+        signatures: []
+      };
+
+      // 각 페이지 분석
+      for (let i = 1; i <= numPages; i++) {
+        const page = await pdf.getPage(i);
+        
+        // 텍스트 내용 추출
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => ({
+          text: item.str,
+          x: item.transform[4],
+          y: item.transform[5],
+          width: item.width,
+          height: item.height
+        }));
+
+        // "서명" 또는 관련 키워드가 있는 위치 찾기
+        const signatureKeywords = ['서명', '날인', '인감', '사인'];
+        const suggestedSignatureAreas = pageText
+          .filter(item => 
+            signatureKeywords.some(keyword => item.text.includes(keyword))
+          )
+          .map(item => ({
+            pageNumber: i,
+            x: item.x,
+            y: item.y,
+            width: 200,
+            height: 100,
+            type: 'signature',
+            keyword: item.text
+          }));
+
+        analysis.text.push(pageText);
+        analysis.signatures.push(...suggestedSignatureAreas);
+      }
+
+      setPdfAnalysis(analysis);
+      return analysis;
+    } catch (error) {
+      console.error('PDF 분석 중 오류:', error);
+      throw error;
+    }
+  };
+
+  // PDF 로드 핸들러 수정
+  const handlePdfLoad = async (file) => {
+    try {
+      setLoading(true);
+      await analyzePdf(file);
+      setFile(file);
+    } catch (error) {
+      alert('PDF 분석 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAreaSelected = (newArea) => {
+    setSignatureAreas(prev => [...prev, newArea]);
   };
 
   const handleSubmit = async (e) => {
@@ -71,6 +160,7 @@ const ContractUpload = () => {
         }
       });
       formDataToSend.append('file', file);
+      formDataToSend.append('signatureAreas', JSON.stringify(signatureAreas));
 
       const response = await fetch('http://localhost:8080/api/contracts', {
         method: 'POST',
@@ -92,6 +182,16 @@ const ContractUpload = () => {
       setLoading(false);
     }
   };
+
+  // 컴포넌트 cleanup
+  useEffect(() => {
+    return () => {
+      // 컴포넌트 언마운트 시 생성된 URL 해제
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -263,7 +363,7 @@ const ContractUpload = () => {
               />
             </Grid>
 
-            {/* 파일 업로드 */}
+            {/* PDF 파일 업로드 섹션 */}
             <Grid item xs={12}>
               <Button
                 variant="outlined"
@@ -276,7 +376,13 @@ const ContractUpload = () => {
                   type="file"
                   hidden
                   accept=".pdf"
-                  onChange={(e) => setFile(e.target.files[0])}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setFile(file);
+                      handlePdfLoad(file);
+                    }
+                  }}
                 />
               </Button>
               {file && (
@@ -285,6 +391,31 @@ const ContractUpload = () => {
                 </Typography>
               )}
             </Grid>
+
+            {/* 서명 영역 선택 버튼 */}
+            {pdfUrl && (
+              <Grid item xs={12}>
+                <Button
+                  onClick={() => setIsSelectingArea(!isSelectingArea)}
+                  variant="outlined"
+                  color={isSelectingArea ? "secondary" : "primary"}
+                  sx={{ mt: 2 }}
+                >
+                  {isSelectingArea ? "서명 영역 선택 완료" : "서명 영역 선택"}
+                </Button>
+              </Grid>
+            )}
+
+            {/* PDF 미리보기 및 서명 영역 선택 */}
+            {pdfUrl && (
+              <SignatureAreaSelector
+                pdfUrl={pdfUrl}
+                isSelectingArea={isSelectingArea}
+                onAreaSelected={handleAreaSelected}
+                currentPage={currentPage}
+                totalPages={pdfAnalysis.text.length}
+              />
+            )}
 
             {/* 제출 버튼 */}
             <Grid item xs={12}>

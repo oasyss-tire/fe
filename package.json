@@ -28,6 +28,8 @@
     "react-scripts": "5.0.1",
     "react-signature-canvas": "^1.0.7",
     "react-slick": "^0.30.3",
+    "react-zoom-pan-pinch": "^3.7.0",
+    "recharts": "^2.15.1",
     "slick-carousel": "^1.8.1"
   },
   "scripts": {
