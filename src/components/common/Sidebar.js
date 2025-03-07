@@ -77,6 +77,8 @@ const Sidebar = () => {
         { text: '위수탁 계약', path: '/contracts' },
         { text: '임대 계약', path: '/service-preparing' },
         { text: '근로 계약', path: '/service-preparing' },
+        { text: '계약서 업로드', path: '/pdf-upload'},
+        { text: '계약서 템플릿', path: '/saved-pdfs'}
       ]
     },
     {
@@ -87,31 +89,7 @@ const Sidebar = () => {
         { text: '시설물 실사', path: '/service-preparing'}
       ]
     },
-    // 게시판 메뉴
-    {
-      category: '게시판',
-      items: [
-        { text: '공지사항', path: '/notices' },
-        { text: 'AS / 문의', path: '/inquiries' },
-        { text: '고객센터', path: '/customer' },
-        { text: '비회원 문의', path: '/guest-inquiries' },
-      ]
-    },
-    {
-      category: '대시보드',
-      items: [
-        { text: '계약 대시보드', path: '/contract-dashboard' },
-        { text: '시설물 대시보드', path: '/facility-dashboard' }
-      ]
-    },
-    // {
-    //   category: '데모',
-    //   items: [
-    //     { text: '계약 목록', path: '/demo/contract-list' },
-    //     { text: '계약서 서명', path: '/demo/sign-contract' },
-    //     { text: '계약서 업로드', path: '/demo/upload-contract' }
-    //   ]
-    // },
+
     // 관리자 메뉴 (ADMIN과 MANAGER만 볼 수 있음)
     ...(isAdminOrManager ? [{
       category: '관리자 메뉴',

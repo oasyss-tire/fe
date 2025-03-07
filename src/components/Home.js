@@ -11,37 +11,11 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import MobileCarousel from './common/MobileCarousel';
-import NoticeDetailModal from './notice/NoticeDetailModal';
-import InquiryDetailModal from './inquiry/InquiryDetailModal';
 import ContactForm from './common/ContactForm';
 import BrandSection from './common/BrandSection';
 
 const Home = () => {
   const navigate = useNavigate();
-  const [selectedNotice, setSelectedNotice] = useState(null);
-  const [openModal, setOpenModal] = useState(false);
-  const [selectedInquiry, setSelectedInquiry] = useState(null);
-  const [openInquiryModal, setOpenInquiryModal] = useState(false);
-
-  const handleNoticeClick = (notice) => {
-    setSelectedNotice(notice);
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(false);
-    setSelectedNotice(null);
-  };
-
-  const handleInquiryClick = (inquiry) => {
-    setSelectedInquiry(inquiry);
-    setOpenInquiryModal(true);
-  };
-
-  const handleCloseInquiryModal = () => {
-    setOpenInquiryModal(false);
-    setSelectedInquiry(null);
-  };
 
   return (
     <Box sx={{
@@ -131,19 +105,6 @@ const Home = () => {
           </Link>
         </Typography>
       </Box>
-
-      {/* ✅ 모달 유지 */}
-      <InquiryDetailModal 
-        open={openInquiryModal}
-        inquiry={selectedInquiry}
-        onClose={handleCloseInquiryModal}
-      />
-
-      <NoticeDetailModal 
-        open={openModal}
-        notice={selectedNotice}
-        onClose={handleCloseModal}
-      />
 
       {/* ✅ 문의하기 컴포넌트 유지 */}
       <ContactForm />
