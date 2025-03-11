@@ -391,9 +391,7 @@ const PdfViewerPage = () => {
     try {
       const PDF_WIDTH = 595.28;
       const PDF_HEIGHT = 841.89;
-
-      // 수정: 메인 PDF 페이지 요소 선택 (썸네일이 아닌)
-
+      
       const pdfPage = containerRef.current.querySelector('.react-pdf__Page');
       
       if (!pdfPage) {
@@ -403,103 +401,54 @@ const PdfViewerPage = () => {
       const { width: pageWidth, height: pageHeight } = pdfPage.getBoundingClientRect();
       const scale = pdfScale || 1;
       
-      console.log('Save Info:', {
-        scale,
-        page: { width: pageWidth, height: pageHeight },
-        pdf: { width: PDF_WIDTH, height: PDF_HEIGHT }
-      });
-
       const allFields = [
-        ...textFields.map(field => {
-          const relativeX = field.x / pageWidth;
-          const relativeY = field.y / pageHeight;
-          
-          // 사용자가 보는 화면에서의 실제 크기를 계산
-          const actualWidth = field.width * scale;  // 화면에 보이는 실제 너비
-          const actualHeight = field.height * scale; // 화면에 보이는 실제 높이
-          
-          // 실제 크기를 기준으로 상대 크기 계산
-          const relativeWidth = actualWidth / pageWidth;
-          const relativeHeight = actualHeight / pageHeight;
+        ...textFields,
+        ...signatureFields,
+        ...checkboxFields
+      ].map(field => ({
+        id: field.id,
+        type: field.type,
+        fieldName: `${field.type}${field.id.split('-')[1]}`,
+        relativeX: field.x / pageWidth,
+        relativeY: field.y / pageHeight,
+        relativeWidth: (field.width * scale) / pageWidth,
+        relativeHeight: (field.height * scale) / pageHeight,
+        page: field.page || 1
+      }));
 
-          return {
-            id: field.id,
-            type: 'text',
-            fieldName: `text${field.id.split('-')[1]}`,
-            relativeX: Math.min(Math.max(relativeX, 0), 1),
-            relativeY: Math.min(Math.max(relativeY, 0), 1),
-            relativeWidth: Math.min(Math.max(relativeWidth, 0), 1),
-            relativeHeight: Math.min(Math.max(relativeHeight, 0), 1),
-            page: field.page || 1
-          };
-        }),
-        ...signatureFields.map(field => {
-          const relativeX = field.x / pageWidth;
-          const relativeY = field.y / pageHeight;
-          
-          // 사용자가 보는 화면에서의 실제 크기를 계산
-          const actualWidth = field.width * scale;  // 화면에 보이는 실제 너비
-          const actualHeight = field.height * scale; // 화면에 보이는 실제 높이
-          
-          // 실제 크기를 기준으로 상대 크기 계산
-          const relativeWidth = actualWidth / pageWidth;
-          const relativeHeight = actualHeight / pageHeight;
-
-          return {
-            id: field.id,
-            type: 'signature',
-            fieldName: `signature${field.id.split('-')[1]}`,
-            relativeX: Math.min(Math.max(relativeX, 0), 1),
-            relativeY: Math.min(Math.max(relativeY, 0), 1),
-            relativeWidth: Math.min(Math.max(relativeWidth, 0), 1),
-            relativeHeight: Math.min(Math.max(relativeHeight, 0), 1),
-            page: field.page || 1
-          };
-        }),
-        ...checkboxFields.map(field => {
-          const relativeX = field.x / pageWidth;
-          const relativeY = field.y / pageHeight;
-          
-          // scale에 따라 크기 조정
-          const adjustedSize = 20 * scale;  // scale이 작으면 크기도 작아지고, scale이 크면 크기도 커짐
-          
-          const relativeWidth = adjustedSize / pageWidth;
-          const relativeHeight = adjustedSize / pageHeight;
-
-          return {
-            id: field.id,
-            type: 'checkbox',
-            fieldName: `checkbox${field.id.split('-')[1]}`,
-            relativeX: Math.max(0, Math.min(relativeX, 1)),
-            relativeY: Math.max(0, Math.min(relativeY, 1)),
-            relativeWidth: Math.max(0, Math.min(relativeWidth, 1)),
-            relativeHeight: Math.max(0, Math.min(relativeHeight, 1)),
-            page: field.page || 1
-          };
-        })
-      ];
-
-      // 1. 필드 정보 저장
       await saveFields(allFields);
-      
-      // 2. 필드가 추가된 PDF 저장 API 호출
-      const saveResponse = await fetch(`http://localhost:8080/api/contract-pdf/save/${pdfId}`, {
-        method: 'POST'
-      });
-
-      if (!saveResponse.ok) {
-        throw new Error('필드가 추가된 PDF 저장 실패');
-      }
-
-      // 3. 성공 메시지 표시 (MUI Snackbar 또는 alert 사용)
-      alert('계약서가 성공적으로 저장되었습니다.');
-
-      // 4. PDF 업로드 페이지로 이동
-      window.location.href = '/saved-pdfs';  // PDF 업로드 페이지 대신 목록 페이지로 이동
+      setSaveTemplateModalOpen(true);
 
     } catch (error) {
       console.error('PDF 처리 중 오류:', error);
       alert('계약서 저장 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSaveTemplate = async ({ templateName, description }) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/contract-pdf/save-template/${pdfId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          templateName,
+          description
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('템플릿 저장 실패');
+      }
+
+      alert('템플릿이 성공적으로 저장되었습니다.');
+      setSaveTemplateModalOpen(false);
+      window.location.href = '/contract-templates';
+
+    } catch (error) {
+      console.error('템플릿 저장 중 오류:', error);
+      alert('템플릿 저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -513,45 +462,6 @@ const PdfViewerPage = () => {
       width: field.relativeWidth * pdfDimensions.width * pdfScale,
       height: field.relativeHeight * pdfDimensions.height * pdfScale
     }));
-  };
-
-  // 템플릿 저장 핸들러
-  const handleSaveTemplate = async ({ templateName, description }) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', pdfFile);
-      formData.append('templateName', templateName);
-      
-      // 필드 정보를 JSON 문자열로 변환
-      const fieldsData = {
-        fields: [...textFields, ...signatureFields, ...checkboxFields].map(field => ({
-          fieldId: field.id,
-          fieldName: field.fieldName || field.id,
-          type: field.type,
-          relativeX: field.x / pdfDimensions.width,
-          relativeY: field.y / pdfDimensions.height,
-          relativeWidth: field.width / pdfDimensions.width,
-          relativeHeight: field.height / pdfDimensions.height,
-          page: field.page
-        }))
-      };
-      formData.append('fieldsRequest', JSON.stringify(fieldsData));
-
-      const response = await fetch('http://localhost:8080/api/contract-templates', {
-        method: 'POST',
-        body: formData  // Content-Type은 자동으로 설정됨
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save template');
-      }
-
-      alert('템플릿이 성공적으로 저장되었습니다.');
-      setSaveTemplateModalOpen(false);
-    } catch (error) {
-      console.error('Error saving template:', error);
-      alert('템플릿 저장 중 오류가 발생했습니다.');
-    }
   };
 
   if (!pdfFile) {
@@ -729,33 +639,37 @@ const PdfViewerPage = () => {
         bgcolor: 'white', 
         borderLeft: 1, 
         borderColor: 'divider',
-        p: 2,
         display: 'flex',
         flexDirection: 'column',
-        gap: 2
+        height: '100%'
       }}>
-        <PdfToolbar 
-          selectedTool={selectedTool}
-          onToolChange={handleToolChange}
-          onSave={handleSaveFields}
-        />
-        
-        <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {/* 상단 영역 */}
+        <Box sx={{ p: 2, flex: 1 }}>
+          <PdfToolbar 
+            selectedTool={selectedTool}
+            onToolChange={handleToolChange}
+          />
+        </Box>
+
+        {/* 하단 버튼 영역 */}
+        <Box sx={{ 
+          p: 2, 
+          borderTop: 1, 
+          borderColor: 'divider'
+        }}>
           <Button 
             variant="contained" 
             onClick={handleSaveFields}
-            startIcon={<SaveIcon />}
             fullWidth
+            sx={{ 
+              py: 1.5,
+              bgcolor: '#1976d2',
+              '&:hover': {
+                bgcolor: '#1565c0'
+              }
+            }}
           >
-            필드 저장
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => setSaveTemplateModalOpen(true)}
-            startIcon={<SaveIcon />}
-            fullWidth
-          >
-            템플릿으로 저장
+            계약서 저장
           </Button>
         </Box>
       </Box>

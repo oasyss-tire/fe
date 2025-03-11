@@ -4,7 +4,6 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme';
 import { Box, CircularProgress } from '@mui/material';
-import Sidebar from './components/common/Sidebar';
 import MainHome from './components/Home';
 import './App.css';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -15,8 +14,10 @@ import ContractList from './components/contract/ContractList';
 import ContractUpload from './components/contract/ContractUpload';
 import ContractDetail from './components/contract/ContractDetail';
 import { PdfProvider } from './context/PdfContext';
-import SavedPdfList from './components/common/SavedPdfList';
+import ContractTemplate from './components/common/ContractTemplate';
+import Sidebar from './components/common/Sidebar';
 
+const DRAWER_WIDTH = 240;
 
 // 지연 로딩할 컴포넌트들
 const CompanyList = React.lazy(() => import('./components/company/CompanyList'));
@@ -27,9 +28,15 @@ const FacilityList = React.lazy(() => import('./components/facility/FacilityList
 const FacilityCreate = React.lazy(() => import('./components/facility/FacilityCreate'));
 const FacilityDetail = React.lazy(() => import('./components/facility/FacilityDetail'));
 const ServicePreparingPage = React.lazy(() => import('./components/common/ServicePreparingPage'));
-const PdfUploader = React.lazy(() => import('./components/common/PdfUploader'));
+const ContractPdfUploader = React.lazy(() => import('./components/common/ContractPdfUploader'));
 const PdfViewerPage = React.lazy(() => import('./components/common/PdfViewerPage'));
 const SignaturePdfViewer = React.lazy(() => import('./components/common/SignaturePdfViewer'));
+const ContractSend = React.lazy(() => import('./components/contract/ContractSend'));
+const FacilitiesList = React.lazy(() => import('./components/facility/FacilitiesList'));
+const FacilitiesRegister = React.lazy(() => import('./components/facility/FacilitiesRegister'));
+const FacilitiesService = React.lazy(() => import('./components/facility/FacilitiesService'));
+const ContractDetailPage = React.lazy(() => import('./components/contract/ContractDetailPage'));
+
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -49,65 +56,76 @@ const LoadingFallback = () => (
 const AppContent = () => {
   const location = useLocation();
   
-  // PDF 관련 경로 체크 (viewer와 editor 모두 포함)
-  const isPdfRoute = location.pathname.includes("/pdf-viewer") || 
-                    location.pathname.includes("/pdf-editor");
-
-  const isDashboardRoute = ["/contract-dashboard", "/facility-dashboard"].includes(location.pathname);
+  const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer'];
+  const shouldHideSidebar = hideSidebarPaths.some(path => 
+    location.pathname.includes(path)
+  );
 
   return (
-    <Box
-      sx={{
-        width: "100%",  // 전체 너비 사용
-        margin: "0 auto",
-        minHeight: "100vh",
-        boxShadow: "0px 0px 10px rgba(0, 0, 0, 0.1)",
-        backgroundColor: "#FFFFFF",
-        position: "relative",
-      }}
-    >
-      <Sidebar />
-      <Suspense fallback={<LoadingFallback />}>
-        <Routes>
-          <Route path="/" element={<MainHome />} />
-          <Route path="/companies" element={<CompanyList />} />
-          <Route path="/companies/:companyId" element={<CompanyManagement />} />
-          <Route path="/users" element={<UserList />} />
-          <Route path="/users/:userId" element={<UserManagement />} />
-          <Route path="/facility" element={<FacilityList />} />
-          <Route path="/facility/create" element={<FacilityCreate />} />
-          <Route path="/facility/:id" element={<FacilityDetail />} />
-          <Route path="/service-preparing" element={<ServicePreparingPage />} />
-          <Route path="/pdf-upload" element={<PdfUploader />} />
-          <Route path="/pdf-editor/:pdfId" element={<PdfViewerPage />} />
-          <Route path="/pdf-viewer/:pdfId" element={<SignaturePdfViewer />} />
-          <Route path="/saved-pdfs" element={<SavedPdfList />} />
-          <Route 
-            path="/contracts" 
-            element={
-              <ProtectedRoute>
-                <ContractList />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/contracts/:id"
-            element={
-              <ProtectedRoute>
-                <ContractDetail />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/contract/upload" 
-            element={
-              <ProtectedRoute>
-                <ContractUpload />
-              </ProtectedRoute>
-            } 
-          />
-        </Routes>
-      </Suspense>
+    <Box sx={{ display: 'flex' }}>
+      {/* Sidebar 고정 */}
+      {!shouldHideSidebar && (
+        <Box sx={{ 
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 1000,
+        }}>
+          <Sidebar />
+        </Box>
+      )}
+
+      {/* 메인 컨텐츠 영역 */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          marginLeft: !shouldHideSidebar ? `${DRAWER_WIDTH}px` : 0,
+          minHeight: '100vh',
+          overflow: 'auto',
+        }}
+      >
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/" element={<MainHome />} />
+            <Route path="/companies" element={<CompanyList />} />
+            <Route path="/companies/:companyId" element={<CompanyManagement />} />
+            <Route path="/users" element={<UserList />} />
+            <Route path="/users/:userId" element={<UserManagement />} />
+            <Route path="/facility" element={<FacilityList />} />
+            <Route path="/facility/create" element={<FacilityCreate />} />
+            <Route path="/facility/:id" element={<FacilityDetail />} />
+            <Route path="/service-preparing" element={<ServicePreparingPage />} />
+            <Route path="/contract-upload" element={<ContractPdfUploader />} />
+            <Route path="/pdf-editor/:pdfId" element={<PdfViewerPage />} />
+            <Route path="/contract-sign/:contractId/participant/:participantId" element={<SignaturePdfViewer />} />
+            <Route path="/contract-templates" element={<ContractTemplate />} />
+            <Route path="/contract-list" element={<ContractList />} />
+            <Route path="/contract-send" element={<ContractSend />} />
+            <Route path="/facility-list" element={<FacilitiesList />} />
+            <Route path="/facility-register" element={<FacilitiesRegister />} />
+            <Route path="/facility-service" element={<FacilitiesService />} />
+            <Route path="/contract-detail/:id" element={<ContractDetailPage />} />
+            <Route 
+              path="/contracts/:id"
+              element={
+                <ProtectedRoute>
+                  <ContractDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/contract/upload" 
+              element={
+                <ProtectedRoute>
+                  <ContractUpload />
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </Suspense>
+      </Box>
     </Box>
   );
 };

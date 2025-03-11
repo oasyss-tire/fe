@@ -1,102 +1,111 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
+  List, 
+  ListItem, 
+  ListItemText, 
+  IconButton,
+  Paper,
+  Divider,
+  Chip,
+  Menu,
+  MenuItem,
   Button,
   TextField,
   InputAdornment,
-  IconButton,
   Select,
-  MenuItem,
-  FormControl,
-  Chip,
-  Menu
+  FormControl
 } from '@mui/material';
 import { 
+  Create as CreateIcon,
+  Download as DownloadIcon,
+  MoreVert as MoreVertIcon,
+  AttachFile as AttachFileIcon,
   Search as SearchIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
-  CalendarToday as CalendarTodayIcon,
-  MoreVert as MoreVertIcon,
-  AttachFile as AttachFileIcon
+  CalendarToday as CalendarTodayIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 
-const ContractList = () => {
-  const navigate = useNavigate();
-  const [contracts, setContracts] = useState([]);
+const ContractTemplate = () => {
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedContractId, setSelectedContractId] = useState(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const navigate = useNavigate();
 
-  // 계약 목록 조회
-  const fetchContracts = async () => {
+  // 템플릿 목록 조회
+  const fetchTemplates = async (keyword = '') => {
     try {
-      const response = await fetch('http://localhost:8080/api/contracts');
-      if (!response.ok) throw new Error('계약 목록 조회 실패');
+      setLoading(true);
+      const response = await fetch(`http://localhost:8080/api/contract-pdf/templates${keyword ? `?keyword=${keyword}` : ''}`);
+      if (!response.ok) throw new Error('템플릿 목록 조회 실패');
       const data = await response.json();
-      setContracts(data);
+      setTemplates(data);
     } catch (error) {
-      console.error('계약 목록 조회 중 오류:', error);
+      console.error('템플릿 조회 중 오류:', error);
+      alert('템플릿 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  // 컴포넌트 마운트 시 템플릿 목록 조회
   useEffect(() => {
-    fetchContracts();
+    fetchTemplates();
   }, []);
 
-  const handleMenuClick = (event, contractId) => {
+  // 검색어 입력 핸들러
+  const handleSearch = (event) => {
+    const value = event.target.value;
+    setSearchKeyword(value);
+    fetchTemplates(value);
+  };
+
+  // 서명하기 버튼 클릭 시
+  const handleSign = (pdfId) => {
+    navigate(`/pdf-viewer/${pdfId}`);  // SignaturePdfViewer로 이동
+  };
+
+  // PDF 다운로드
+  const handleDownload = async (pdfId) => {
+    window.open(`http://localhost:8080/api/contract-pdf/download/${pdfId}`, '_blank');
+  };
+
+  const handleMenuClick = (event, item) => {
     setAnchorEl(event.currentTarget);
-    setSelectedContractId(contractId);
+    setSelectedTemplateId(item);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setSelectedContractId(null);
+    setSelectedTemplateId(null);
   };
 
-  // 계약 상태에 따른 Chip 컴포넌트 렌더링
-  const renderStatusChip = (progressRate) => {
-    let label = "계약 대기";
-    let color = "#666";
-    let bgColor = "#F5F5F5";
-
-    if (progressRate === 100) {
-      label = "계약 완료";
-      color = "#3182F6";
-      bgColor = "#E8F3FF";
-    } else if (progressRate > 0) {
-      label = "계약 진행중";
-      color = "#FF9800";
-      bgColor = "#FFF3E0";
+  // 템플릿 미리보기 처리
+  const handleTemplatePreview = async (templateId) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/contract-pdf/templates/${templateId}/preview`);
+      if (!response.ok) throw new Error('템플릿 미리보기 실패');
+      
+      // PDF 미리보기를 새 창에서 열기
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('템플릿 미리보기 중 오류:', error);
+      alert('템플릿 미리보기에 실패했습니다.');
     }
-
-    return (
-      <Chip
-        label={label}
-        size="small"
-        sx={{
-          backgroundColor: bgColor,
-          color: color,
-          height: '24px',
-          fontSize: '12px'
-        }}
-      />
-    );
-  };
-
-  // 날짜 포맷 함수
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return `${date.getFullYear()-2000}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  };
-
-  // 계약 상세 페이지로 이동
-  const handleContractClick = (contractId) => {
-    navigate(`/contract-detail/${contractId}`);
   };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+    <Box sx={{ 
+      p: 3,
+      backgroundColor: '#F8F8FE',  // 전체 배경색 설정
+      minHeight: '100vh'  // 전체 높이 확보
+    }}>
       {/* 상단 헤더 */}
       <Box 
         sx={{ 
@@ -113,7 +122,7 @@ const ContractList = () => {
             color: '#3A3A3A'
           }}
         >
-          계약 관리
+          계약서 템플릿
         </Typography>
         <Button
           variant="contained"
@@ -139,7 +148,7 @@ const ContractList = () => {
             검색어
           </Typography>
           <TextField
-            placeholder="계약 제목"
+            placeholder="템플릿 이름"
             size="small"
             sx={{ 
               width: '100%',
@@ -157,6 +166,8 @@ const ContractList = () => {
                 </InputAdornment>
               ),
             }}
+            value={searchKeyword}
+            onChange={handleSearch}
           />
         </Box>
 
@@ -212,9 +223,8 @@ const ContractList = () => {
               }}
             >
               <MenuItem value="">전체</MenuItem>
-              <MenuItem value="계약완료">계약완료</MenuItem>
-              <MenuItem value="서명전">서명전</MenuItem>
-              <MenuItem value="승인필요">승인필요</MenuItem>
+              <MenuItem value="사용중">사용중</MenuItem>
+              <MenuItem value="미사용">미사용</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -273,8 +283,8 @@ const ContractList = () => {
         </Box>
       </Box>
 
-      {/* 계약 목록 */}
-      <Box sx={{ backgroundColor: 'white', borderRadius: 2, mt: 3 }}>
+      {/* 목록 영역 */}
+      <Box sx={{ backgroundColor: 'white', borderRadius: 1, border: '1px solid #EEEEEE' }}>
         {/* 목록 헤더 */}
         <Box sx={{ 
           display: 'grid',
@@ -283,23 +293,26 @@ const ContractList = () => {
           borderBottom: '1px solid #EEEEEE',
           backgroundColor: '#F8F9FA'
         }}>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>계약명</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>계약상태</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>진행률</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>제목</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>상태</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>구분</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>작성일</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>관리</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>더보기</Typography>
         </Box>
 
-        {/* 계약 목록 또는 빈 상태 메시지 */}
-        {contracts.length === 0 ? (
+        {/* 템플릿 목록 */}
+        {loading ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="text.secondary">생성된 계약이 없습니다.</Typography>
+            <Typography>로딩중...</Typography>
+          </Box>
+        ) : templates.length === 0 ? (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography color="text.secondary">저장된 템플릿이 없습니다.</Typography>
           </Box>
         ) : (
-          // 계약 목록 아이템
-          contracts.map((contract) => (
+          templates.map((template) => (
             <Box 
-              key={contract.id}
+              key={template.id}
               sx={{ 
                 display: 'grid',
                 gridTemplateColumns: '1fr 150px 150px 150px 50px',
@@ -308,36 +321,61 @@ const ContractList = () => {
                 '&:hover': { backgroundColor: '#F8F9FA' }
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+              {/* 제목 영역 - 클릭 가능 */}
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',  // 커서 스타일은 제목 영역에만 적용
+                  '&:hover': { textDecoration: 'underline' }  // 호버 시 밑줄 표시
+                }}
+                onClick={() => handleTemplatePreview(template.id)}  // 클릭 이벤트는 제목 영역에만 적용
+              >
                 <AttachFileIcon sx={{ color: '#3182F6', mr: 2, mt: 0.5 }} />
-                <Box 
-                  onClick={() => handleContractClick(contract.id)}
-                  sx={{ 
-                    cursor: 'pointer',
-                    '&:hover': {
-                      '& .contract-title': {
-                        color: '#1976d2'
-                      }
-                    }
-                  }}
-                >
-                  <Typography className="contract-title">{contract.title}</Typography>
+                <Box>
+                  <Typography>{template.templateName}</Typography>
                   <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5 }}>
-                    {contract.participants.map(p => p.name).join(', ')}
+                    {template.description || '설명 없음'}
                   </Typography>
                 </Box>
               </Box>
+
+              {/* 나머지 영역 - 클릭 불가 */}
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                {renderStatusChip(contract.progressRate)}
+                <Chip
+                  label={template.isActive ? "사용중" : "미사용"}
+                  size="small"
+                  sx={{
+                    backgroundColor: template.isActive ? '#E8F3FF' : '#F5F5F5',
+                    color: template.isActive ? '#3182F6' : '#666',
+                    height: '24px',
+                    fontSize: '12px'
+                  }}
+                />
               </Box>
               <Typography sx={{ display: 'flex', alignItems: 'center' }}>
-                {contract.progressRate}%
+                {template.originalPdfId.includes('위수탁') ? '위수탁 계약서' : '근로 계약서'}
               </Typography>
-              <Typography sx={{ display: 'flex', alignItems: 'center' }}>
-                {formatDate(contract.createdAt)}
+              <Typography 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {new Date(template.createdAt).toLocaleDateString('ko-KR', {
+                  year: '2-digit',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                }).replace(/\./g, '. ').replace('시', ':').replace('분', '')}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton size="small" onClick={(e) => handleMenuClick(e, contract.id)}>
+                <IconButton size="small" onClick={(e) => handleMenuClick(e, template.id)}>
                   <MoreVertIcon />
                 </IconButton>
               </Box>
@@ -359,4 +397,4 @@ const ContractList = () => {
   );
 };
 
-export default ContractList;
+export default ContractTemplate; 
