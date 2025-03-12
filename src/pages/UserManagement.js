@@ -12,7 +12,6 @@ import {
   FormControlLabel,
   Switch,
   Stack,
-  DialogContent,
   Divider
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -199,35 +198,38 @@ const UserManagement = () => {
   };
 
   return (
-    <Box sx={{ p: 2, maxWidth: '430px', margin: '0 auto' }}>
-      {/* 헤더 */}
-      <Box sx={{ 
-        position: 'sticky',   
-        top: 0, 
-        bgcolor: '#FFFFFF',
-        borderBottom: '1px solid #eee',
-        zIndex: 1,
-        p: 2,
-        textAlign: 'center'
-      }}>
-        <Typography variant="h6">사용자 상세</Typography>
+    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+      {/* 상단 헤더 */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+          사용자 상세
+        </Typography>
       </Box>
 
-      <Paper sx={{ p: 2, mt: 6 }}>
-        <form onSubmit={handleSubmit}>
+      {/* 전체 컨테이너 */}
+      <Paper sx={{ 
+        p: 3,
+        borderRadius: 2,
+        boxShadow: 'none',
+        border: '1px solid #EEEEEE'
+      }}>
+        {/* 기본 정보 섹션 */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+            기본 정보
+          </Typography>
           <Stack spacing={2}>
-            {/* ID - 수정 불가능 표시 */}
             <TextField
               label="ID"
               value={user.username}
               fullWidth
               disabled
+              size="small"
               InputProps={{
                 sx: { bgcolor: '#f5f5f5' }
               }}
             />
             
-            {/* 이름 */}
             <TextField
               label="이름"
               value={user.fullName}
@@ -237,7 +239,6 @@ const UserManagement = () => {
               required
             />
             
-            {/* 업체 */}
             <FormControl fullWidth size="small">
               <InputLabel>업체</InputLabel>
               <Select
@@ -253,7 +254,6 @@ const UserManagement = () => {
               </Select>
             </FormControl>
             
-            {/* 권한 */}
             <FormControl fullWidth size="small">
               <InputLabel>권한</InputLabel>
               <Select
@@ -267,7 +267,6 @@ const UserManagement = () => {
               </Select>
             </FormControl>
             
-            {/* 이메일 */}
             <TextField
               label="이메일"
               type="email"
@@ -277,7 +276,6 @@ const UserManagement = () => {
               size="small"
             />
             
-            {/* 연락처 */}
             <TextField
               label="연락처"
               value={user.phoneNumber}
@@ -286,7 +284,6 @@ const UserManagement = () => {
               size="small"
             />
 
-            {/* 사용여부 */}
             <FormControlLabel
               control={
                 <Switch
@@ -296,15 +293,17 @@ const UserManagement = () => {
                 />
               }
               label={user.active ? "사용" : "미사용"}
-              sx={{ mt: 1 }}
             />
+          </Stack>
+        </Box>
 
-            {/* 비밀번호 변경 필드 추가 */}
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>비밀번호 변경</Typography>
-            
+        {/* 비밀번호 변경 섹션 */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+            비밀번호 변경
+          </Typography>
+          <Stack spacing={2}>
             <TextField
-              fullWidth
               type="password"
               label="현재 비밀번호"
               value={passwordData.currentPassword}
@@ -314,108 +313,102 @@ const UserManagement = () => {
               }}
               error={Boolean(passwordErrors.currentPassword)}
               helperText={passwordErrors.currentPassword}
-              margin="normal"
+              fullWidth
+              size="small"
             />
             
             <TextField
-              fullWidth
               type="password"
               label="새 비밀번호"
               value={passwordData.newPassword}
               onChange={(e) => {
                 const value = e.target.value;
                 let errorMessage = '';
-
                 if (value.length > 0 && value.length < 4) {
                   errorMessage = '새 비밀번호는 4자 이상이어야 합니다.';
-                } else if (/\s/.test(value)) {
-                  errorMessage = '새 비밀번호에는 공백이 포함될 수 없습니다.';
                 }
-
                 setPasswordData({ ...passwordData, newPassword: value });
                 setPasswordErrors({ ...passwordErrors, newPassword: errorMessage });
               }}
               error={Boolean(passwordErrors.newPassword)}
               helperText={passwordErrors.newPassword}
-              margin="normal"
+              fullWidth
+              size="small"
             />
 
             <TextField
-              fullWidth
               type="password"
               label="새 비밀번호 확인"
               value={passwordData.confirmPassword}
               onChange={(e) => {
                 const value = e.target.value;
                 let errorMessage = '';
-
                 if (value !== passwordData.newPassword) {
                   errorMessage = '새 비밀번호가 일치하지 않습니다.';
                 }
-
                 setPasswordData({ ...passwordData, confirmPassword: value });
                 setPasswordErrors({ ...passwordErrors, confirmPassword: errorMessage });
               }}
               error={Boolean(passwordErrors.confirmPassword)}
               helperText={passwordErrors.confirmPassword}
-              margin="normal"
+              fullWidth
+              size="small"
             />
-
-
-            {/* 버튼 그룹 */}
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 1, 
-              justifyContent: 'center',
-              mt: 2 
-            }}>
-              <Button 
-                variant="contained" 
-                type="submit"
-                sx={{ 
-                  minWidth: '100px',
-                  bgcolor: '#1C243A',
-                  '&:hover': { bgcolor: '#3d63b8' }
-                }}
-              >
-                저장
-              </Button>
-              <Button 
-                variant="outlined"
-                onClick={() => navigate('/users')}
-                sx={{ 
-                  minWidth: '100px',
-                  color: '#1C243A',
-                  borderColor: '#1C243A',
-                  '&:hover': {
-                    borderColor: '#3d63b8',
-                    color: '#3d63b8'
-                  }
-                }}
-              >
-                목록
-              </Button>
-              {/* {isAdmin && (
-                <Button 
-                  variant="outlined"
-                  onClick={handleDelete}
-                  sx={{ 
-                    minWidth: '100px',
-                    color: 'error.main',
-                    borderColor: 'error.main',
-                    '&:hover': {
-                      backgroundColor: 'error.light',
-                      borderColor: 'error.dark',
-                      color: 'white'
-                    }
-                  }}
-                >
-                  삭제
-                </Button>
-              )} */}
-            </Box>
           </Stack>
-        </form>
+        </Box>
+
+        {/* 버튼 그룹 */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          justifyContent: 'center',
+          mt: 4
+        }}>
+          <Button 
+            variant="contained" 
+            onClick={handleSubmit}
+            sx={{ 
+              minWidth: '120px',
+              bgcolor: '#1976d2',
+              '&:hover': { bgcolor: '#1565c0' }
+            }}
+          >
+            저장
+          </Button>
+          <Button 
+            variant="outlined"
+            onClick={() => navigate('/users')}
+            sx={{ 
+              minWidth: '120px',
+              color: '#666',
+              borderColor: '#666',
+              '&:hover': {
+                borderColor: '#1976d2',
+                color: '#1976d2'
+              }
+            }}
+          >
+            목록
+          </Button>
+          {isAdmin && (
+            <Button 
+              variant="outlined"
+              onClick={handleDelete}
+              sx={{ 
+                minWidth: '120px',
+                color: 'error.main',
+                borderColor: 'error.main',
+                '&:hover': {
+                  backgroundColor: 'error.light',
+                  borderColor: 'error.dark',
+                  color: 'white'
+                }
+              }}
+            >
+              삭제
+            </Button>
+          )}
+        </Box>
       </Paper>
     </Box>
   );

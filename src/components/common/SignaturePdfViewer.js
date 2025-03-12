@@ -113,6 +113,7 @@ const SignaturePdfViewer = () => {
         setSignatureModalOpen(true);
         break;
       case 'text':
+        setSelectedField(field);
         setTextModalOpen(true);
         break;
       case 'checkbox':
@@ -419,9 +420,16 @@ const SignaturePdfViewer = () => {
       
       <TextInputModal
         open={textModalOpen}
-        onClose={() => setTextModalOpen(false)}
-        onSave={handleTextSave}
-        initialValue={selectedField?.value}
+        onClose={() => {
+          setTextModalOpen(false);
+          setSelectedField(null);
+        }}
+        onSave={(text) => {
+          handleTextSave(text);
+          setTextModalOpen(false);
+          setSelectedField(null);
+        }}
+        initialValue={selectedField?.value || ''}
       />
     </Box>
   );

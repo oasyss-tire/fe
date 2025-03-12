@@ -50,7 +50,7 @@ const Sidebar = () => {
         { text: '시설물 리스트', icon: <ListAltIcon />, path: '/facility-list' },
         { text: '시설물 등록', icon: <FacilityIcon />, path: '/facility-register' },
         { text: 'A/S 관리', icon: <BuildIcon />, path: '/facility-service' },
-        { text: '시설물 대시보드', icon: <DashboardIcon />, path: '/contract-detail/:id' },
+        { text: '시설물 대시보드', icon: <DashboardIcon />, path: '/facility-dashboard' },
       ]
     },
     {

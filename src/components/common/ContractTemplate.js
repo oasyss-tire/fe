@@ -354,7 +354,7 @@ const ContractTemplate = () => {
                 />
               </Box>
               <Typography sx={{ display: 'flex', alignItems: 'center' }}>
-                {template.originalPdfId.includes('위수탁') ? '위수탁 계약서' : '근로 계약서'}
+                {template.originalPdfId.includes('위수탁') ? '위수탁 계약서' : '위수탁 계약서'}
               </Typography>
               <Typography 
                 sx={{ 

@@ -17,7 +17,7 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   CalendarToday as CalendarTodayIcon,
   MoreVert as MoreVertIcon,
-  AttachFile as AttachFileIcon
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -309,7 +309,7 @@ const ContractList = () => {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                <AttachFileIcon sx={{ color: '#3182F6', mr: 2, mt: 0.5 }} />
+                <DescriptionIcon sx={{ color: '#3182F6', mr: 2, mt: 0.5 }} />
                 <Box 
                   onClick={() => handleContractClick(contract.id)}
                   sx={{ 

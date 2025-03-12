@@ -1,16 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 
 const TextInputModal = ({ open, onClose, onSave, initialValue = '' }) => {
   const [text, setText] = useState(initialValue);
 
+  useEffect(() => {
+    setText(initialValue);
+  }, [initialValue]);
+
   const handleSave = () => {
     onSave(text);
+    setText('');
+  };
+
+  const handleClose = () => {
+    setText('');
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>텍스트 입력</DialogTitle>
       <DialogContent>
         <TextField
@@ -24,7 +33,7 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '' }) => {
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>취소</Button>
+        <Button onClick={handleClose}>취소</Button>
         <Button onClick={handleSave} variant="contained">저장</Button>
       </DialogActions>
     </Dialog>

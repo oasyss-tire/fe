@@ -16,6 +16,7 @@ import ContractDetail from './components/contract/ContractDetail';
 import { PdfProvider } from './context/PdfContext';
 import ContractTemplate from './components/common/ContractTemplate';
 import Sidebar from './components/common/Sidebar';
+import Settings from './components/settings/Settings';
 
 const DRAWER_WIDTH = 240;
 
@@ -36,7 +37,9 @@ const FacilitiesList = React.lazy(() => import('./components/facility/Facilities
 const FacilitiesRegister = React.lazy(() => import('./components/facility/FacilitiesRegister'));
 const FacilitiesService = React.lazy(() => import('./components/facility/FacilitiesService'));
 const ContractDetailPage = React.lazy(() => import('./components/contract/ContractDetailPage'));
-
+const FacilityDashboard = React.lazy(() => import('./components/facility/FacilityDashboard'));
+const CodeManagement = React.lazy(() => import('./components/settings/CodeManagement'));
+const PermissionManagement = React.lazy(() => import('./components/settings/PermissionManagement'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -107,6 +110,10 @@ const AppContent = () => {
             <Route path="/facility-register" element={<FacilitiesRegister />} />
             <Route path="/facility-service" element={<FacilitiesService />} />
             <Route path="/contract-detail/:id" element={<ContractDetailPage />} />
+            <Route path="/facility-dashboard" element={<FacilityDashboard />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/codes" element={<CodeManagement />} />
+            <Route path="/settings/permissions" element={<PermissionManagement />} />
             <Route 
               path="/contracts/:id"
               element={

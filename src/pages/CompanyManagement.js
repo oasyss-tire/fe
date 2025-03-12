@@ -321,398 +321,164 @@ const CompanyManagement = () => {
   };
 
   return (
-    <Box sx={{ p: 2, maxWidth: '430px', margin: '0 auto', minHeight: '100vh' }}>
-      {/* 헤더 */}
-      <Box sx={{ 
-        mb: 4,
-        textAlign: 'center',
-        position: 'relative'
-      }}>
-        <Typography variant="h5" sx={{ 
-          fontWeight: 500,
-          color: '#343959',
-          mb: 1
-        }}>
-          업체 관리
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#666' }}>
-          업체 정보를 관리할 수 있습니다.
+    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+      {/* 상단 헤더 */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+          업체 상세
         </Typography>
       </Box>
 
+      {/* 전체 컨테이너 */}
+      <Paper sx={{ 
+        p: 3,
+        borderRadius: 2,
+        boxShadow: 'none',
+        border: '1px solid #EEEEEE'
+      }}>
         <form onSubmit={handleSubmit}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: 2.5
-        }}>
-          <TextField
-            label="업체명"
-            value={company.companyName || ''}
-            onChange={(e) => setCompany({ ...company, companyName: e.target.value })}
-            fullWidth
-            size="small"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: '#f8f9fa',
-                borderRadius: '10px',
-                '& fieldset': {
-                  borderColor: '#e0e0e0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#343959',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#343959',
-                }
-              },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: '#343959',
-              }
-            }}
-          />
-
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              label="주소"
-              value={company.address || ''}
-              fullWidth
-              size="small"
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#f8f9fa',
-                  borderRadius: '10px',
-                  '& fieldset': {
-                    borderColor: '#e0e0e0',
-                  }
-                }
-              }}
-            />
-            <Button
-              variant="outlined"
-              onClick={handleAddressSearch}
-              sx={{ 
-                minWidth: '80px',
-                whiteSpace: 'nowrap',
-                color: '#343959',
-                borderColor: '#343959',
-                borderRadius: '10px',
-                '&:hover': {
-                  borderColor: '#3d63b8',
-                  color: '#3d63b8',
-                  bgcolor: 'rgba(61, 99, 184, 0.04)'
-                }
-              }}
-            >
-              검색
-            </Button>
-          </Box>
-            
-            <TextField
-              label="연락처"
-              value={company.phoneNumber || ''}
-              onChange={(e) => setCompany({ ...company, phoneNumber: e.target.value })}
-              fullWidth
-              size="small"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: '#f8f9fa',
-                borderRadius: '10px',
-                '& fieldset': {
-                  borderColor: '#e0e0e0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#343959',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#343959',
-                }
-              },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: '#343959',
-              }
-            }}
-          />
-
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
+          {/* 기본 정보 섹션 */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+              기본 정보
+            </Typography>
+            <Stack spacing={2}>
               <TextField
-                label="사업자 번호"
-                value={company.businessNumber || ''}
+                label="업체명"
+                value={company.companyName}
+                onChange={(e) => setCompany({ ...company, companyName: e.target.value })}
+                fullWidth
+                size="small"
+                required
+              />
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="주소"
+                  value={company.address}
+                  fullWidth
+                  size="small"
+                  InputProps={{
+                    readOnly: true,
+                    sx: { bgcolor: '#f8f9fa' }
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddressSearch}
+                  sx={{
+                    minWidth: '100px',
+                    color: '#666',
+                    borderColor: '#E0E0E0',
+                    '&:hover': {
+                      borderColor: '#1976d2',
+                      color: '#1976d2'
+                    }
+                  }}
+                >
+                  주소 검색
+                </Button>
+              </Box>
+
+              <TextField
+                label="상세주소"
+                value={company.detailAddress}
+                onChange={(e) => setCompany({ ...company, detailAddress: e.target.value })}
+                fullWidth
+                size="small"
+              />
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="연락처"
+                  value={company.phoneNumber}
+                  onChange={(e) => setCompany({ ...company, phoneNumber: e.target.value })}
+                  fullWidth
+                  size="small"
+                />
+                <TextField
+                  label="팩스"
+                  value={company.faxNumber}
+                  onChange={(e) => setCompany({ ...company, faxNumber: e.target.value })}
+                  fullWidth
+                  size="small"
+                />
+              </Box>
+
+              <TextField
+                label="사업자등록번호"
+                value={company.businessNumber}
                 onChange={(e) => setCompany({ ...company, businessNumber: e.target.value })}
                 fullWidth
                 size="small"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: '#f8f9fa',
-                    borderRadius: '10px',
-                    '& fieldset': {
-                      borderColor: '#e0e0e0',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#343959',
-                    }
-                  }
-                }}
               />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Box
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '10px',
-                  p: 2,
-                  bgcolor: '#f8f9fa',
-                }}
-              >
-                <Typography variant="subtitle2" sx={{ 
-                  color: '#343959',
-                  mb: 1.5,
-                  fontWeight: 500
-                }}>
-                  사업자등록증
-                </Typography>
-                {company.businessLicenseImage ? (
-                  <Box 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 2,
-                      bgcolor: 'white',
-                      p: 1.5,
-                      borderRadius: '10px',
-                      border: '1px solid #e0e0e0'
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        flex: 1,
-                        minWidth: 0
-                      }}
-                    >
-                      <ImageIcon 
-                        sx={{ 
-                          color: '#343959',
-                          flexShrink: 0
-                        }}
-                      />
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          color: '#666'
-                        }}
-                      >
-                        {truncateFileName(company.businessLicenseImage.split('/').pop())}
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={handleFileView}
-                      sx={{
-                        minWidth: '60px',
-                        flexShrink: 0,
-                        color: '#343959',
-                        borderColor: '#343959',
-                        borderRadius: '8px',
-                        '&:hover': {
-                          borderColor: '#3d63b8',
-                          color: '#3d63b8',
-                          bgcolor: 'rgba(61, 99, 184, 0.04)'
-                        }
-                      }}
-                    >
-                      {company.businessLicenseImage.toLowerCase().endsWith('.pdf') ? '열기' : '보기'}
-                    </Button>
-                  </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: '#666' }}>
-                    등록된 파일이 없습니다
-                  </Typography>
-                )}
-              </Box>
-            </Grid>
-          </Grid>
 
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="계약일자"
-              value={company.contractDate ? new Date(company.contractDate) : null}
-              onChange={(date) => setCompany({ ...company, contractDate: date })}
-              renderInput={(params) => (
-            <TextField
-                  {...params} 
-              fullWidth
-              size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: '#f8f9fa',
-                      borderRadius: '10px',
-                      '& fieldset': {
-                        borderColor: '#e0e0e0',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: '#343959',
-                      }
-                    }
-                  }}
-                />
-              )}
-            />
-
-            <DatePicker
-              label="시작일자"
-              value={company.startDate ? new Date(company.startDate) : null}
-              onChange={(date) => setCompany({ ...company, startDate: date })}
-              renderInput={(params) => (
-            <TextField
-                  {...params} 
-              fullWidth
-              size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: '#f8f9fa',
-                      borderRadius: '10px',
-                      '& fieldset': {
-                        borderColor: '#e0e0e0',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: '#343959',
-                      }
-                    }
-                  }}
-                />
-              )}
-            />
-
-            <DatePicker
-              label="만기일자"
-              value={company.expiryDate ? new Date(company.expiryDate) : null}
-              onChange={(date) => setCompany({ ...company, expiryDate: date })}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  fullWidth 
-                  size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: '#f8f9fa',
-                      borderRadius: '10px',
-                      '& fieldset': {
-                        borderColor: '#e0e0e0',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: '#343959',
-                      }
-                    }
-                  }}
-                />
-              )}
-            />
-          </LocalizationProvider>
-
-          <TextField
-            label="월 비용"
-            value={company.monthlyFee || ''}
-            onChange={(e) => setCompany({ ...company, monthlyFee: e.target.value })}
-            fullWidth
-            size="small"
-            InputProps={{
-              startAdornment: <InputAdornment position="start">₩</InputAdornment>,
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: '#f8f9fa',
-                borderRadius: '10px',
-                '& fieldset': {
-                  borderColor: '#e0e0e0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#343959',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#343959',
-                }
-              },
-              '& .MuiInputLabel-root.Mui-focused': {
-                color: '#343959',
-              }
-            }}
-          />
-
-          <FormControl fullWidth size="small">
-            <InputLabel>상태</InputLabel>
-            <Select
-              name="status"
-              value={company.status}
-              onChange={(e) => setCompany({ ...company, status: e.target.value })}
-              label="상태"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#f8f9fa',
-                  borderRadius: '10px',
-                  '& fieldset': {
-                    borderColor: '#e0e0e0',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#343959',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#343959',
-                  }
-                },
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#343959',
-                }
-              }}
-            >
-              <MenuItem value="ACTIVE">사용</MenuItem>
-              <MenuItem value="TERMINATED">해지</MenuItem>
-            </Select>
-          </FormControl>
-
-          {company.status === 'TERMINATED' && (
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="해지일자"
-                value={company.terminationDate ? new Date(company.terminationDate) : null}
-                onChange={(date) => setCompany({ ...company, terminationDate: date })}
-                renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    fullWidth 
-                    size="small"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: '#f8f9fa',
-                        borderRadius: '10px',
-                        '& fieldset': {
-                          borderColor: '#e0e0e0',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: '#343959',
-                        }
-                      }
-                    }}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={company.status === 'ACTIVE'}
+                    onChange={(e) => setCompany({ 
+                      ...company, 
+                      status: e.target.checked ? 'ACTIVE' : 'INACTIVE' 
+                    })}
+                    color="success"
                   />
-                )}
+                }
+                label={company.status === 'ACTIVE' ? "사용" : "해지"}
               />
-            </LocalizationProvider>
-          )}
+            </Stack>
+          </Box>
+
+          {/* 계약 정보 섹션 */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+              계약 정보
+            </Typography>
+            <Stack spacing={2}>
+              <TextField
+                label="월 이용료"
+                value={company.monthlyFee}
+                onChange={(e) => setCompany({ ...company, monthlyFee: e.target.value })}
+                fullWidth
+                size="small"
+                type="number"
+              />
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="계약일"
+                  type="date"
+                  value={company.contractDate || ''}
+                  onChange={(e) => setCompany({ ...company, contractDate: e.target.value })}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  label="시작일"
+                  type="date"
+                  value={company.startDate || ''}
+                  onChange={(e) => setCompany({ ...company, startDate: e.target.value })}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  label="만료일"
+                  type="date"
+                  value={company.expiryDate || ''}
+                  onChange={(e) => setCompany({ ...company, expiryDate: e.target.value })}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Box>
+            </Stack>
+          </Box>
 
           {/* 직원 정보 섹션 */}
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500, color: '#343959', mb: 2 }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
               직원 정보
             </Typography>
             
@@ -732,37 +498,24 @@ const CompanyManagement = () => {
                   label="이름"
                   value={employee.name}
                   onChange={(e) => handleEmployeeChange(employee.employeeId, 'name', e.target.value)}
-                  sx={{ 
-                    width: '30%',
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: '#f8f9fa'
-                    }
-                  }}
+                  sx={{ width: '30%' }}
                 />
                 <TextField
                   size="small"
                   label="핸드폰번호"
                   value={employee.phone}
                   onChange={(e) => handleEmployeeChange(employee.employeeId, 'phone', e.target.value)}
-                  sx={{ 
-                    width: '50%',
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: '#f8f9fa'
-                    }
-                  }}
+                  sx={{ width: '50%' }}
                 />
                 <IconButton 
                   onClick={() => handleDeactivateEmployee(employee.employeeId)}
-                  sx={{ 
-                    color: '#666',
-                    '&:hover': { color: '#ff4444' }
-                  }}
+                  sx={{ color: '#666', '&:hover': { color: '#ff4444' } }}
                 >
                   <DeleteIcon />
                 </IconButton>
               </Box>
             ))}
-            
+
             {/* 새 직원 추가 폼 */}
             <Box sx={{ 
               display: 'flex', 
@@ -778,8 +531,6 @@ const CompanyManagement = () => {
                 value={newEmployee.name}
                 onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
                 sx={{ width: '30%' }}
-                error={Boolean(!newEmployee.name && newEmployee.phone)}
-                helperText={!newEmployee.name && newEmployee.phone ? "이름을 입력하세요" : " "}
               />
               <TextField
                 size="small"
@@ -787,8 +538,6 @@ const CompanyManagement = () => {
                 value={newEmployee.phone}
                 onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
                 sx={{ width: '50%' }}
-                error={Boolean(newEmployee.name && !newEmployee.phone)}
-                helperText={newEmployee.name && !newEmployee.phone ? "핸드폰번호를 입력하세요" : " "}
               />
               <Button 
                 variant="outlined"
@@ -796,17 +545,11 @@ const CompanyManagement = () => {
                 onClick={handleAddEmployee}
                 disabled={!newEmployee.name || !newEmployee.phone}
                 sx={{ 
-                  color: '#343959',
-                  borderColor: '#343959',
-                  height: '40px',
+                  color: '#666',
+                  borderColor: '#E0E0E0',
                   '&:hover': {
-                    borderColor: '#3d63b8',
-                    color: '#3d63b8',
-                    bgcolor: 'rgba(61, 99, 184, 0.04)'
-                  },
-                  '&.Mui-disabled': {
-                    color: '#ccc',
-                    borderColor: '#ccc'
+                    borderColor: '#1976d2',
+                    color: '#1976d2'
                   }
                 }}
               >
@@ -815,51 +558,60 @@ const CompanyManagement = () => {
             </Box>
           </Box>
 
+          {/* 버튼 그룹 */}
           <Box sx={{ 
             display: 'flex', 
-            gap: 1.5, 
+            gap: 1, 
             justifyContent: 'center',
-            mt: 3
+            mt: 4
           }}>
             <Button 
               variant="contained"
               type="submit"
               sx={{ 
                 minWidth: '120px',
-                bgcolor: '#343959',
-                borderRadius: '10px',
-                py: 1.5,
-                '&:hover': { 
-                  bgcolor: '#3d63b8'
-                },
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                fontWeight: 500
+                bgcolor: '#1976d2',
+                '&:hover': { bgcolor: '#1565c0' }
               }}
             >
               저장
-              </Button>
+            </Button>
+            <Button 
+              variant="outlined"
+              onClick={() => navigate('/companies')}
+              sx={{ 
+                minWidth: '120px',
+                color: '#666',
+                borderColor: '#666',
+                '&:hover': {
+                  borderColor: '#1976d2',
+                  color: '#1976d2'
+                }
+              }}
+            >
+              목록
+            </Button>
+            {isAdmin && (
               <Button 
                 variant="outlined"
-                onClick={() => navigate('/companies')}
+                onClick={handleDelete}
                 sx={{ 
-                minWidth: '120px',
-                color: '#343959',
-                borderColor: '#343959',
-                borderRadius: '10px',
-                py: 1.5,
+                  minWidth: '120px',
+                  color: 'error.main',
+                  borderColor: 'error.main',
                   '&:hover': {
-                    borderColor: '#3d63b8',
-                  color: '#3d63b8',
-                  bgcolor: 'rgba(61, 99, 184, 0.04)'
+                    backgroundColor: 'error.light',
+                    borderColor: 'error.dark',
+                    color: 'white'
                   }
                 }}
               >
-                목록
+                삭제
               </Button>
-            </Box>
-        </Box>
+            )}
+          </Box>
         </form>
-
+      </Paper>
     </Box>
   );
 };
