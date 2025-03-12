@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, Checkbox, Button } from '@mui/material';
+import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -10,6 +10,58 @@ import SaveIcon from '@mui/icons-material/Save';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+// AuthenticationDialog를 메인 컴포넌트 밖으로 분리하고 React.memo로 감싸기
+const AuthenticationDialog = React.memo(({ 
+  open, 
+  phoneInput, 
+  authError, 
+  onPhoneChange, 
+  onVerify 
+}) => (
+  <Dialog 
+    open={open} 
+    maxWidth="xs" 
+    fullWidth
+    disableEscapeKeyDown
+  >
+    <DialogTitle sx={{ pb: 1 }}>
+      본인 인증
+    </DialogTitle>
+    <DialogContent>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
+          계약서 서명을 위해 본인 인증이 필요합니다.<br />
+          등록된 휴대폰 번호의 뒷자리 4자리를 입력해주세요.
+        </Typography>
+        <TextField
+          fullWidth
+          label="휴대폰 번호 뒷자리 4자리"
+          value={phoneInput}
+          onChange={(e) => {
+            const value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length <= 4) {
+              onPhoneChange(value);
+            }
+          }}
+          error={!!authError}
+          helperText={authError}
+          size="small"
+          autoFocus
+        />
+      </Box>
+    </DialogContent>
+    <DialogActions sx={{ px: 3, pb: 3 }}>
+      <Button 
+        onClick={onVerify}
+        variant="contained"
+        fullWidth
+      >
+        인증하기
+      </Button>
+    </DialogActions>
+  </Dialog>
+));
 
 const SignaturePdfViewer = () => {
   const { contractId, participantId } = useParams();
@@ -22,25 +74,32 @@ const SignaturePdfViewer = () => {
   const [signatureModalOpen, setSignatureModalOpen] = useState(false);
   const [textModalOpen, setTextModalOpen] = useState(false);
   const [participant, setParticipant] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(true);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [authError, setAuthError] = useState('');
 
   // 참여자 정보 조회
   useEffect(() => {
     const fetchParticipantInfo = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/contracts/${contractId}/participants/${participantId}`);
-        if (!response.ok) throw new Error('참여자 정보 조회 실패');
-        const data = await response.json();
-        setParticipant(data);
-        
-        // 참여자의 PDF 필드 정보 조회
-        if (data.pdfId) {
-          const fieldsResponse = await fetch(`http://localhost:8080/api/contract-pdf/fields/${data.pdfId}`);
-          if (!fieldsResponse.ok) throw new Error('필드 정보 조회 실패');
-          const fieldsData = await fieldsResponse.json();
-          setFields(fieldsData);
+        const response = await fetch(
+          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setParticipant(data);
+          
+          // 참여자의 PDF 필드 정보 조회
+          if (data.pdfId) {
+            const fieldsResponse = await fetch(`http://localhost:8080/api/contract-pdf/fields/${data.pdfId}`);
+            if (!fieldsResponse.ok) throw new Error('필드 정보 조회 실패');
+            const fieldsData = await fieldsResponse.json();
+            setFields(fieldsData);
+          }
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('참여자 정보 조회 실패:', error);
       }
     };
     
@@ -262,6 +321,61 @@ const SignaturePdfViewer = () => {
       alert('서명 저장 중 오류가 발생했습니다.');
     }
   };
+
+  // 전화번호 입력 핸들러를 useCallback으로 감싸기
+  const handlePhoneInputChange = React.useCallback((value) => {
+    setPhoneInput(value);
+  }, []);
+
+  // 인증 핸들러를 useCallback으로 감싸기
+  const handlePhoneVerification = React.useCallback(async () => {
+    try {
+      if (phoneInput.length !== 4) {
+        setAuthError('휴대폰 번호 뒷자리 4자리를 입력해주세요.');
+        return;
+      }
+
+      const response = await fetch(
+        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/verify`, 
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phoneLastDigits: phoneInput
+          })
+        }
+      );
+
+      if (response.ok) {
+        setIsAuthenticated(true);
+        setShowAuthDialog(false);
+        setAuthError('');
+      } else {
+        const errorData = await response.json();
+        setAuthError(errorData.message || '인증에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('인증 처리 중 오류:', error);
+      setAuthError('인증 처리 중 오류가 발생했습니다.');
+    }
+  }, [phoneInput, contractId, participantId]);
+
+  // 인증되지 않은 경우의 렌더링
+  if (!isAuthenticated) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <AuthenticationDialog 
+          open={showAuthDialog}
+          phoneInput={phoneInput}
+          authError={authError}
+          onPhoneChange={handlePhoneInputChange}
+          onVerify={handlePhoneVerification}
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ 

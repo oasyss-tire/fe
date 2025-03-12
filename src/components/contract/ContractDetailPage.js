@@ -8,15 +8,12 @@ import {
   Button
 } from '@mui/material';
 import { LocationOn as LocationOnIcon, Label as LabelIcon, Draw as DrawIcon, Download as DownloadIcon } from '@mui/icons-material';
-import PasswordModal from '../common/modals/PasswordModal';
 
 const ContractDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [selectedParticipantId, setSelectedParticipantId] = useState(null);
 
   // 계약 상세 정보 조회
   useEffect(() => {
@@ -37,31 +34,9 @@ const ContractDetailPage = () => {
     fetchContractDetail();
   }, [id]);
 
-  // 서명하기 버튼 클릭 핸들러
-  const handleSignClick = (participantId) => {
-    setSelectedParticipantId(participantId);
-    setPasswordModalOpen(true);
-  };
-
-  // 비밀번호 확인 핸들러
-  const handlePasswordSubmit = async (password) => {
-    try {
-      // 선택된 참여자의 정보 찾기
-      const participant = contract.participants.find(p => p.id === selectedParticipantId);
-      
-      // 휴대폰 번호 뒤 4자리와 입력된 비밀번호 비교
-      const last4Digits = participant.phoneNumber.slice(-4);
-      
-      if (password === last4Digits) {
-        setPasswordModalOpen(false);
-        navigate(`/contract-sign/${contract.id}/participant/${selectedParticipantId}`);
-      } else {
-        alert('휴대폰 번호가 일치하지 않습니다.');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('인증에 실패했습니다.');
-    }
+  // 서명 버튼 클릭 핸들러
+  const handleSignatureClick = (participant) => {
+    window.location.href = `/contract-sign/${contract.id}/participant/${participant.id}`;
   };
 
   // 다운로드 핸들러 추가
@@ -288,7 +263,7 @@ const ContractDetailPage = () => {
                         variant="contained"
                         size="small"
                         startIcon={<DrawIcon />}
-                        onClick={() => handleSignClick(participant.id)}
+                        onClick={() => handleSignatureClick(participant)}
                         disabled={participant.signed}
                         sx={{
                           backgroundColor: '#1976d2',
@@ -309,16 +284,6 @@ const ContractDetailPage = () => {
           </Box>
         </Paper>
       </Box>
-
-      {/* 비밀번호 모달 추가 */}
-      <PasswordModal
-        open={passwordModalOpen}
-        onClose={() => {
-          setPasswordModalOpen(false);
-          setSelectedParticipantId(null);
-        }}
-        onSubmit={handlePasswordSubmit}
-      />
     </>
   );
 };

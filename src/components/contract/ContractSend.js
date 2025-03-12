@@ -18,6 +18,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { ko } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
+import { sendContractEmail } from '../../services/EmailService';
 
 const ContractSend = () => {
   const [participants, setParticipants] = useState([
@@ -37,6 +39,8 @@ const ContractSend = () => {
 
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+
+  const navigate = useNavigate();
 
   const handleAddParticipant = () => {
     const newParticipant = {
@@ -110,80 +114,64 @@ const ContractSend = () => {
     setSelectedTemplateId(event.target.value);
   };
 
-  // 계약 생성 요청 핸들러
-  const handleCreateContract = async () => {
-    // 1. 입력값 검증
-    if (!contractInfo.title) {
-      alert('계약 제목을 입력해주세요.');
-      return;
-    }
-    if (!selectedTemplateId) {
-      alert('계약서 템플릿을 선택해주세요.');
-      return;
-    }
-    if (!contractInfo.startDate || !contractInfo.expiryDate || !contractInfo.deadlineDate) {
-      alert('계약 기간과 마감일을 모두 설정해주세요.');
-      return;
-    }
-    if (!contractInfo.createdBy || !contractInfo.department) {
-      alert('담당자와 부서 정보를 입력해주세요.');
-      return;
-    }
-
-    // 참여자 정보 검증
-    const invalidParticipant = participants.find(p => 
-      !p.name || !p.email || !p.phone || !p.sendMethod
-    );
-    if (invalidParticipant) {
-      alert('모든 참여자의 정보를 입력해주세요.');
-      return;
-    }
-
-    // 2. API 요청 데이터 구성 (백엔드 DTO와 맞춤)
-    const requestData = {
-      title: contractInfo.title,
-      description: contractInfo.description || '',
-      startDate: contractInfo.startDate?.toISOString(),
-      expiryDate: contractInfo.expiryDate?.toISOString(),
-      deadlineDate: contractInfo.deadlineDate?.toISOString(),
-      templateId: selectedTemplateId,
-      createdBy: contractInfo.createdBy,
-      department: contractInfo.department,
-      contractNumber: contractInfo.contractNumber,
-      participants: participants.map(p => ({
-        name: p.name,
-        email: p.email,
-        phoneNumber: p.phone,
-        notifyType: p.sendMethod.toUpperCase(),  // email -> EMAIL, sms -> SMS
-        signed: false  // 초기값은 false
-      }))
-    };
-
+  // 계약 생성 및 이메일 발송을 처리하는 새로운 함수
+  const handleCreateContractAndSendEmail = async () => {
     try {
-      // 3. API 호출
+      // 1. 계약 생성
       const response = await fetch('http://localhost:8080/api/contracts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify({
+          title: contractInfo.title,
+          description: contractInfo.description || '',
+          templateId: selectedTemplateId,
+          startDate: contractInfo.startDate,
+          expiryDate: contractInfo.expiryDate,
+          deadlineDate: contractInfo.deadlineDate,
+          createdBy: contractInfo.createdBy,
+          department: contractInfo.department,
+          contractNumber: contractInfo.contractNumber,
+          participants: participants.map(p => ({
+            name: p.name,
+            email: p.email,
+            phoneNumber: p.phone,
+            notifyType: p.sendMethod.toUpperCase(),
+            signed: false
+          }))
+        })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || '계약 생성 실패');
+        throw new Error('계약 생성 실패');
       }
 
-      const result = await response.json();
-      console.log('계약 생성 성공:', result);
+      const contractData = await response.json();
 
-      // 4. 성공 처리
-      alert('계약이 생성되었습니다.\n각 참여자별 서명용 계약서가 준비되었습니다.');
-      window.location.href = '/contract-list';
+      // 2. 이메일 발송
+      const { success, emailCount, error } = await sendContractEmail(
+        contractData.id, 
+        contractData.participants
+      );
+
+      // 3. 결과 처리
+      if (emailCount > 0) {
+        if (success) {
+          alert('계약서가 생성되었으며, 이메일 발송 대상자에게 서명 요청 이메일이 발송되었습니다.');
+        } else {
+          alert(`계약서는 생성되었으나, 이메일 발송에 실패했습니다. (${error})`);
+        }
+      } else {
+        alert('계약서가 생성되었습니다.');
+      }
       
+      navigate('/contract-list');
+
     } catch (error) {
-      console.error('계약 생성 중 오류:', error);
-      alert(`계약 생성에 실패했습니다.\n${error.message}`);
+      console.error('처리 중 오류:', error);
+      alert('처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -478,7 +466,7 @@ const ContractSend = () => {
         }}>
           <Button
             variant="contained"
-            onClick={handleCreateContract}
+            onClick={handleCreateContractAndSendEmail}
             sx={{
               px: 4,
               py: 1.5,
@@ -491,7 +479,7 @@ const ContractSend = () => {
               minWidth: '200px'
             }}
           >
-            서명 요청 발송하기
+            저장 및 이메일 발송
           </Button>
         </Box>
       </Box>
