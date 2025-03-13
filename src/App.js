@@ -14,10 +14,8 @@ import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import { AuthProvider } from './contexts/AuthContext';
 import ContractList from './components/contract/ContractList';
-import ContractUpload from './components/contract/ContractUpload';
-import ContractDetail from './components/contract/ContractDetail';
-import { PdfProvider } from './context/PdfContext';
-import ContractTemplate from './components/common/ContractTemplate';
+import { PdfProvider } from './contexts/PdfContext';
+import ContractTemplate from './components/contract/ContractTemplate';
 import Sidebar from './components/common/Sidebar';
 import Settings from './components/settings/Settings';
 
@@ -25,16 +23,15 @@ const DRAWER_WIDTH = 240;
 
 // 지연 로딩할 컴포넌트들
 const CompanyList = React.lazy(() => import('./components/company/CompanyList'));
-const UserList = React.lazy(() => import('./components/user/UserList'));
-const UserManagement = React.lazy(() => import('./pages/UserManagement'));
-const CompanyManagement = React.lazy(() => import('./pages/CompanyManagement'));
+const UserList = React.lazy(() => import('./components/auth/UserList'));
+const UserManagement = React.lazy(() => import('./components/auth/UserManagement'));
 const FacilityList = React.lazy(() => import('./components/facility/FacilityList'));
 const FacilityCreate = React.lazy(() => import('./components/facility/FacilityCreate'));
 const FacilityDetail = React.lazy(() => import('./components/facility/FacilityDetail'));
 const ServicePreparingPage = React.lazy(() => import('./components/common/ServicePreparingPage'));
-const ContractPdfUploader = React.lazy(() => import('./components/common/ContractPdfUploader'));
-const PdfViewerPage = React.lazy(() => import('./components/common/PdfViewerPage'));
-const SignaturePdfViewer = React.lazy(() => import('./components/common/SignaturePdfViewer'));
+const ContractPdfUploader = React.lazy(() => import('./components/contract/ContractPdfUploader'));
+const PdfViewerPage = React.lazy(() => import('./components/contract/PdfViewerPage'));
+const SignaturePdfViewer = React.lazy(() => import('./components/contract/SignaturePdfViewer'));
 const ContractSend = React.lazy(() => import('./components/contract/ContractSend'));
 const FacilitiesList = React.lazy(() => import('./components/facility/FacilitiesList'));
 const FacilitiesRegister = React.lazy(() => import('./components/facility/FacilitiesRegister'));
@@ -106,7 +103,6 @@ const AppContent = () => {
             {/* 보호된 라우트 - 인증 필요 */}
             <Route element={<ProtectedRoute />}>
               <Route path="/companies" element={<CompanyList />} />
-              <Route path="/companies/:companyId" element={<CompanyManagement />} />
               <Route path="/users" element={<UserList />} />
               <Route path="/users/:userId" element={<UserManagement />} />
               <Route path="/facility" element={<FacilityList />} />
@@ -127,8 +123,6 @@ const AppContent = () => {
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/codes" element={<CodeManagement />} />
               <Route path="/settings/permissions" element={<PermissionManagement />} />
-              <Route path="/contracts/:id" element={<ContractDetail />} />
-              <Route path="/contract/upload" element={<ContractUpload />} />
             </Route>
           </Routes>
         </Suspense>

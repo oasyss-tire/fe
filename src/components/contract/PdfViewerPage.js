@@ -8,11 +8,10 @@ import {
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { usePdf } from '../../context/PdfContext';
+import { usePdf } from '../../contexts/PdfContext';
 import PdfToolbar from './PdfToolbar';
-import { TextField, SignatureField, CheckboxField } from './fields/PdfField';
-import SaveTemplateModal from './modals/SaveTemplateModal';
-import SaveIcon from '@mui/icons-material/Save';
+import { TextField, SignatureField, CheckboxField } from '../common/fields/PdfField';
+import SaveTemplateModal from '../common/modals/SaveTemplateModal';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;

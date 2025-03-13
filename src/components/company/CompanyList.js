@@ -20,7 +20,6 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import CompanyDialog from './CompanyDialog';
 
 const CompanyList = () => {
   const [companies, setCompanies] = useState([]);
@@ -317,12 +316,6 @@ const CompanyList = () => {
         ))}
       </Box>
 
-      {/* 업체 추가 다이얼로그 */}
-      <CompanyDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSubmit={handleSubmit}
-      />
     </Box>
   );
 };

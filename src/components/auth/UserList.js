@@ -20,7 +20,6 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import UserDialog from './UserDialog';
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
@@ -269,12 +268,6 @@ const UserList = () => {
           </Box>
         ))}
       </Box>
-
-      {/* 사용자 추가 다이얼로그 */}
-      <UserDialog
-        open={dialogOpen}
-        onClose={handleDialogClose}
-      />
     </Box>
   );
 };

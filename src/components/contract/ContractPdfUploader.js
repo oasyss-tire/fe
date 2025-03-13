@@ -10,7 +10,7 @@ import {
   Edit as EditIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { usePdf } from '../../context/PdfContext';
+import { usePdf } from '../../contexts/PdfContext';
 
 const ContractPdfUploader = () => {
   const [selectedFile, setSelectedFile] = useState(null);

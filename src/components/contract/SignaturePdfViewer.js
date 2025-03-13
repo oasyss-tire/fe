@@ -4,8 +4,8 @@ import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, 
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import SignatureModal from './fields/SignatureModal';
-import TextInputModal from './fields/TextInputModal';
+import SignatureModal from '../common/fields/SignatureModal';
+import TextInputModal from '../common/fields/TextInputModal';
 import SaveIcon from '@mui/icons-material/Save';
 
 // PDF.js 워커 설정
