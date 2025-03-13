@@ -7,7 +7,8 @@ import {
   IconButton,
   Select,
   MenuItem,
-  FormControl
+  FormControl,
+  CircularProgress
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -26,6 +27,7 @@ const ContractSend = () => {
   const [participants, setParticipants] = useState([
     { id: 1, name: '', email: '', phone: '', sendMethod: '' }
   ]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [contractInfo, setContractInfo] = useState({
     title: '',
@@ -34,8 +36,7 @@ const ContractSend = () => {
     expiryDate: null,
     deadlineDate: null,
     createdBy: '',
-    department: '',
-    contractNumber: ''
+    department: ''
   });
 
   const [templates, setTemplates] = useState([]);
@@ -73,26 +74,6 @@ const ContractSend = () => {
     }));
   };
 
-  // 계약번호 자동 생성 함수
-  const generateContractNumber = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    
-    return `CT-${year}-${month}${day}-${random}`;
-    // 예: CT-2024-0315-001
-  };
-
-  // 컴포넌트 마운트 시 계약번호 자동 생성
-  useEffect(() => {
-    setContractInfo(prev => ({
-      ...prev,
-      contractNumber: generateContractNumber()
-    }));
-  }, []);
-
   // 템플릿 목록 조회
   const fetchTemplates = async () => {
     try {
@@ -115,9 +96,30 @@ const ContractSend = () => {
     setSelectedTemplateId(event.target.value);
   };
 
+  const formatPhoneNumber = (value) => {
+    // 이전 값과 현재 값의 길이를 비교하여 삭제 중인지 확인
+    const numbers = value.replace(/[^\d]/g, '');
+    
+    // 빈 값이면 그대로 반환
+    if (!numbers) return '';
+    
+    // 숫자만 남기고 모두 제거한 후 길이 체크
+    if (numbers.length > 11) return value;
+    
+    // 숫자를 3-4-4 형식으로 포맷팅
+    if (numbers.length >= 7) {
+      return numbers.replace(/(\d{3})(\d{4})(\d{0,4})/, '$1-$2-$3').replace(/-*$/, '');
+    } else if (numbers.length >= 3) {
+      return numbers.replace(/(\d{3})(\d{0,4})/, '$1-$2').replace(/-*$/, '');
+    }
+    return numbers;
+  };
+
   // 계약 생성 및 이메일 발송을 처리하는 새로운 함수
   const handleCreateContractAndSendEmail = async () => {
     try {
+      setIsLoading(true);  // 로딩 시작
+      
       // 1. 계약 생성
       const response = await fetch('http://localhost:8080/api/contracts', {
         method: 'POST',
@@ -134,7 +136,6 @@ const ContractSend = () => {
           deadlineDate: contractInfo.deadlineDate,
           createdBy: contractInfo.createdBy,
           department: contractInfo.department,
-          contractNumber: contractInfo.contractNumber,
           participants: participants.map(p => ({
             name: p.name,
             email: p.email,
@@ -187,6 +188,8 @@ const ContractSend = () => {
     } catch (error) {
       console.error('처리 중 오류:', error);
       alert('처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);  // 로딩 종료
     }
   };
 
@@ -247,15 +250,6 @@ const ContractSend = () => {
               label="계약 제목"
               value={contractInfo.title}
               onChange={(e) => handleContractInfoChange('title', e.target.value)}
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="계약 번호"
-              value={contractInfo.contractNumber}
-              InputProps={{
-                readOnly: true,
-              }}
               fullWidth
               size="small"
             />
@@ -381,7 +375,7 @@ const ContractSend = () => {
                 placeholder="연락처"
                 size="small"
                 value={participant.phone}
-                onChange={(e) => handleParticipantChange(participant.id, 'phone', e.target.value)}
+                onChange={(e) => handleParticipantChange(participant.id, 'phone', formatPhoneNumber(e.target.value))}
                 sx={{ 
                   flex: 1,
                   '& .MuiOutlinedInput-root': {
@@ -482,6 +476,7 @@ const ContractSend = () => {
           <Button
             variant="contained"
             onClick={handleCreateContractAndSendEmail}
+            disabled={isLoading}
             sx={{
               px: 4,
               py: 1.5,
@@ -489,12 +484,31 @@ const ContractSend = () => {
               '&:hover': {
                 backgroundColor: '#1565c0',
               },
+              '&.Mui-disabled': {
+                backgroundColor: '#1976d2',
+                opacity: 0.7,
+              },
               borderRadius: '8px',
               fontSize: '1rem',
-              minWidth: '200px'
+              minWidth: '200px',
+              position: 'relative'
             }}
           >
-            저장 및 서명요청 발송
+            {isLoading ? (
+              <>
+                <CircularProgress
+                  size={24}
+                  sx={{
+                    color: 'white',
+                    position: 'absolute',
+                    left: '20px'
+                  }}
+                />
+                처리 중...
+              </>
+            ) : (
+              '저장 및 서명요청 발송'
+            )}
           </Button>
         </Box>
       </Box>
