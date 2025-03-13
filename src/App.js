@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme';
@@ -9,7 +9,10 @@ import './App.css';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { StyledEngineProvider } from '@mui/material/styles';
-import ProtectedRoute from './components/common/ProtectedRoute';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Login from './components/auth/Login';
+import Signup from './components/auth/Signup';
+import { AuthProvider } from './contexts/AuthContext';
 import ContractList from './components/contract/ContractList';
 import ContractUpload from './components/contract/ContractUpload';
 import ContractDetail from './components/contract/ContractDetail';
@@ -59,7 +62,7 @@ const LoadingFallback = () => (
 const AppContent = () => {
   const location = useLocation();
   
-  const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer'];
+  const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer', '/login', '/signup'];
   const shouldHideSidebar = hideSidebarPaths.some(path => 
     location.pathname.includes(path)
   );
@@ -91,45 +94,42 @@ const AppContent = () => {
       >
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={<MainHome />} />
-            <Route path="/companies" element={<CompanyList />} />
-            <Route path="/companies/:companyId" element={<CompanyManagement />} />
-            <Route path="/users" element={<UserList />} />
-            <Route path="/users/:userId" element={<UserManagement />} />
-            <Route path="/facility" element={<FacilityList />} />
-            <Route path="/facility/create" element={<FacilityCreate />} />
-            <Route path="/facility/:id" element={<FacilityDetail />} />
-            <Route path="/service-preparing" element={<ServicePreparingPage />} />
-            <Route path="/contract-upload" element={<ContractPdfUploader />} />
-            <Route path="/pdf-editor/:pdfId" element={<PdfViewerPage />} />
-            <Route path="/contract-sign/:contractId/participant/:participantId" element={<SignaturePdfViewer />} />
-            <Route path="/contract-templates" element={<ContractTemplate />} />
-            <Route path="/contract-list" element={<ContractList />} />
-            <Route path="/contract-send" element={<ContractSend />} />
-            <Route path="/facility-list" element={<FacilitiesList />} />
-            <Route path="/facility-register" element={<FacilitiesRegister />} />
-            <Route path="/facility-service" element={<FacilitiesService />} />
-            <Route path="/contract-detail/:id" element={<ContractDetailPage />} />
-            <Route path="/facility-dashboard" element={<FacilityDashboard />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/settings/codes" element={<CodeManagement />} />
-            <Route path="/settings/permissions" element={<PermissionManagement />} />
-            <Route 
-              path="/contracts/:id"
-              element={
-                <ProtectedRoute>
-                  <ContractDetail />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/contract/upload" 
-              element={
-                <ProtectedRoute>
-                  <ContractUpload />
-                </ProtectedRoute>
-              } 
-            />
+            {/* 로그인 페이지 - 인증 불필요 */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* 회원가입 페이지 - 인증 불필요 */}
+            <Route path="/signup" element={<Signup />} />
+            
+            {/* 루트 경로 접근 시 로그인 또는 메인 페이지로 리다이렉트 */}
+            <Route path="/" element={<Navigate to="/contract-list" replace />} />
+            
+            {/* 보호된 라우트 - 인증 필요 */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/companies" element={<CompanyList />} />
+              <Route path="/companies/:companyId" element={<CompanyManagement />} />
+              <Route path="/users" element={<UserList />} />
+              <Route path="/users/:userId" element={<UserManagement />} />
+              <Route path="/facility" element={<FacilityList />} />
+              <Route path="/facility/create" element={<FacilityCreate />} />
+              <Route path="/facility/:id" element={<FacilityDetail />} />
+              <Route path="/service-preparing" element={<ServicePreparingPage />} />
+              <Route path="/contract-upload" element={<ContractPdfUploader />} />
+              <Route path="/pdf-editor/:pdfId" element={<PdfViewerPage />} />
+              <Route path="/contract-sign/:contractId/participant/:participantId" element={<SignaturePdfViewer />} />
+              <Route path="/contract-templates" element={<ContractTemplate />} />
+              <Route path="/contract-list" element={<ContractList />} />
+              <Route path="/contract-send" element={<ContractSend />} />
+              <Route path="/facility-list" element={<FacilitiesList />} />
+              <Route path="/facility-register" element={<FacilitiesRegister />} />
+              <Route path="/facility-service" element={<FacilitiesService />} />
+              <Route path="/contract-detail/:id" element={<ContractDetailPage />} />
+              <Route path="/facility-dashboard" element={<FacilityDashboard />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/codes" element={<CodeManagement />} />
+              <Route path="/settings/permissions" element={<PermissionManagement />} />
+              <Route path="/contracts/:id" element={<ContractDetail />} />
+              <Route path="/contract/upload" element={<ContractUpload />} />
+            </Route>
           </Routes>
         </Suspense>
       </Box>
@@ -145,9 +145,11 @@ function App() {
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <PdfProvider>
-              <AppContent />
-            </PdfProvider>
+            <AuthProvider>
+              <PdfProvider>
+                <AppContent />
+              </PdfProvider>
+            </AuthProvider>
           </LocalizationProvider>
         </ThemeProvider>
       </Router>

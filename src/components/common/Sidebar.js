@@ -7,7 +7,8 @@ import {
   ListItemText, 
   Box, 
   Divider,
-  Typography 
+  Typography,
+  Button
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
@@ -19,6 +20,8 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import SendIcon from '@mui/icons-material/Send';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BuildIcon from '@mui/icons-material/Build';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   BusinessCenter as TemplateIcon,      // 서류가방 아이콘
   Edit as ContractWriteIcon,           // 계약서 작성 아이콘
@@ -31,6 +34,12 @@ const DRAWER_WIDTH = 240;
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const menuItems = [
     { 
@@ -88,6 +97,8 @@ const Sidebar = () => {
             borderRadius: '12px',
             boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.05)',
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
           },
         }}
       >
@@ -113,7 +124,7 @@ const Sidebar = () => {
             py: 1,
             px: 1,
             overflowY: 'auto',
-            maxHeight: 'calc(100% - 75px)',
+            flexGrow: 1,
             '&::-webkit-scrollbar': {
               width: '6px',
               backgroundColor: 'transparent',
@@ -192,6 +203,30 @@ const Sidebar = () => {
               </List>
             </Box>
           ))}
+        </Box>
+        
+        {/* 로그아웃 버튼 */}
+        <Box sx={{ p: 2 }}>
+          <Divider sx={{ mb: 2, opacity: 0.5 }} />
+          <Button
+            variant="outlined"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            fullWidth
+            sx={{
+              justifyContent: 'flex-start',
+              color: '#666',
+              borderColor: '#E0E0E0',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: '#BDBDBD',
+              },
+              textTransform: 'none',
+              fontSize: '0.8rem',
+            }}
+          >
+            로그아웃
+          </Button>
         </Box>
       </Drawer>
     </Box>

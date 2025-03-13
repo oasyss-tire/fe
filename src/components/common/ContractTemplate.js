@@ -124,20 +124,6 @@ const ContractTemplate = () => {
         >
           계약서 템플릿
         </Typography>
-        <Button
-          variant="contained"
-          sx={{
-            backgroundColor: '#1976d2',
-            '&:hover': {
-              backgroundColor: '#1565c0',
-            },
-            borderRadius: '8px',
-            textTransform: 'none',
-            px: 3
-          }}
-        >
-          로그인
-        </Button>
       </Box>
 
       {/* 검색 및 필터 영역 */}
