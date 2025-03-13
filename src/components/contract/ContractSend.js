@@ -20,6 +20,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { ko } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { sendContractEmail } from '../../services/EmailService';
+import { sendContractSMS } from '../../services/SMSService';
 
 const ContractSend = () => {
   const [participants, setParticipants] = useState([
@@ -150,23 +151,37 @@ const ContractSend = () => {
 
       const contractData = await response.json();
 
-      // 2. 이메일 발송
-      const { success, emailCount, error } = await sendContractEmail(
-        contractData.id, 
-        contractData.participants
-      );
+      // 2. 알림 발송 (이메일 & SMS)
+      const [emailResult, smsResult] = await Promise.all([
+        sendContractEmail(contractData.id, contractData.participants),
+        sendContractSMS(contractData.id, contractData.participants)
+      ]);
 
       // 3. 결과 처리
-      if (emailCount > 0) {
-        if (success) {
-          alert('계약서가 생성되었으며, 이메일 발송 대상자에게 서명 요청 이메일이 발송되었습니다.');
-        } else {
-          alert(`계약서는 생성되었으나, 이메일 발송에 실패했습니다. (${error})`);
-        }
-      } else {
-        alert('계약서가 생성되었습니다.');
+      let message = '계약서가 생성되었습니다.';
+      const notifications = [];
+
+      if (emailResult.emailCount > 0) {
+        notifications.push(
+          emailResult.success 
+            ? `이메일 발송 완료 (${emailResult.emailCount}명)` 
+            : `이메일 발송 실패 (${emailResult.error})`
+        );
       }
-      
+
+      if (smsResult.smsCount > 0) {
+        notifications.push(
+          smsResult.success 
+            ? `SMS 발송 완료 (${smsResult.smsCount}명)` 
+            : `SMS 발송 실패 (${smsResult.error})`
+        );
+      }
+
+      if (notifications.length > 0) {
+        message += '\n' + notifications.join('\n');
+      }
+
+      alert(message);
       navigate('/contract-list');
 
     } catch (error) {
@@ -479,7 +494,7 @@ const ContractSend = () => {
               minWidth: '200px'
             }}
           >
-            저장 및 이메일 발송
+            저장 및 서명요청 발송
           </Button>
         </Box>
       </Box>
