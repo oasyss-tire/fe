@@ -9,7 +9,8 @@ import {
   Select,
   MenuItem,
   FormControl,
-  Chip
+  Chip,
+  CircularProgress
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -23,52 +24,85 @@ import { useNavigate } from 'react-router-dom';
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const navigate = useNavigate();
 
-  // 하드코딩된 사용자 데이터
-  const hardcodedUsers = [
-    {
-      userId: 1,
-      username: 'admin',
-      fullName: '관리자',
-      companyName: '타이어뱅크 (본점)',
-      email: 'admin@tirebank.com',
-      active: true,
-      role: 'ADMIN'
-    },
-    {
-      userId: 2,
-      username: 'user123',
-      fullName: '사용자',
-      companyName: '타이어뱅크 (창원점)',
-      email: 'user@tirebank.com',
-      active: true,
-      role: 'USER'
-    },
-    {
-      userId: 3,
-      username: 'kimuser',
-      fullName: '김아무개',
-      companyName: '타이어뱅크 (서광주점)',
-      email: 'kim@tirebank.com',
-      active: false,
-      role: 'USER'
-    }
-  ];
-
-  // fetchUsers 함수 수정
+  // API에서 사용자 데이터 가져오기
   const fetchUsers = async () => {
-    // API 호출 대신 하드코딩된 데이터 사용
-    setUsers(hardcodedUsers);
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('http://localhost:8080/api/users');
+      
+      if (!response.ok) {
+        throw new Error('사용자 데이터를 불러오는데 실패했습니다.');
+      }
+      
+      const data = await response.json();
+      setUsers(data);
+      setFilteredUsers(data);
+    } catch (error) {
+      console.error('사용자 데이터 조회 오류:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // 컴포넌트 마운트 시 사용자 데이터 로드
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // 검색어, 정렬, 상태 필터 변경 시 사용자 목록 필터링
+  useEffect(() => {
+    let result = [...users];
+    
+    // 검색어 필터링
+    if (searchTerm) {
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      result = result.filter(user => 
+        (user.userId && user.userId.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (user.userName && user.userName.toLowerCase().includes(lowerCaseSearchTerm)) ||
+        (user.companyName && user.companyName.toLowerCase().includes(lowerCaseSearchTerm))
+      );
+    }
+    
+    // 상태 필터링
+    if (statusFilter) {
+      const isActive = statusFilter === 'true';
+      result = result.filter(user => user.active === isActive);
+    }
+    
+    // 정렬
+    if (sortBy) {
+      switch (sortBy) {
+        case 'name':
+          result.sort((a, b) => (a.userName || '').localeCompare(b.userName || ''));
+          break;
+        case 'company':
+          result.sort((a, b) => (a.companyName || '').localeCompare(b.companyName || ''));
+          break;
+        default:
+          // 기본은 최신순 (ID 기준 내림차순)
+          result.sort((a, b) => b.id - a.id);
+      }
+    } else {
+      // 기본 정렬: 최신순
+      result.sort((a, b) => b.id - a.id);
+    }
+    
+    setFilteredUsers(result);
+  }, [users, searchTerm, sortBy, statusFilter]);
 
   const handleMenuClick = (event, userId) => {
     event.stopPropagation();
@@ -92,6 +126,23 @@ const UserList = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSortChange = (e) => {
+    setSortBy(e.target.value);
+  };
+
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+  };
+
+  // 사용자 추가 버튼 클릭 핸들러
+  const handleAddUserClick = () => {
+    navigate('/signup');
+  };
+
   return (
     <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
       {/* 상단 헤더 */}
@@ -107,7 +158,7 @@ const UserList = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setDialogOpen(true)}
+          onClick={handleAddUserClick}
           sx={{
             backgroundColor: '#1976d2',
             '&:hover': {
@@ -129,10 +180,10 @@ const UserList = () => {
             검색어
           </Typography>
           <TextField
-            placeholder="이름, ID 또는 업체명 검색"
+            placeholder="ID 또는 이름 검색"
             size="small"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             sx={{ 
               width: '100%',
               backgroundColor: 'white',
@@ -160,7 +211,8 @@ const UserList = () => {
           <FormControl size="small" sx={{ minWidth: 120, backgroundColor: 'white' }}>
             <Select
               displayEmpty
-              defaultValue=""
+              value={sortBy}
+              onChange={handleSortChange}
               IconComponent={KeyboardArrowDownIcon}
               sx={{
                 '& .MuiOutlinedInput-notchedOutline': {
@@ -183,7 +235,8 @@ const UserList = () => {
           <FormControl size="small" sx={{ minWidth: 120, backgroundColor: 'white' }}>
             <Select
               displayEmpty
-              defaultValue=""
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
               IconComponent={KeyboardArrowDownIcon}
               sx={{
                 '& .MuiOutlinedInput-notchedOutline': {
@@ -204,49 +257,75 @@ const UserList = () => {
         {/* 목록 헤더 */}
         <Box sx={{ 
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1.5fr 100px 50px',
+          gridTemplateColumns: '1fr 1fr 1.5fr 1fr 100px',
           p: 2,
           borderBottom: '1px solid #EEEEEE',
           backgroundColor: '#F8F9FA'
         }}>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>ID</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>이름</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>업체</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>이메일</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>전화번호</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>상태</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>관리</Typography>
         </Box>
 
+        {/* 로딩 상태 표시 */}
+        {isLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress size={40} />
+          </Box>
+        )}
+
+        {/* 에러 메시지 표시 */}
+        {error && (
+          <Box sx={{ p: 3, textAlign: 'center', color: 'error.main' }}>
+            <Typography>{error}</Typography>
+            <Button 
+              variant="outlined" 
+              sx={{ mt: 2 }}
+              onClick={fetchUsers}
+            >
+              다시 시도
+            </Button>
+          </Box>
+        )}
+
+        {/* 데이터가 없을 때 메시지 표시 */}
+        {!isLoading && !error && filteredUsers.length === 0 && (
+          <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+            <Typography>표시할 사용자 데이터가 없습니다.</Typography>
+          </Box>
+        )}
+
         {/* 사용자 목록 아이템 */}
-        {users.map((user) => (
+        {!isLoading && !error && filteredUsers.map((user) => (
           <Box 
-            key={user.userId}
+            key={user.id}
+            onClick={() => handleUserClick(user.id)}
             sx={{ 
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1.5fr 100px 50px',
+              gridTemplateColumns: '1fr 1fr 1.5fr 1fr 100px',
               p: 2,
               borderBottom: '1px solid #EEEEEE',
-              '&:hover': { backgroundColor: '#F8F9FA' }
+              '&:hover': { 
+                backgroundColor: '#F8F9FA',
+                cursor: 'pointer'
+              }
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-              <PersonIcon sx={{ color: '#3182F6', mr: 2, mt: 0.5 }} />
-              <Box 
-                onClick={() => handleUserClick(user.userId)}
-                sx={{ 
-                  cursor: 'pointer',
-                  '&:hover': {
-                    '& .user-id': {
-                      color: '#1976d2'
-                    }
-                  }
-                }}
+              <Typography 
+                className="user-id"
               >
-                <Typography className="user-id">{user.username}</Typography>
-              </Box>
+                {user.userId}
+              </Typography>
             </Box>
-            <Typography>{user.fullName}</Typography>
+            <Typography>{user.userName}</Typography>
             <Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user.companyName || '-'}
+              {user.email || '-'}
+            </Typography>
+            <Typography sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.phoneNumber || '-'}
             </Typography>
             <Box>
               <Chip
@@ -259,11 +338,6 @@ const UserList = () => {
                   fontSize: '12px'
                 }}
               />
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <IconButton size="small" onClick={(e) => handleMenuClick(e, user.userId)}>
-                <MoreVertIcon />
-              </IconButton>
             </Box>
           </Box>
         ))}

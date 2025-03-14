@@ -58,6 +58,11 @@ const Login = () => {
         throw new Error(data.message || '로그인에 실패했습니다.');
       }
       
+      // 로그인 응답 데이터 콘솔에 출력 (디버깅용)
+      console.log('로그인 성공 응답:', data);
+      console.log('토큰:', data.token);
+      console.log('사용자 정보:', data.user);
+      
       // 토큰 및 사용자 정보 저장
       login(data.token, data.user);
       

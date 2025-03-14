@@ -29,11 +29,11 @@ const ServicePreparingPage = () => {
         <ConstructionIcon 
           sx={{ 
             fontSize: 60, 
-            color: '#1C243A',
+            color: '#3182F6',
             mb: 2 
           }} 
         />
-        <Typography variant="h5" gutterBottom sx={{ color: '#1C243A' }}>
+        <Typography variant="h5" gutterBottom sx={{ color: '#3182F6' }}>
           서비스 준비 중
         </Typography>
         <Typography color="textSecondary">

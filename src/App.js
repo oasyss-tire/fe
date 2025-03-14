@@ -23,8 +23,10 @@ const DRAWER_WIDTH = 240;
 
 // 지연 로딩할 컴포넌트들
 const CompanyList = React.lazy(() => import('./components/company/CompanyList'));
+const CompanyCreate = React.lazy(() => import('./components/company/CompanyCreate'));
+const CompanyDetail = React.lazy(() => import('./components/company/CompanyDetail'));
 const UserList = React.lazy(() => import('./components/auth/UserList'));
-const UserManagement = React.lazy(() => import('./components/auth/UserManagement'));
+const UserManagement = React.lazy(() => import('./components/auth/UserDetailPage'));
 const FacilityList = React.lazy(() => import('./components/facility/FacilityList'));
 const FacilityCreate = React.lazy(() => import('./components/facility/FacilityCreate'));
 const FacilityDetail = React.lazy(() => import('./components/facility/FacilityDetail'));
@@ -103,6 +105,8 @@ const AppContent = () => {
             {/* 보호된 라우트 - 인증 필요 */}
             <Route element={<ProtectedRoute />}>
               <Route path="/companies" element={<CompanyList />} />
+              <Route path="/companies/create" element={<CompanyCreate />} />
+              <Route path="/companies/:companyId" element={<CompanyDetail />} />
               <Route path="/users" element={<UserList />} />
               <Route path="/users/:userId" element={<UserManagement />} />
               <Route path="/facility" element={<FacilityList />} />

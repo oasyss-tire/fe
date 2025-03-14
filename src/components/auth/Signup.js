@@ -36,6 +36,11 @@ const Signup = () => {
   
   const navigate = useNavigate();
 
+  // 뒤로가기 핸들러 - 이전 페이지로 이동
+  const handleGoBack = () => {
+    navigate(-1); // 브라우저 히스토리에서 이전 페이지로 이동
+  };
+
   // 비밀번호 정책 검증 함수
   const validatePassword = (password) => {
     const passwordPattern = /^(?=.*[0-9])(?=.*[a-z])(?=.*[@#$%^&+=!])(?=\S+$).{8,20}$/;
@@ -358,7 +363,7 @@ const Signup = () => {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <IconButton 
-            onClick={() => navigate('/login')}
+            onClick={handleGoBack}
             sx={{ mr: 1 }}
           >
             <ArrowBack />
@@ -566,7 +571,7 @@ const Signup = () => {
             <Link
               component="button"
               variant="body2"
-              onClick={() => navigate('/login')}
+              onClick={handleGoBack}
               sx={{ 
                 fontWeight: 600,
                 color: '#0073b1',

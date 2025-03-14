@@ -1,0 +1,1585 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Paper, 
+  Grid, 
+  Divider, 
+  Chip,
+  Alert,
+  CircularProgress,
+  IconButton,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack
+} from '@mui/material';
+import { 
+  ArrowBack,
+  Save as SaveIcon,
+  Upload as UploadIcon,
+  Delete as DeleteIcon
+} from '@mui/icons-material';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import koLocale from 'date-fns/locale/ko';
+
+const CompanyDetail = () => {
+  const navigate = useNavigate();
+  const { companyId } = useParams();
+  const [company, setCompany] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [formData, setFormData] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [imageFiles, setImageFiles] = useState({
+    frontImage: null,
+    backImage: null,
+    leftSideImage: null,
+    rightSideImage: null,
+    fullImage: null
+  });
+  const [imagePreview, setImagePreview] = useState({
+    frontImage: null,
+    backImage: null,
+    leftSideImage: null,
+    rightSideImage: null,
+    fullImage: null
+  });
+
+  // 회사 정보 조회 함수
+  const fetchCompanyData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('회사 정보를 불러오는데 실패했습니다.');
+      }
+      
+      const data = await response.json();
+      setCompany(data);
+      
+      // 폼 데이터 초기화
+      setFormData({
+        storeCode: data.storeCode || '',
+        storeNumber: data.storeNumber || '',
+        storeName: data.storeName || '',
+        trustee: data.trustee || '',
+        trusteeCode: data.trusteeCode || '',
+        businessNumber: data.businessNumber || '',
+        subBusinessNumber: data.subBusinessNumber || '',
+        companyName: data.companyName || '',
+        representativeName: data.representativeName || '',
+        active: data.active,
+        startDate: data.startDate || null,
+        endDate: data.endDate || null,
+        managerName: data.managerName || '',
+        email: data.email || '',
+        phoneNumber: data.phoneNumber || '',
+        address: data.address || '',
+        businessType: data.businessType || '',
+        businessCategory: data.businessCategory || ''
+      });
+      
+    } catch (error) {
+      console.error('회사 정보 조회 오류:', error);
+      setError(error.message || '회사 정보를 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanyData();
+  }, [companyId]);
+
+  // 폼 입력값 변경 핸들러
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    
+    // 사업자번호 자동 하이픈 추가
+    if (name === 'businessNumber') {
+      // 숫자만 추출
+      const numbers = value.replace(/[^0-9]/g, '');
+      
+      // 10자리 이하로 제한
+      if (numbers.length <= 10) {
+        // 하이픈 추가 (3-2-5 형식)
+        let formattedValue = '';
+        if (numbers.length <= 3) {
+          formattedValue = numbers;
+        } else if (numbers.length <= 5) {
+          formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3)}`;
+        } else {
+          formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3, 5)}-${numbers.substring(5)}`;
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          [name]: formattedValue
+        }));
+      }
+      return;
+    }
+    
+    // 전화번호 자동 하이픈 추가
+    if (name === 'phoneNumber') {
+      // 숫자만 추출
+      const numbers = value.replace(/[^0-9]/g, '');
+      
+      // 11자리 이하로 제한
+      if (numbers.length <= 11) {
+        // 하이픈 추가 (3-4-4 형식)
+        let formattedValue = '';
+        if (numbers.length <= 3) {
+          formattedValue = numbers;
+        } else if (numbers.length <= 7) {
+          formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3)}`;
+        } else {
+          formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3, 7)}-${numbers.substring(7)}`;
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          [name]: formattedValue
+        }));
+      }
+      return;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // 에러 메시지 제거
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: null
+      }));
+    }
+  };
+
+  // 날짜 변경 핸들러
+  const handleDateChange = (name, date) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: date
+    }));
+  };
+
+  // 폼 유효성 검사
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.storeName) {
+      errors.storeName = '매장명은 필수 입력 항목입니다.';
+    }
+    
+    if (!formData.businessNumber) {
+      errors.businessNumber = '사업자번호는 필수 입력 항목입니다.';
+    } else if (!/^\d{3}-\d{2}-\d{5}$/.test(formData.businessNumber)) {
+      errors.businessNumber = '사업자번호 형식이 올바르지 않습니다. (예: 123-45-67890)';
+    }
+    
+    if (!formData.companyName) {
+      errors.companyName = '상호는 필수 입력 항목입니다.';
+    }
+    
+    if (!formData.representativeName) {
+      errors.representativeName = '대표자명은 필수 입력 항목입니다.';
+    }
+    
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = '이메일 형식이 올바르지 않습니다.';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // 이미지 파일 선택 핸들러
+  const handleImageChange = (e, imageType) => {
+    const file = e.target.files[0];
+    if (file) {
+      // 이미지 파일 저장
+      setImageFiles(prev => ({
+        ...prev,
+        [imageType]: file
+      }));
+      
+      // 이미지 미리보기 생성
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(prev => ({
+          ...prev,
+          [imageType]: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 이미지 삭제 핸들러
+  const handleImageDelete = async (imageType) => {
+    try {
+      // 이미지 타입 매핑 (API 요구사항에 맞게 변환)
+      const apiImageType = {
+        frontImage: 'front',
+        backImage: 'back',
+        leftSideImage: 'leftside',
+        rightSideImage: 'rightside',
+        fullImage: 'full'
+      }[imageType];
+      
+      if (!apiImageType) {
+        throw new Error('지원하지 않는 이미지 타입입니다.');
+      }
+      
+      // 이미지가 서버에 존재하는 경우에만 API 호출
+      if (company?.imageInfo && company.imageInfo[imageType]) {
+        setIsLoading(true);
+        const token = sessionStorage.getItem('token');
+        
+        const response = await fetch(`http://localhost:8080/api/companies/${companyId}/images/${apiImageType}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('이미지 삭제에 실패했습니다.');
+        }
+        
+        const updatedCompany = await response.json();
+        setCompany(updatedCompany);
+        
+        // 폼 데이터도 업데이트
+        setFormData(prev => ({
+          ...prev
+        }));
+        
+        setSuccessMessage('이미지가 성공적으로 삭제되었습니다.');
+        
+        // 3초 후 성공 메시지 숨기기
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      }
+      
+      // 로컬 상태 업데이트 (미리보기 및 파일 상태 초기화)
+      setImageFiles(prev => ({
+        ...prev,
+        [imageType]: null
+      }));
+      setImagePreview(prev => ({
+        ...prev,
+        [imageType]: null
+      }));
+      
+    } catch (error) {
+      console.error('이미지 삭제 오류:', error);
+      setError(error.message || '이미지 삭제에 실패했습니다.');
+      
+      // 3초 후 에러 메시지 숨기기
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 회사 정보 수정 제출 핸들러
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const token = sessionStorage.getItem('token');
+      
+      // 날짜 형식 변환
+      const formattedData = {
+        ...formData,
+        startDate: formData.startDate ? new Date(formData.startDate).toISOString().split('T')[0] : null,
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString().split('T')[0] : null
+      };
+      
+      // 이미지 파일이 있는지 확인
+      const hasImageFiles = Object.values(imageFiles).some(file => file !== null);
+      
+      if (hasImageFiles) {
+        // FormData 객체 생성
+        const formDataObj = new FormData();
+        
+        // 회사 정보를 JSON 문자열로 변환하여 추가
+        formDataObj.append('company', new Blob([JSON.stringify(formattedData)], { type: 'application/json' }));
+        
+        // 이미지 파일 추가
+        if (imageFiles.frontImage) formDataObj.append('frontImage', imageFiles.frontImage);
+        if (imageFiles.backImage) formDataObj.append('backImage', imageFiles.backImage);
+        if (imageFiles.leftSideImage) formDataObj.append('leftSideImage', imageFiles.leftSideImage);
+        if (imageFiles.rightSideImage) formDataObj.append('rightSideImage', imageFiles.rightSideImage);
+        if (imageFiles.fullImage) formDataObj.append('fullImage', imageFiles.fullImage);
+        
+        // 회사 정보와 이미지 함께 수정 API 호출
+        const response = await fetch(`http://localhost:8080/api/companies/${companyId}/with-images`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: formDataObj
+        });
+        
+        if (!response.ok) {
+          throw new Error('회사 정보 수정에 실패했습니다.');
+        }
+        
+        const updatedCompany = await response.json();
+        setCompany(updatedCompany);
+        
+      } else {
+        // 이미지 없이 회사 정보만 수정 API 호출
+        const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify(formattedData)
+        });
+        
+        if (!response.ok) {
+          throw new Error('회사 정보 수정에 실패했습니다.');
+        }
+        
+        const updatedCompany = await response.json();
+        setCompany(updatedCompany);
+      }
+      
+      setSuccessMessage('회사 정보가 성공적으로 수정되었습니다.');
+      
+      // 이미지 파일 및 미리보기 초기화
+      setImageFiles({
+        frontImage: null,
+        backImage: null,
+        leftSideImage: null,
+        rightSideImage: null,
+        fullImage: null
+      });
+      setImagePreview({
+        frontImage: null,
+        backImage: null,
+        leftSideImage: null,
+        rightSideImage: null,
+        fullImage: null
+      });
+      
+      // 3초 후 성공 메시지 숨기기
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+      
+      // 편집 모드 종료
+      setIsEditing(false);
+      
+    } catch (error) {
+      console.error('회사 정보 수정 오류:', error);
+      setError(error.message || '회사 정보 수정에 실패했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
+  // 편집 모드 토글
+  const toggleEditMode = () => {
+    if (isEditing) {
+      // 편집 취소 시 원래 데이터로 복원
+      setFormData({
+        storeCode: company.storeCode || '',
+        storeNumber: company.storeNumber || '',
+        storeName: company.storeName || '',
+        trustee: company.trustee || '',
+        trusteeCode: company.trusteeCode || '',
+        businessNumber: company.businessNumber || '',
+        subBusinessNumber: company.subBusinessNumber || '',
+        companyName: company.companyName || '',
+        representativeName: company.representativeName || '',
+        active: company.active,
+        startDate: company.startDate || null,
+        endDate: company.endDate || null,
+        managerName: company.managerName || '',
+        email: company.email || '',
+        phoneNumber: company.phoneNumber || '',
+        address: company.address || '',
+        businessType: company.businessType || '',
+        businessCategory: company.businessCategory || ''
+      });
+      setFormErrors({});
+      
+      // 이미지 파일 및 미리보기 초기화
+      setImageFiles({
+        frontImage: null,
+        backImage: null,
+        leftSideImage: null,
+        rightSideImage: null,
+        fullImage: null
+      });
+      setImagePreview({
+        frontImage: null,
+        backImage: null,
+        leftSideImage: null,
+        rightSideImage: null,
+        fullImage: null
+      });
+    }
+    setIsEditing(!isEditing);
+  };
+
+  if (isLoading && !formData) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error && !formData) {
+    return (
+      <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+        <Alert severity="error">{error}</Alert>
+        <Button 
+          variant="contained" 
+          onClick={() => navigate('/companies')}
+          sx={{ mt: 2 }}
+        >
+          목록으로 돌아가기
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+      {/* 성공 메시지 */}
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {successMessage}
+        </Alert>
+      )}
+      
+      {/* 에러 메시지 */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {/* 상단 헤더 */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 3 
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <IconButton 
+            onClick={() => navigate('/companies')}
+            sx={{ mr: 1 }}
+          >
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+            회사 상세 정보
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {isEditing ? (
+            <>
+              <Button
+                variant="outlined"
+                onClick={toggleEditMode}
+                sx={{
+                  color: '#666',
+                  borderColor: '#666',
+                  '&:hover': {
+                    borderColor: '#1976d2',
+                    color: '#1976d2'
+                  }
+                }}
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                form="company-form"
+                variant="contained"
+                startIcon={<SaveIcon />}
+                disabled={isSubmitting}
+                sx={{
+                  backgroundColor: '#1976d2',
+                  '&:hover': {
+                    backgroundColor: '#1565c0',
+                  },
+                }}
+              >
+                {isSubmitting ? '저장 중...' : '저장'}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={toggleEditMode}
+              sx={{
+                backgroundColor: '#1976d2',
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
+              }}
+            >
+              수정
+            </Button>
+          )}
+        </Box>
+      </Box>
+
+      {formData && (
+        <form id="company-form" onSubmit={handleSubmit}>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={koLocale}>
+            {/* 기본 정보 */}
+            <Paper sx={{ 
+              p: 3,
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: 'none',
+              border: '1px solid #EEEEEE'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+                  기본 정보
+                </Typography>
+              
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="매장코드"
+                      name="storeCode"
+                      value={formData.storeCode}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">매장코드</Typography>
+                      <Typography variant="body1">{company?.storeCode || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="점번"
+                      name="storeNumber"
+                      value={formData.storeNumber}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      disabled
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                      helperText="점번은 수정할 수 없습니다"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">점번</Typography>
+                      <Typography variant="body1">{company?.storeNumber || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="매장명"
+                      name="storeName"
+                      value={formData.storeName}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      required
+                      error={!!formErrors.storeName}
+                      helperText={formErrors.storeName}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">매장명</Typography>
+                      <Typography variant="body1">{company?.storeName || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="수탁자"
+                      name="trustee"
+                      value={formData.trustee}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">수탁자</Typography>
+                      <Typography variant="body1">{company?.trustee || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="수탁코드"
+                      name="trusteeCode"
+                      value={formData.trusteeCode}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">수탁코드</Typography>
+                      <Typography variant="body1">{company?.trusteeCode || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="사업자번호"
+                      name="businessNumber"
+                      value={formData.businessNumber}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      required
+                      error={!!formErrors.businessNumber}
+                      placeholder="123-45-67890"
+                      inputProps={{
+                        maxLength: 12
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">사업자번호</Typography>
+                      <Typography variant="body1">{company?.businessNumber || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="종사업장번호"
+                      name="subBusinessNumber"
+                      value={formData.subBusinessNumber}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">종사업장번호</Typography>
+                      <Typography variant="body1">{company?.subBusinessNumber || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="상호"
+                      name="companyName"
+                      value={formData.companyName}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      required
+                      error={!!formErrors.companyName}
+                      helperText={formErrors.companyName}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">상호</Typography>
+                      <Typography variant="body1">{company?.companyName || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="대표자명"
+                      name="representativeName"
+                      value={formData.representativeName}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      required
+                      error={!!formErrors.representativeName}
+                      helperText={formErrors.representativeName}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">대표자명</Typography>
+                      <Typography variant="body1">{company?.representativeName || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <DatePicker
+                      label="시작일자"
+                      value={formData.startDate ? new Date(formData.startDate) : null}
+                      onChange={(date) => handleDateChange('startDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small"
+                        }
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">시작일자</Typography>
+                      <Typography variant="body1">{company?.startDate || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <DatePicker
+                      label="종료일자"
+                      value={formData.endDate ? new Date(formData.endDate) : null}
+                      onChange={(date) => handleDateChange('endDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small"
+                        }
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">종료일자</Typography>
+                      <Typography variant="body1">{company?.endDate || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                {isEditing && (
+                  <Grid item xs={12} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>상태</InputLabel>
+                      <Select
+                        name="active"
+                        value={formData.active}
+                        onChange={handleFormChange}
+                        label="상태"
+                      >
+                        <MenuItem value={true}>사용</MenuItem>
+                        <MenuItem value={false}>미사용</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+              </Grid>
+            </Paper>
+
+            {/* 담당자 정보 */}
+            <Paper sx={{ 
+              p: 3,
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: 'none',
+              border: '1px solid #EEEEEE'
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+                담당자 정보
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="담당자"
+                      name="managerName"
+                      value={formData.managerName}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">담당자</Typography>
+                      <Typography variant="body1">{company?.managerName || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="이메일"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      error={!!formErrors.email}
+                      helperText={formErrors.email}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">이메일</Typography>
+                      <Typography variant="body1">{company?.email || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="전화번호"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      placeholder="010-1234-5678"
+                      inputProps={{
+                        maxLength: 13
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">전화번호</Typography>
+                      <Typography variant="body1">{company?.phoneNumber || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12}>
+                  {isEditing ? (
+                    <TextField
+                      label="주소"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">주소</Typography>
+                      <Typography variant="body1">{company?.address || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* 사업 정보 */}
+            <Paper sx={{ 
+              p: 3,
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: 'none',
+              border: '1px solid #EEEEEE'
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+                사업 정보
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  {isEditing ? (
+                    <TextField
+                      label="업태"
+                      name="businessType"
+                      value={formData.businessType}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">업태</Typography>
+                      <Typography variant="body1">{company?.businessType || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  {isEditing ? (
+                    <TextField
+                      label="종목"
+                      name="businessCategory"
+                      value={formData.businessCategory}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">종목</Typography>
+                      <Typography variant="body1">{company?.businessCategory || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* 이미지 정보 */}
+            <Paper sx={{ 
+              p: 3,
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: 'none',
+              border: '1px solid #EEEEEE'
+            }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+                이미지 정보
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>전면 이미지</Typography>
+                  {isEditing ? (
+                    <Box sx={{ position: 'relative' }}>
+                      {imagePreview.frontImage || company?.imageInfo?.frontImage ? (
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={imagePreview.frontImage || `http://localhost:8080/api/companies/images/${company.imageInfo.frontImage}`}
+                            alt="전면 이미지"
+                            sx={{
+                              width: '100%',
+                              height: 200,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                            }}
+                          />
+                          <IconButton
+                            onClick={() => handleImageDelete('frontImage')}
+                            sx={{
+                              position: 'absolute',
+                              padding: 0.5,
+                              top: 5,
+                              right: 5,
+                              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: 200,
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: '#e0e0e0',
+                            }
+                          }}
+                          onClick={() => document.getElementById('frontImage-upload').click()}
+                        >
+                          <UploadIcon sx={{ fontSize: 40, color: '#999' }} />
+                          <Typography color="text.secondary" sx={{ mt: 1 }}>이미지 업로드</Typography>
+                          <input
+                            id="frontImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'frontImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Box>
+                      )}
+                      {(imagePreview.frontImage || company?.imageInfo?.frontImage) && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<UploadIcon />}
+                          onClick={() => document.getElementById('frontImage-upload').click()}
+                          sx={{ mt: 1, width: '100%' }}
+                        >
+                          이미지 변경
+                          <input
+                            id="frontImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'frontImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    company?.imageInfo?.frontImage ? (
+                      <Box
+                        component="img"
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.frontImage}`}
+                        alt="전면 이미지"
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          backgroundColor: '#f5f5f5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Typography color="text.secondary">이미지 없음</Typography>
+                      </Box>
+                    )
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>후면 이미지</Typography>
+                  {isEditing ? (
+                    <Box sx={{ position: 'relative' }}>
+                      {imagePreview.backImage || company?.imageInfo?.backImage ? (
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={imagePreview.backImage || `http://localhost:8080/api/companies/images/${company.imageInfo.backImage}`}
+                            alt="후면 이미지"
+                            sx={{
+                              width: '100%',
+                              height: 200,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                            }}
+                          />
+                          <IconButton
+                            onClick={() => handleImageDelete('backImage')}
+                            sx={{
+                              position: 'absolute',
+                              padding: 0.5,
+                              top: 5,
+                              right: 5,
+                              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: 200,
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: '#e0e0e0',
+                            }
+                          }}
+                          onClick={() => document.getElementById('backImage-upload').click()}
+                        >
+                          <UploadIcon sx={{ fontSize: 40, color: '#999' }} />
+                          <Typography color="text.secondary" sx={{ mt: 1 }}>이미지 업로드</Typography>
+                          <input
+                            id="backImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'backImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Box>
+                      )}
+                      {(imagePreview.backImage || company?.imageInfo?.backImage) && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<UploadIcon />}
+                          onClick={() => document.getElementById('backImage-upload').click()}
+                          sx={{ mt: 1, width: '100%' }}
+                        >
+                          이미지 변경
+                          <input
+                            id="backImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'backImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    company?.imageInfo?.backImage ? (
+                      <Box
+                        component="img"
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.backImage}`}
+                        alt="후면 이미지"
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          backgroundColor: '#f5f5f5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Typography color="text.secondary">이미지 없음</Typography>
+                      </Box>
+                    )
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>좌측면 이미지</Typography>
+                  {isEditing ? (
+                    <Box sx={{ position: 'relative' }}>
+                      {imagePreview.leftSideImage || company?.imageInfo?.leftSideImage ? (
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={imagePreview.leftSideImage || `http://localhost:8080/api/companies/images/${company.imageInfo.leftSideImage}`}
+                            alt="좌측면 이미지"
+                            sx={{
+                              width: '100%',
+                              height: 200,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                            }}
+                          />
+                          <IconButton
+                            onClick={() => handleImageDelete('leftSideImage')}
+                            sx={{
+                              position: 'absolute',
+                              padding: 0.5,
+                              top: 5,
+                              right: 5,
+                              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: 200,
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: '#e0e0e0',
+                            }
+                          }}
+                          onClick={() => document.getElementById('leftSideImage-upload').click()}
+                        >
+                          <UploadIcon sx={{ fontSize: 40, color: '#999' }} />
+                          <Typography color="text.secondary" sx={{ mt: 1 }}>이미지 업로드</Typography>
+                          <input
+                            id="leftSideImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'leftSideImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Box>
+                      )}
+                      {(imagePreview.leftSideImage || company?.imageInfo?.leftSideImage) && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<UploadIcon />}
+                          onClick={() => document.getElementById('leftSideImage-upload').click()}
+                          sx={{ mt: 1, width: '100%' }}
+                        >
+                          이미지 변경
+                          <input
+                            id="leftSideImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'leftSideImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    company?.imageInfo?.leftSideImage ? (
+                      <Box
+                        component="img"
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.leftSideImage}`}
+                        alt="좌측면 이미지"
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          backgroundColor: '#f5f5f5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Typography color="text.secondary">이미지 없음</Typography>
+                      </Box>
+                    )
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>우측면 이미지</Typography>
+                  {isEditing ? (
+                    <Box sx={{ position: 'relative' }}>
+                      {imagePreview.rightSideImage || company?.imageInfo?.rightSideImage ? (
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={imagePreview.rightSideImage || `http://localhost:8080/api/companies/images/${company.imageInfo.rightSideImage}`}
+                            alt="우측면 이미지"
+                            sx={{
+                              width: '100%',
+                              height: 200,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                            }}
+                          />
+                          <IconButton
+                            onClick={() => handleImageDelete('rightSideImage')}
+                            sx={{
+                              position: 'absolute',
+                              padding: 0.5,
+                              top: 5,
+                              right: 5,
+                              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: 200,
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: '#e0e0e0',
+                            }
+                          }}
+                          onClick={() => document.getElementById('rightSideImage-upload').click()}
+                        >
+                          <UploadIcon sx={{ fontSize: 40, color: '#999' }} />
+                          <Typography color="text.secondary" sx={{ mt: 1 }}>이미지 업로드</Typography>
+                          <input
+                            id="rightSideImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'rightSideImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Box>
+                      )}
+                      {(imagePreview.rightSideImage || company?.imageInfo?.rightSideImage) && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<UploadIcon />}
+                          onClick={() => document.getElementById('rightSideImage-upload').click()}
+                          sx={{ mt: 1, width: '100%' }}
+                        >
+                          이미지 변경
+                          <input
+                            id="rightSideImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'rightSideImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    company?.imageInfo?.rightSideImage ? (
+                      <Box
+                        component="img"
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.rightSideImage}`}
+                        alt="우측면 이미지"
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          backgroundColor: '#f5f5f5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Typography color="text.secondary">이미지 없음</Typography>
+                      </Box>
+                    )
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>전체 이미지</Typography>
+                  {isEditing ? (
+                    <Box sx={{ position: 'relative' }}>
+                      {imagePreview.fullImage || company?.imageInfo?.fullImage ? (
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={imagePreview.fullImage || `http://localhost:8080/api/companies/images/${company.imageInfo.fullImage}`}
+                            alt="전체 이미지"
+                            sx={{
+                              width: '100%',
+                              height: 200,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                            }}
+                          />
+                          <IconButton
+                            onClick={() => handleImageDelete('fullImage')}
+                            sx={{
+                              position: 'absolute',
+                              padding: 0.5,
+                              top: 5,
+                              right: 5,
+                              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: 200,
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: '#e0e0e0',
+                            }
+                          }}
+                          onClick={() => document.getElementById('fullImage-upload').click()}
+                        >
+                          <UploadIcon sx={{ fontSize: 40, color: '#999' }} />
+                          <Typography color="text.secondary" sx={{ mt: 1 }}>이미지 업로드</Typography>
+                          <input
+                            id="fullImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'fullImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Box>
+                      )}
+                      {(imagePreview.fullImage || company?.imageInfo?.fullImage) && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<UploadIcon />}
+                          onClick={() => document.getElementById('fullImage-upload').click()}
+                          sx={{ mt: 1, width: '100%' }}
+                        >
+                          이미지 변경
+                          <input
+                            id="fullImage-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, 'fullImage')}
+                            style={{ display: 'none' }}
+                          />
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    company?.imageInfo?.fullImage ? (
+                      <Box
+                        component="img"
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.fullImage}`}
+                        alt="전체 이미지"
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          backgroundColor: '#f5f5f5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Typography color="text.secondary">이미지 없음</Typography>
+                      </Box>
+                    )
+                  )}
+                </Grid>
+              </Grid>
+            </Paper>
+            
+            {/* 하단 버튼 그룹 (편집 모드일 때만 표시) */}
+            {isEditing && (
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 2, 
+                justifyContent: 'center',
+                mt: 4
+              }}>
+                <Button 
+                  type="submit"
+                  variant="contained" 
+                  disabled={isSubmitting}
+                  startIcon={<SaveIcon />}
+                  sx={{ 
+                    minWidth: '120px',
+                    bgcolor: '#1976d2',
+                    '&:hover': { bgcolor: '#1565c0' }
+                  }}
+                >
+                  {isSubmitting ? '저장 중...' : '저장'}
+                </Button>
+                
+                <Button 
+                  variant="outlined"
+                  onClick={toggleEditMode}
+                  disabled={isSubmitting}
+                  sx={{ 
+                    minWidth: '120px',
+                    color: '#666',
+                    borderColor: '#666',
+                    '&:hover': {
+                      borderColor: '#1976d2',
+                      color: '#1976d2'
+                    }
+                  }}
+                >
+                  취소
+                </Button>
+              </Box>
+            )}
+          </LocalizationProvider>
+        </form>
+      )}
+    </Box>
+  );
+};
+
+export default CompanyDetail; 
