@@ -65,7 +65,7 @@ const Sidebar = () => {
     {
       category: '관리',
       items: [
-        { text: '업체 관리', icon: <BusinessIcon />, path: '/companies' },
+        { text: '위수탁 업체 관리', icon: <BusinessIcon />, path: '/companies' },
         { text: '사용자 관리', icon: <GroupIcon />, path: '/users' },
         { text: '설정', icon: <SettingsIcon />, path: '/settings' },
       ]
