@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from '@mui/material';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Paper, Stepper, Step, StepLabel } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import SignatureModal from '../common/fields/SignatureModal';
 import TextInputModal from '../common/fields/TextInputModal';
 import SaveIcon from '@mui/icons-material/Save';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -65,6 +67,7 @@ const AuthenticationDialog = React.memo(({
 
 const SignaturePdfViewer = () => {
   const { contractId, participantId } = useParams();
+  const navigate = useNavigate();
   const [numPages, setNumPages] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pdfScale, setPdfScale] = useState(null);
@@ -78,48 +81,78 @@ const SignaturePdfViewer = () => {
   const [showAuthDialog, setShowAuthDialog] = useState(true);
   const [phoneInput, setPhoneInput] = useState('');
   const [authError, setAuthError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  // 다중 템플릿 관련 상태 추가
+  const [currentTemplateIndex, setCurrentTemplateIndex] = useState(0);
+  const [completedTemplates, setCompletedTemplates] = useState([]);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-  // 참여자 정보 조회
+  // 계약 정보 및 참여자 정보 조회
   useEffect(() => {
-    const fetchParticipantInfo = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await fetch(
+        setLoading(true);
+        
+        // 1. 계약 전체 정보 조회
+        const contractResponse = await fetch(`http://localhost:8080/api/contracts/${contractId}`);
+        if (!contractResponse.ok) throw new Error('계약 정보 조회 실패');
+        const contractData = await contractResponse.json();
+        
+        // 2. 참여자 정보 조회
+        const participantResponse = await fetch(
           `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}`
         );
-        if (response.ok) {
-          const data = await response.json();
-          setParticipant(data);
-          
-          // 참여자의 PDF 필드 정보 조회
-          if (data.pdfId) {
-            const fieldsResponse = await fetch(`http://localhost:8080/api/contract-pdf/fields/${data.pdfId}`);
-            if (!fieldsResponse.ok) throw new Error('필드 정보 조회 실패');
-            const fieldsData = await fieldsResponse.json();
-            setFields(fieldsData);
-          }
+        if (!participantResponse.ok) throw new Error('참여자 정보 조회 실패');
+        const participantData = await participantResponse.json();
+        
+        // 3. 참여자 정보 상태 설정 (중요: fetchTemplateStatus 전에 실행)
+        setParticipant(participantData);
+        
+        // 4. 첫 번째 템플릿의 필드 정보 조회
+        if (participantData.templatePdfs && participantData.templatePdfs.length > 0) {
+          const firstTemplatePdf = participantData.templatePdfs[0];
+          await fetchFields(firstTemplatePdf.pdfId);
         }
+        
+        // 5. 템플릿 상태 조회 (participant 설정 후에 실행)
+        // fetchTemplateStatus는 useEffect에 의해 participant가 업데이트된 후 자동으로 호출됨
+        
       } catch (error) {
-        console.error('참여자 정보 조회 실패:', error);
+        console.error('데이터 조회 실패:', error);
+      } finally {
+        setLoading(false);
       }
     };
     
-    fetchParticipantInfo();
+    fetchInitialData();
   }, [contractId, participantId]);
+
+  // participant가 변경될 때마다 템플릿 상태 조회
+  useEffect(() => {
+    // participant가 있는 경우에만 템플릿 상태 조회
+    if (participant) {
+      fetchTemplateStatus();
+    }
+  }, [participant]);
 
   // pdfId에서 원본 ID 추출
   const getOriginalPdfId = (pdfId) => {
     return pdfId.replace('_with_fields.pdf', '.pdf');
   };
 
-  // 필드 정보 가져오기 - participant.pdfId 사용
+  // 필드 정보 가져오기
   const fetchFields = async (pdfId) => {
     try {
+      setLoading(true);
       const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${pdfId}`);
       if (!response.ok) throw new Error('Failed to fetch fields');
       const data = await response.json();
       setFields(data);
     } catch (error) {
       console.error('Error fetching fields:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -183,32 +216,14 @@ const SignaturePdfViewer = () => {
     }
   };
 
-  // 서명 저장 핸들러
-  const handleSignatureSave = async (signatureData) => {
-    try {
-      const originalPdfId = getOriginalPdfId(participant.pdfId);
-      const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'signature',
-            value: signatureData
-          })
-        }
-      );
-      if (!response.ok) throw new Error('Failed to save signature');
-      await fetchFields(participant.pdfId);
-    } catch (error) {
-      console.error('Error saving signature:', error);
-    }
-  };
-
   // 텍스트 저장 핸들러
   const handleTextSave = async (text) => {
     try {
-      const originalPdfId = getOriginalPdfId(participant.pdfId);
+      if (!participant?.templatePdfs) return;
+      
+      const currentTemplate = participant.templatePdfs[currentTemplateIndex];
+      const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
+      
       const response = await fetch(
         `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
         {
@@ -220,17 +235,53 @@ const SignaturePdfViewer = () => {
           })
         }
       );
+      
       if (!response.ok) throw new Error('Failed to save text');
-      await fetchFields(participant.pdfId); // 필드 목록 새로고침
+      await fetchFields(currentTemplate.pdfId);
+      setTextModalOpen(false);
+      setSelectedField(null);
+      
     } catch (error) {
       console.error('Error saving text:', error);
+    }
+  };
+
+  // 서명 저장 핸들러
+  const handleSignatureSave = async (signatureData) => {
+    try {
+      if (!participant?.templatePdfs) return;
+      
+      const currentTemplate = participant.templatePdfs[currentTemplateIndex];
+      const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
+      
+      const response = await fetch(
+        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'signature',
+            value: signatureData
+          })
+        }
+      );
+      
+      if (!response.ok) throw new Error('Failed to save signature');
+      await fetchFields(currentTemplate.pdfId);
+      setSignatureModalOpen(false);
+      
+    } catch (error) {
+      console.error('Error saving signature:', error);
     }
   };
 
   // 체크박스 변경 핸들러
   const handleCheckboxChange = async (field) => {
     try {
-      const originalPdfId = getOriginalPdfId(participant.pdfId);
+      if (!participant?.templatePdfs) return;
+      
+      const currentTemplate = participant.templatePdfs[currentTemplateIndex];
+      const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
       const newValue = field.value === 'true' ? 'false' : 'true';
       
       const response = await fetch(
@@ -246,7 +297,8 @@ const SignaturePdfViewer = () => {
       );
       
       if (!response.ok) throw new Error('Failed to save checkbox');
-      await fetchFields(participant.pdfId);
+      await fetchFields(currentTemplate.pdfId);
+      
     } catch (error) {
       console.error('Error saving checkbox:', error);
     }
@@ -295,30 +347,141 @@ const SignaturePdfViewer = () => {
     setCurrentPage(pageNumber);
   };
 
-  // PDF 저장 핸들러
-  const handleSavePdf = async () => {
+  // 다음 템플릿으로 이동
+  const handleNextTemplate = async () => {
+    if (!participant?.templatePdfs) return;
+    
+    if (currentTemplateIndex < participant.templatePdfs.length - 1) {
+      // 다음 템플릿으로 이동
+      const nextIndex = currentTemplateIndex + 1;
+      setCurrentTemplateIndex(nextIndex);
+      
+      // 다음 템플릿의 필드 정보 가져오기
+      await fetchFields(participant.templatePdfs[nextIndex].pdfId);
+      setCurrentPage(1); // 페이지 초기화
+      
+      // 템플릿 상태 업데이트
+      await fetchTemplateStatus();
+    }
+  };
+
+  // 이전 템플릿으로 이동
+  const handlePrevTemplate = async () => {
+    if (!participant?.templatePdfs) return;
+    
+    if (currentTemplateIndex > 0) {
+      const prevIndex = currentTemplateIndex - 1;
+      setCurrentTemplateIndex(prevIndex);
+      await fetchFields(participant.templatePdfs[prevIndex].pdfId);
+      setCurrentPage(1); // 페이지 초기화
+      
+      // 템플릿 상태 업데이트
+      await fetchTemplateStatus();
+    }
+  };
+
+  // 템플릿 상태 조회 함수 추가
+  const fetchTemplateStatus = async () => {
     try {
-      if (!participant?.pdfId) throw new Error('PDF 정보가 없습니다.');
-
-      // 1. 서명된 PDF 생성
+      // participant가 null인 경우 함수 실행 중단
+      if (!participant || !participant.templatePdfs) {
+        return;
+      }
+      
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/download-signed/${participant.pdfId}`,
-        { method: 'POST' }
+        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/template-status`
       );
-
-      if (!response.ok) throw new Error('서명 저장 실패');
-
-      // 2. 서명 완료 상태 업데이트
-      await fetch(`http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/sign`, {
-        method: 'POST'
-      });
-
-      alert('서명이 완료되었습니다.');
-      window.location.href = `/contract-detail/${contractId}`;
+      
+      if (!response.ok) throw new Error('템플릿 상태 조회 실패');
+      
+      const statusList = await response.json();
+      
+      // 완료된 템플릿 인덱스 업데이트
+      const completedIndexes = participant.templatePdfs
+        .map((template, index) => {
+          const status = statusList.find(s => s.pdfId === template.pdfId);
+          return status && status.signed ? index : -1;
+        })
+        .filter(index => index !== -1);
+      
+      setCompletedTemplates(completedIndexes);
       
     } catch (error) {
-      console.error('Error saving signature:', error);
-      alert('서명 저장 중 오류가 발생했습니다.');
+      console.error('템플릿 상태 조회 실패:', error);
+    }
+  };
+
+  // 서명 완료 확인 다이얼로그 열기
+  const handleConfirmComplete = () => {
+    setConfirmDialogOpen(true);
+  };
+
+  // 서명 완료 확인 다이얼로그 닫기
+  const handleCloseConfirmDialog = () => {
+    setConfirmDialogOpen(false);
+  };
+  
+  // 서명 완료 처리 실행
+  const handleCompleteAllTemplates = async () => {
+    try {
+      if (!participant?.templatePdfs) return;
+      
+      setLoading(true);
+      setConfirmDialogOpen(false); // 다이얼로그 닫기
+      
+      // 모든 미완료 템플릿에 대해 서명 완료 처리
+      for (let i = 0; i < participant.templatePdfs.length; i++) {
+        if (completedTemplates.includes(i)) {
+          continue; // 이미 완료된 템플릿은 건너뜀
+        }
+        
+        const template = participant.templatePdfs[i];
+        
+        // 서명된 PDF 생성 요청
+        const response = await fetch(
+          `http://localhost:8080/api/contract-pdf/download-signed/${template.pdfId}`,
+          { 
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              participantId: participantId,
+              mappingId: template.mappingId
+            })
+          }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.message || `${template.templateName} 서명 저장 실패`);
+        }
+      }
+      
+      // 모든 계약서 서명 완료 시 참여자 서명 완료 처리
+      const finalizeResponse = await fetch(
+        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/sign`, 
+        { 
+          method: 'POST'
+        }
+      );
+      
+      if (finalizeResponse.ok) {
+        alert('모든 계약서에 대한 서명이 완료되었습니다.');
+        // 계약 상세 페이지로 이동
+        console.log('페이지 이동: /contract-detail/' + contractId);
+        setTimeout(() => {
+          window.location.href = `/contract-detail/${contractId}`;
+        }, 500);
+      } else {
+        throw new Error('서명 완료 처리 실패');
+      }
+      
+    } catch (error) {
+      console.error('템플릿 일괄 완료 처리 실패:', error);
+      alert(error.message || '서명 저장 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -362,6 +525,24 @@ const SignaturePdfViewer = () => {
     }
   }, [phoneInput, contractId, participantId]);
 
+  // 클릭하여 템플릿 변경 시 필드도 함께 업데이트하는 함수 추가
+  const handleTemplateChange = async (index) => {
+    if (!participant?.templatePdfs || index === currentTemplateIndex) return;
+    
+    setLoading(true);
+    setCurrentTemplateIndex(index);
+    
+    try {
+      // 선택한 템플릿의 필드 정보 가져오기
+      await fetchFields(participant.templatePdfs[index].pdfId);
+      setCurrentPage(1); // 페이지 초기화
+    } catch (error) {
+      console.error('템플릿 변경 중 오류:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 인증되지 않은 경우의 렌더링
   if (!isAuthenticated) {
     return (
@@ -377,24 +558,41 @@ const SignaturePdfViewer = () => {
     );
   }
 
+  // 계약서가 없는 경우
+  if (!participant?.templatePdfs || participant.templatePdfs.length === 0) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        backgroundColor: '#f5f5f5' 
+      }}>
+        <Typography>서명할 계약서가 없습니다.</Typography>
+      </Box>
+    );
+  }
+
+  const currentTemplate = participant.templatePdfs[currentTemplateIndex];
+
   return (
     <Box sx={{ 
       display: 'flex', 
-      height: '100vh',  // 전체 높이로 변경
+      height: '100vh',
       bgcolor: '#f5f5f5',
-      position: 'fixed', // 전체 화면 고정
+      position: 'fixed',
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      zIndex: 1200 // 사이드바 위에 표시
+      zIndex: 1200
     }}>
       {/* 왼쪽 썸네일 영역 */}
       <Box 
         sx={{ 
           width: '200px',
           minWidth: '200px',
-          height: '100%', // 전체 높이
+          height: '100%',
           overflowY: 'auto',
           borderRight: '1px solid #ddd',
           bgcolor: '#fff',
@@ -405,8 +603,8 @@ const SignaturePdfViewer = () => {
           페이지 목록
         </Typography>
         <Document
-          file={participant?.pdfId ? 
-            `http://localhost:8080/api/contract-pdf/view/${participant.pdfId}` : 
+          file={currentTemplate?.pdfId ? 
+            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` : 
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}
@@ -440,7 +638,7 @@ const SignaturePdfViewer = () => {
         ref={containerRef}
         sx={{ 
           flex: '1 1 auto',
-          height: '100%', // 전체 높이
+          height: '100%',
           overflowY: 'auto',
           p: 4,
           bgcolor: '#fff',
@@ -450,8 +648,8 @@ const SignaturePdfViewer = () => {
         }}
       >
         <Document
-          file={participant?.pdfId ? 
-            `http://localhost:8080/api/contract-pdf/view/${participant.pdfId}` : 
+          file={currentTemplate?.pdfId ? 
+            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` : 
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}
@@ -488,7 +686,7 @@ const SignaturePdfViewer = () => {
         </Document>
       </Box>
 
-      {/* 오른쪽 저장 영역 */}
+      {/* 오른쪽 계약서 진행 상황 및 버튼 영역 */}
       <Box sx={{ 
         width: 280, 
         height: '100%',
@@ -498,29 +696,158 @@ const SignaturePdfViewer = () => {
         p: 2,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between'  // 상단과 하단 사이 공간 분배
+        justifyContent: 'space-between'
       }}>
-        <Typography variant="h6">서명하기</Typography>
+        <Box>
+          <Typography variant="h6">계약서 서명</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            모든 계약서의 필수 필드를 작성하고 서명을 완료해주세요.
+          </Typography>
+          
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>계약서 진행 상황</Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              mt: 2,
+              border: '1px solid #E0E0E0',
+              borderRadius: 1,
+              p: 1.5
+            }}>
+              {participant.templatePdfs.map((template, index) => (
+                <Box 
+                  key={template.mappingId} 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    mb: index === participant.templatePdfs.length - 1 ? 0 : 1.5,
+                    pb: index === participant.templatePdfs.length - 1 ? 0 : 1.5,
+                    borderBottom: index === participant.templatePdfs.length - 1 ? 'none' : '1px solid #EEEEEE',
+                    cursor: 'pointer',
+                    p: 1,
+                    borderRadius: 1,
+                    '&:hover': {
+                      bgcolor: '#f5f5f5'
+                    }
+                  }}
+                  onClick={() => handleTemplateChange(index)}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box 
+                      sx={{ 
+                        width: 20, 
+                        height: 20, 
+                        borderRadius: '50%', 
+                        backgroundColor: index === currentTemplateIndex ? '#1976d2' : 
+                                       completedTemplates.includes(index) ? '#4CAF50' : '#E0E0E0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: 12,
+                        mr: 1.5
+                      }}
+                    >
+                      {index + 1}
+                    </Box>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: index === currentTemplateIndex ? 600 : 400,
+                        color: index === currentTemplateIndex ? '#1976d2' : 
+                               completedTemplates.includes(index) ? '#4CAF50' : 'text.primary'
+                      }}
+                    >
+                      {template.templateName}
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      fontSize: '0.75rem',
+                      color: index === currentTemplateIndex ? '#1976d2' : 
+                             completedTemplates.includes(index) ? '#4CAF50' : 'text.secondary',
+                      backgroundColor: index === currentTemplateIndex ? '#E3F2FD' : 
+                                     completedTemplates.includes(index) ? '#E8F5E9' : '#F5F5F5',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      visibility: index === currentTemplateIndex || completedTemplates.includes(index) ? 'visible' : 'hidden'
+                    }}
+                  >
+                    {completedTemplates.includes(index) ? '완료' : 
+                     index === currentTemplateIndex ? '작성 중' : ''}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
         
-        {/* 버튼을 하단에 배치하기 위한 컨테이너 */}
-        <Box sx={{ mb: 2 }}>  {/* 하단 여백 추가 */}
+        <Box sx={{ mb: 2 }}>
+          {/* 계약서 이동 버튼 */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<NavigateBeforeIcon />}
+              onClick={handlePrevTemplate}
+              disabled={currentTemplateIndex === 0}
+              sx={{
+                py: 0.5,
+                px: 1,
+                borderColor: '#1976d2',
+                color: '#1976d2',
+                borderRadius: '8px',
+                fontSize: '0.75rem',
+                width: '45%',
+                minWidth: 'auto'
+              }}
+            >
+              이전 계약서
+            </Button>
+            
+            <Button
+              variant="outlined"
+              endIcon={<NavigateNextIcon />}
+              onClick={handleNextTemplate}
+              disabled={currentTemplateIndex === participant.templatePdfs.length - 1}
+              sx={{
+                py: 0.5,
+                px: 1,
+                borderColor: '#1976d2',
+                color: '#1976d2',
+                borderRadius: '8px',
+                fontSize: '0.75rem',
+                width: '45%',
+                minWidth: 'auto'
+              }}
+            >
+              다음 계약서
+            </Button>
+          </Box>
+          
+          {/* 서명 완료 버튼 */}
           <Button
             variant="contained"
+            onClick={handleConfirmComplete}
+            disabled={loading || completedTemplates.length === participant.templatePdfs.length}
             startIcon={<SaveIcon />}
-            onClick={handleSavePdf}
             fullWidth
             sx={{
               px: 4,
-              py: 1,  // 높이 줄임 (1.5 -> 1)
+              py: 1,
               backgroundColor: '#1976d2',
               '&:hover': {
                 backgroundColor: '#1565c0',
               },
               borderRadius: '8px',
-              fontSize: '1rem'
+              fontSize: '1rem',
+              mb: 1.5
             }}
           >
-            서명 완료
+            {completedTemplates.length === participant.templatePdfs.length ? 
+              '모든 서명 완료' : 
+              loading ? '처리중...' : '모든 계약서 서명 완료'}
           </Button>
         </Box>
       </Box>
@@ -545,6 +872,40 @@ const SignaturePdfViewer = () => {
         }}
         initialValue={selectedField?.value || ''}
       />
+
+      {/* 확인 다이얼로그 추가 */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCloseConfirmDialog}
+        aria-labelledby="confirm-dialog-title"
+      >
+        <DialogTitle id="confirm-dialog-title">
+          서명 완료 확인
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            모든 계약서에 대한 서명을 완료하시겠습니까?
+            완료 후에는 수정이 불가능합니다.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={handleCloseConfirmDialog} 
+            color="inherit"
+            variant="outlined"
+          >
+            취소
+          </Button>
+          <Button 
+            onClick={handleCompleteAllTemplates} 
+            color="primary"
+            variant="contained"
+            autoFocus
+          >
+            확인
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

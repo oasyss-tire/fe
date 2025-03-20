@@ -8,12 +8,21 @@ import {
   Select,
   MenuItem,
   FormControl,
-  CircularProgress
+  CircularProgress,
+  InputLabel,
+  ListSubheader,
+  InputAdornment,
+  OutlinedInput,
+  Autocomplete,
+  Paper
 } from '@mui/material';
 import { 
   Search as SearchIcon,
   Close as CloseIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -36,11 +45,16 @@ const ContractSend = () => {
     expiryDate: null,
     deadlineDate: null,
     createdBy: '',
-    department: ''
+    department: '',
+    companyId: ''
   });
 
   const [templates, setTemplates] = useState([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState([]);
+  const [templateOrder, setTemplateOrder] = useState([]);
+  const [companies, setCompanies] = useState([]);
+
+  const [companySearchTerm, setCompanySearchTerm] = useState('');
 
   const navigate = useNavigate();
 
@@ -86,15 +100,86 @@ const ContractSend = () => {
     }
   };
 
-  // 컴포넌트 마운트 시 템플릿 목록 조회
+  // 회사 목록 조회
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/companies?active=true');
+      if (!response.ok) throw new Error('회사 목록 조회 실패');
+      const data = await response.json();
+      setCompanies(data);
+    } catch (error) {
+      console.error('회사 목록 조회 중 오류:', error);
+    }
+  };
+
+  // 컴포넌트 마운트 시 템플릿 목록과 회사 목록 조회
   useEffect(() => {
     fetchTemplates();
+    fetchCompanies();
   }, []);
 
-  // 템플릿 선택 핸들러
-  const handleTemplateChange = (event) => {
-    setSelectedTemplateId(event.target.value);
+  // 템플릿 선택 핸들러 수정
+  const handleTemplateChange = (event, newValues) => {
+    const newTemplateIds = newValues.map(template => template.id);
+    setSelectedTemplateIds(newTemplateIds);
+    
+    // 새로 선택된 템플릿들의 순서 정보 업데이트
+    const currentOrder = [...templateOrder];
+    const newOrder = newTemplateIds.map((id, index) => {
+      const existingOrderItem = currentOrder.find(item => item.id === id);
+      return existingOrderItem || { id, order: index + 1 };
+    });
+    
+    setTemplateOrder(newOrder);
   };
+  
+  // 템플릿 순서 변경 핸들러
+  const handleMoveTemplate = (id, direction) => {
+    const currentIndex = templateOrder.findIndex(item => item.id === id);
+    if (
+      (direction === 'up' && currentIndex === 0) || 
+      (direction === 'down' && currentIndex === templateOrder.length - 1)
+    ) {
+      return; // 이동 불가능한 경우
+    }
+    
+    const newOrder = [...templateOrder];
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    
+    // 위치 교환
+    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
+    
+    // 순서 번호 재할당
+    newOrder.forEach((item, index) => {
+      item.order = index + 1;
+    });
+    
+    setTemplateOrder(newOrder);
+  };
+  
+  // 템플릿 제거 핸들러
+  const handleRemoveTemplate = (id) => {
+    const newSelectedIds = selectedTemplateIds.filter(templateId => templateId !== id);
+    setSelectedTemplateIds(newSelectedIds);
+    
+    const newOrder = templateOrder.filter(item => item.id !== id)
+      .map((item, index) => ({ ...item, order: index + 1 }));
+    setTemplateOrder(newOrder);
+  };
+
+  // 회사 검색어 변경 핸들러
+  const handleCompanySearchChange = (e) => {
+    setCompanySearchTerm(e.target.value);
+  };
+  
+  // 회사 목록 필터링
+  const filteredCompanies = companySearchTerm 
+    ? companies.filter(company => 
+        company.storeName?.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
+        company.businessNumber?.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
+        company.companyName?.toLowerCase().includes(companySearchTerm.toLowerCase())
+      )
+    : companies;
 
   const formatPhoneNumber = (value) => {
     // 이전 값과 현재 값의 길이를 비교하여 삭제 중인지 확인
@@ -115,12 +200,27 @@ const ContractSend = () => {
     return numbers;
   };
 
-  // 계약 생성 및 이메일 발송을 처리하는 새로운 함수
+  // 계약 생성 및 이메일 발송을 처리하는 함수
   const handleCreateContractAndSendEmail = async () => {
     try {
+      if (!contractInfo.companyId) {
+        alert('회사를 선택해주세요.');
+        return;
+      }
+
+      if (selectedTemplateIds.length === 0) {
+        alert('최소 하나 이상의 템플릿을 선택해주세요.');
+        return;
+      }
+      
       setIsLoading(true);  // 로딩 시작
       
-      // 1. 계약 생성
+      // 순서에 따라 템플릿 ID 정렬
+      const orderedTemplateIds = templateOrder
+        .sort((a, b) => a.order - b.order)
+        .map(item => item.id);
+      
+      // 1. 계약 생성 - templateId → templateIds로 변경
       const response = await fetch('http://localhost:8080/api/contracts', {
         method: 'POST',
         headers: {
@@ -130,12 +230,13 @@ const ContractSend = () => {
         body: JSON.stringify({
           title: contractInfo.title,
           description: contractInfo.description || '',
-          templateId: selectedTemplateId,
+          templateIds: orderedTemplateIds, // 순서가 적용된 템플릿 ID 목록
           startDate: contractInfo.startDate,
           expiryDate: contractInfo.expiryDate,
           deadlineDate: contractInfo.deadlineDate,
           createdBy: contractInfo.createdBy,
           department: contractInfo.department,
+          companyId: contractInfo.companyId,
           participants: participants.map(p => ({
             name: p.name,
             email: p.email,
@@ -252,6 +353,62 @@ const ContractSend = () => {
               onChange={(e) => handleContractInfoChange('title', e.target.value)}
               fullWidth
               size="small"
+            />
+            <Autocomplete
+              size="small"
+              options={companies}
+              loading={companies.length === 0}
+              getOptionLabel={(option) => option.storeName || ''}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              value={companies.find(company => company.id === contractInfo.companyId) || null}
+              onChange={(event, newValue) => {
+                handleContractInfoChange('companyId', newValue ? newValue.id : '');
+              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  label="계약 회사" 
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {companies.length === 0 ? (
+                          <CircularProgress color="inherit" size={20} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="body2">{option.storeName}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {option.businessNumber} {option.companyName ? `| ${option.companyName}` : ''}
+                    </Typography>
+                  </Box>
+                </li>
+              )}
+              noOptionsText="검색 결과가 없습니다"
+              loadingText="회사 목록을 불러오는 중..."
+              filterOptions={(options, { inputValue }) => {
+                return options.filter(option => 
+                  option.storeName?.toLowerCase().includes(inputValue.toLowerCase()) ||
+                  option.businessNumber?.toLowerCase().includes(inputValue.toLowerCase()) ||
+                  option.companyName?.toLowerCase().includes(inputValue.toLowerCase())
+                );
+              }}
+              PaperComponent={(props) => (
+                <Paper 
+                  {...props} 
+                  sx={{ 
+                    maxHeight: 300,
+                    overflowY: 'auto'
+                  }} 
+                />
+              )}
             />
           </Box>
 
@@ -428,42 +585,127 @@ const ContractSend = () => {
               계약서 선택
             </Typography>
           </Box>
-          <FormControl fullWidth>
-            <Select
-              value={selectedTemplateId}
-              onChange={handleTemplateChange}
-              displayEmpty
-              sx={{
-                backgroundColor: '#F8F9FA',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderStyle: 'dashed',
-                  borderColor: '#E0E0E0'
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#1976d2'
-                }
-              }}
-            >
-              <MenuItem value="" disabled>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#666' }}>
-                  <SearchIcon />
-                  <Typography>계약서 템플릿에서 선택하기</Typography>
+          <Autocomplete
+            multiple
+            id="templates-select"
+            options={templates}
+            value={templates.filter(template => selectedTemplateIds.includes(template.id))}
+            onChange={handleTemplateChange}
+            getOptionLabel={(option) => option.templateName}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                placeholder="계약서 템플릿 선택"
+                label="계약서 템플릿"
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="body2">{option.templateName}</Typography>
+                  {option.description && (
+                    <Typography variant="caption" color="text.secondary">
+                      {option.description}
+                    </Typography>
+                  )}
                 </Box>
-              </MenuItem>
-              {templates.map((template) => (
-                <MenuItem key={template.id} value={template.id}>
-                  <Box>
-                    <Typography>{template.templateName}</Typography>
-                    {template.description && (
-                      <Typography variant="caption" color="text.secondary">
-                        {template.description}
-                      </Typography>
-                    )}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              </li>
+            )}
+            noOptionsText="사용 가능한 템플릿이 없습니다"
+            sx={{ width: '100%' }}
+          />
+          
+          {/* 선택된 템플릿 표시 - 순서 조정 가능 */}
+          {selectedTemplateIds.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                선택된 템플릿 (서명 순서)
+              </Typography>
+              <Box sx={{ 
+                border: '1px solid #E0E0E0', 
+                borderRadius: 1, 
+                p: 1,
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                {templateOrder
+                  .sort((a, b) => a.order - b.order)
+                  .map((item) => {
+                    const template = templates.find(t => t.id === item.id);
+                    if (!template) return null;
+                    
+                    return (
+                      <Box 
+                        key={template.id}
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          p: 1,
+                          mb: 0.5,
+                          border: '1px solid #F0F0F0',
+                          borderRadius: 1,
+                          '&:hover': { backgroundColor: '#F8F9FA' }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              bgcolor: '#3182F6',
+                              color: 'white',
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mr: 1
+                            }}
+                          >
+                            {item.order}
+                          </Typography>
+                          <Box>
+                            <Typography variant="body2">{template.templateName}</Typography>
+                            {template.description && (
+                              <Typography variant="caption" color="text.secondary">
+                                {template.description}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        
+                        <Box>
+                          <IconButton 
+                            size="small" 
+                            disabled={item.order === 1}
+                            onClick={() => handleMoveTemplate(item.id, 'up')}
+                          >
+                            <ArrowUpwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
+                            disabled={item.order === templateOrder.length}
+                            onClick={() => handleMoveTemplate(item.id, 'down')}
+                          >
+                            <ArrowDownwardIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleRemoveTemplate(item.id)}
+                            sx={{ color: '#FF4D4D' }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+              </Box>
+            </Box>
+          )}
         </Box>
 
         {/* 하단 버튼 - 가운데 정렬 */}

@@ -100,10 +100,11 @@ const AppContent = () => {
             <Route path="/signup" element={<Signup />} />
             
             {/* 루트 경로 접근 시 로그인 또는 메인 페이지로 리다이렉트 */}
-            <Route path="/" element={<Navigate to="/contract-list" replace />} />
-            
+            {/* <Route path="/" element={<Navigate to="/contract-list" replace />} />
+             */}
             {/* 보호된 라우트 - 인증 필요 */}
             <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<MainHome />} />
               <Route path="/companies" element={<CompanyList />} />
               <Route path="/companies/create" element={<CompanyCreate />} />
               <Route path="/companies/:companyId" element={<CompanyDetail />} />

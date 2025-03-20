@@ -66,6 +66,55 @@ const ContractDetailPage = () => {
     }
   };
 
+  // 모든 서명된 PDF 다운로드 핸들러 추가
+  const handleDownloadAllSignedPdfs = async (participantId) => {
+    try {
+      // 서명된 모든 PDF 목록 조회
+      const response = await fetch(
+        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
+        { method: 'GET' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData || 'PDF 조회 실패');
+      }
+
+      const signedPdfs = await response.json();
+      
+      if (signedPdfs.length === 0) {
+        alert('다운로드할 서명된 문서가 없습니다.');
+        return;
+      }
+      
+      // 각 PDF 순차적으로 다운로드
+      for (const pdfInfo of signedPdfs) {
+        await new Promise(resolve => setTimeout(resolve, 300)); // 다운로드 간격 설정
+        
+        const downloadResponse = await fetch(
+          `http://localhost:8080${pdfInfo.downloadUrl}`,
+          { method: 'GET' }
+        );
+        
+        if (!downloadResponse.ok) continue;
+        
+        const blob = await downloadResponse.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${pdfInfo.templateName}_${pdfInfo.pdfId}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+
+    } catch (error) {
+      console.error('Error downloading all PDFs:', error);
+      alert('PDF 다운로드 중 오류가 발생했습니다: ' + error.message);
+    }
+  };
+
   if (loading) return <Box>로딩중...</Box>;
   if (!contract) return <Box>계약 정보를 찾을 수 없습니다.</Box>;
 
@@ -197,7 +246,7 @@ const ContractDetailPage = () => {
               {/* 헤더 행 */}
               <Box sx={{ 
                 display: 'grid',
-                gridTemplateColumns: '1fr 2fr 2fr 100px 180px',
+                gridTemplateColumns: '1fr 2fr 2fr 100px 220px', // 마지막 컬럼 너비 증가
                 gap: 2,
                 pb: 2,
                 borderBottom: '1px solid #EEEEEE'
@@ -206,7 +255,7 @@ const ContractDetailPage = () => {
                 <Typography sx={{ color: '#666' }}>E-mail</Typography>
                 <Typography sx={{ color: '#666' }}>연락처</Typography>
                 <Typography sx={{ color: '#666' }}>서명 여부</Typography>
-                <Typography sx={{ color: '#666' }}>현장서명</Typography>
+                <Typography sx={{ color: '#666' }}>문서</Typography>
               </Box>
 
               {/* 참여자 목록 */}
@@ -215,7 +264,7 @@ const ContractDetailPage = () => {
                   key={index}
                   sx={{ 
                     display: 'grid',
-                    gridTemplateColumns: '1fr 2fr 2fr 100px 180px',  // 마지막 컬럼 너비 증가
+                    gridTemplateColumns: '1fr 2fr 2fr 100px 220px', // 마지막 컬럼 너비 증가
                     gap: 2,
                     py: 2,
                     borderBottom: index < contract.participants.length - 1 ? '1px solid #EEEEEE' : 'none',
@@ -243,7 +292,7 @@ const ContractDetailPage = () => {
                         variant="outlined"
                         size="small"
                         startIcon={<DownloadIcon />}
-                        onClick={() => handleDownloadSignedPdf(participant.signedPdfId)}
+                        onClick={() => handleDownloadAllSignedPdfs(participant.id)}
                         sx={{
                           borderColor: '#1976d2',
                           color: '#1976d2',
@@ -252,10 +301,10 @@ const ContractDetailPage = () => {
                             backgroundColor: 'rgba(25, 118, 210, 0.04)'
                           },
                           borderRadius: '8px',
-                          fontSize: '0.8rem'
+                          fontSize: '0.75rem'
                         }}
                       >
-                        서명본 다운로드
+                        서명된 PDF 다운로드
                       </Button>
                     ) : (
                       // 서명 대기 중인 경우 서명하기 버튼 표시
@@ -274,7 +323,7 @@ const ContractDetailPage = () => {
                           fontSize: '0.8rem'
                         }}
                       >
-                        서명하기
+                        현장서명
                       </Button>
                     )}
                   </Box>
