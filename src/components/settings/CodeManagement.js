@@ -1067,20 +1067,44 @@ const CodeManagement = () => {
         onClose={() => setGroupDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #F0F0F0', 
+          py: 2, 
+          px: 3, 
+          fontSize: '1rem', 
+          fontWeight: 600 
+        }}>
           {isEditMode ? '코드 그룹 수정' : '코드 그룹 추가'}
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent sx={{ p: 3 }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth>
+              <FormControl fullWidth sx={{ mt: 2 }}>
                 <InputLabel>그룹 레벨</InputLabel>
                 <Select
                   name="level"
                   label="그룹 레벨"
                   value={groupFormData.level}
                   onChange={handleGroupFormChange}
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#3182F6',
+                    },
+                  }}
                 >
                   <MenuItem value={1}>대분류</MenuItem>
                   <MenuItem value={2}>중분류</MenuItem>
@@ -1097,6 +1121,17 @@ const CodeManagement = () => {
                     label="상위 그룹"
                     value={groupFormData.parentGroupId || ''}
                     onChange={handleGroupFormChange}
+                    sx={{
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#E0E0E0',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#BDBDBD',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#3182F6',
+                      },
+                    }}
                   >
                     {groups
                       .filter(g => g.level === groupFormData.level - 1)
@@ -1118,6 +1153,19 @@ const CodeManagement = () => {
                 value={groupFormData.groupName}
                 onChange={handleGroupFormChange}
                 placeholder="그룹명을 입력하세요"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3182F6',
+                    },
+                  },
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -1130,6 +1178,19 @@ const CodeManagement = () => {
                 value={groupFormData.description}
                 onChange={handleGroupFormChange}
                 placeholder="그룹에 대한 설명을 입력하세요"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3182F6',
+                    },
+                  },
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -1140,6 +1201,17 @@ const CodeManagement = () => {
                   label="사용 여부"
                   value={groupFormData.active}
                   onChange={handleGroupFormChange}
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#3182F6',
+                    },
+                  }}
                 >
                   <MenuItem value={true}>사용</MenuItem>
                   <MenuItem value={false}>미사용</MenuItem>
@@ -1148,17 +1220,35 @@ const CodeManagement = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setGroupDialogOpen(false)}>취소</Button>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'flex-end' }}>
+          <Button 
+            onClick={() => setGroupDialogOpen(false)}
+            sx={{ 
+              color: '#666',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+              fontWeight: 500,
+              px: 2
+            }}
+          >
+            취소
+          </Button>
           <Button 
             variant="contained"
             onClick={isEditMode ? handleUpdateGroup : handleCreateGroup}
             disabled={loading || !groupFormData.groupName}
-            sx={{
-              backgroundColor: '#3182F6',
+            sx={{ 
+              bgcolor: '#3182F6', 
               '&:hover': {
-                backgroundColor: '#1B64DA'
-              }
+                bgcolor: '#1565C0',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(49, 130, 246, 0.3)',
+              },
+              fontWeight: 500,
+              boxShadow: 'none',
+              px: 2
             }}
           >
             {loading ? '처리중...' : '저장'}
@@ -1172,18 +1262,36 @@ const CodeManagement = () => {
         onClose={() => setCodeDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #F0F0F0', 
+          py: 2, 
+          px: 3, 
+          fontSize: '1rem', 
+          fontWeight: 600 
+        }}>
           {isEditMode ? '코드 수정' : '코드 추가'}
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent sx={{ p: 3 }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth disabled>
+              <FormControl fullWidth disabled sx={{ mt: 2 }}>
                 <InputLabel>코드 그룹</InputLabel>
                 <Select
                   label="코드 그룹"
                   value={selectedGroup?.groupId || ''}
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#E0E0E0',
+                    },
+                  }}
                 >
                   <MenuItem value={selectedGroup?.groupId || ''}>
                     {selectedGroup?.groupName || ''}
@@ -1200,6 +1308,19 @@ const CodeManagement = () => {
                 value={codeFormData.codeName}
                 onChange={handleCodeFormChange}
                 placeholder="코드명을 입력하세요"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3182F6',
+                    },
+                  },
+                }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -1211,6 +1332,19 @@ const CodeManagement = () => {
                 value={codeFormData.sortOrder}
                 onChange={handleCodeFormChange}
                 placeholder="정렬 순서를 입력하세요"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3182F6',
+                    },
+                  },
+                }}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -1221,6 +1355,17 @@ const CodeManagement = () => {
                   label="사용 여부"
                   value={codeFormData.active}
                   onChange={handleCodeFormChange}
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#3182F6',
+                    },
+                  }}
                 >
                   <MenuItem value={true}>사용</MenuItem>
                   <MenuItem value={false}>미사용</MenuItem>
@@ -1237,21 +1382,52 @@ const CodeManagement = () => {
                 value={codeFormData.description}
                 onChange={handleCodeFormChange}
                 placeholder="코드에 대한 설명을 입력하세요"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#E0E0E0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#BDBDBD',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3182F6',
+                    },
+                  },
+                }}
               />
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCodeDialogOpen(false)}>취소</Button>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'flex-end' }}>
+          <Button 
+            onClick={() => setCodeDialogOpen(false)}
+            sx={{ 
+              color: '#666',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+              fontWeight: 500,
+              px: 2
+            }}
+          >
+            취소
+          </Button>
           <Button 
             variant="contained"
             onClick={isEditMode ? handleUpdateCode : handleCreateCode}
             disabled={loading || !codeFormData.codeName}
-            sx={{
-              backgroundColor: '#3182F6',
+            sx={{ 
+              bgcolor: '#3182F6', 
               '&:hover': {
-                backgroundColor: '#1B64DA'
-              }
+                bgcolor: '#1565C0',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(49, 130, 246, 0.3)',
+              },
+              fontWeight: 500,
+              boxShadow: 'none',
+              px: 2
             }}
           >
             {loading ? '처리중...' : '저장'}
@@ -1265,30 +1441,67 @@ const CodeManagement = () => {
         onClose={() => setDeleteDialogOpen(false)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #F0F0F0', 
+          py: 2, 
+          px: 3, 
+          fontSize: '1rem', 
+          fontWeight: 600 
+        }}>
           {deleteType === 'code' ? '코드 삭제' : '코드 그룹 삭제'}
         </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" sx={{ mt: 3 }}>
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="body2" sx={{ color: '#505050', mt: 1 }}>
             {deleteType === 'code' 
               ? `"${itemToDelete?.codeName}" 코드를 삭제하시겠습니까?`
               : `"${itemToDelete?.groupName}" 그룹을 삭제하시겠습니까?`
             }
           </Typography>
           {deleteType === 'group' && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
+            <Alert severity="warning" sx={{ mt: 2, backgroundColor: 'rgba(255, 152, 0, 0.08)', border: 'none' }}>
               이 그룹에 속한 모든 코드와 하위 그룹이 비활성화됩니다.
             </Alert>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>취소</Button>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'flex-end' }}>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{ 
+              color: '#666',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+              fontWeight: 500,
+              px: 2
+            }}
+          >
+            취소
+          </Button>
           <Button 
             variant="contained" 
             color="error"
             onClick={deleteType === 'code' ? handleDeleteCode : handleDeleteGroup}
             disabled={loading}
+            sx={{ 
+              bgcolor: '#3182F6', 
+              '&:hover': {
+                bgcolor: '#1565C0',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(49, 130, 246, 0.3)',
+              },
+              fontWeight: 500,
+              boxShadow: 'none',
+              px: 2
+            }}
           >
             {loading ? '처리중...' : '삭제'}
           </Button>

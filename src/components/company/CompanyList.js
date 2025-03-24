@@ -153,7 +153,7 @@ const CompanyList = () => {
         mb: 3
       }}>
         <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          업체 관리
+          위수탁 업체 관리
         </Typography>
         <Button
           variant="contained"

@@ -33,6 +33,7 @@ const ContractList = () => {
       const response = await fetch('http://localhost:8080/api/contracts');
       if (!response.ok) throw new Error('계약 목록 조회 실패');
       const data = await response.json();
+      console.log('Fetched contracts:', data); // 데이터 로그 확인
       setContracts(data);
     } catch (error) {
       console.error('계약 목록 조회 중 오류:', error);
@@ -53,20 +54,42 @@ const ContractList = () => {
     setSelectedContractId(null);
   };
 
-  // 계약 상태에 따른 Chip 컴포넌트 렌더링
-  const renderStatusChip = (progressRate) => {
+  // 계약 상태에 따른 Chip 컴포넌트 렌더링 (수정: statusCode와 statusName 사용)
+  const renderStatusChip = (contract) => {
+    // 기본 상태 설정 (fallback)
     let label = "계약 대기";
     let color = "#666";
     let bgColor = "#F5F5F5";
 
-    if (progressRate === 100) {
-      label = "계약 완료";
-      color = "#3182F6";
-      bgColor = "#E8F3FF";
-    } else if (progressRate > 0) {
-      label = "계약 진행중";
-      color = "#FF9800";
-      bgColor = "#FFF3E0";
+    // statusCode와 statusName 있는 경우 우선 사용
+    if (contract.statusName) {
+      label = contract.statusName;
+      
+      // 상태 코드에 따른 스타일 지정
+      if (contract.statusCodeId === "001002_0001") { // 승인대기
+        color = "#FF9800";
+        bgColor = "#FFF3E0";
+      } else if (contract.statusCodeId === "001002_0002") { // 계약완료
+        color = "#3182F6";
+        bgColor = "#E8F3FF";
+      } else if (contract.statusCodeId === "001002_0003") { // 임시저장
+        color = "#9E9E9E";
+        bgColor = "#F5F5F5";
+      } else if (contract.statusCodeId === "001002_0004") { // 서명진행중
+        color = "#FF9800";
+        bgColor = "#FFF3E0";
+      }
+    } else {
+      // 기존 로직 (fallback)
+      if (contract.progressRate === 100) {
+        label = "계약 완료";
+        color = "#3182F6";
+        bgColor = "#E8F3FF";
+      } else if (contract.progressRate > 0) {
+        label = "서명 진행중";
+        color = "#FF9800";
+        bgColor = "#FFF3E0";
+      }
     }
 
     return (
@@ -198,9 +221,10 @@ const ContractList = () => {
               }}
             >
               <MenuItem value="">전체</MenuItem>
-              <MenuItem value="계약완료">계약완료</MenuItem>
-              <MenuItem value="서명전">서명전</MenuItem>
-              <MenuItem value="승인필요">승인필요</MenuItem>
+              <MenuItem value="001002_0002">계약완료</MenuItem>
+              <MenuItem value="001002_0003">임시저장</MenuItem>
+              <MenuItem value="001002_0004">서명진행중</MenuItem>
+              <MenuItem value="001002_0001">승인대기</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -314,7 +338,7 @@ const ContractList = () => {
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                {renderStatusChip(contract.progressRate)}
+                {renderStatusChip(contract)}
               </Box>
               <Typography sx={{ display: 'flex', alignItems: 'center' }}>
                 {contract.progressRate}%

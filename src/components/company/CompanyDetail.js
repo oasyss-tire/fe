@@ -516,7 +516,7 @@ const CompanyDetail = () => {
             <ArrowBack />
           </IconButton>
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-            회사 상세 정보
+            위수탁업체 상세 정보
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>

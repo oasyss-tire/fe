@@ -26,13 +26,26 @@ const AuthenticationDialog = React.memo(({
     maxWidth="xs" 
     fullWidth
     disableEscapeKeyDown
+    PaperProps={{
+      sx: {
+        borderRadius: '8px',
+        boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+        overflow: 'hidden'
+      }
+    }}
   >
-    <DialogTitle sx={{ pb: 1 }}>
+    <DialogTitle sx={{ 
+      borderBottom: '1px solid #F0F0F0', 
+      py: 2, 
+      px: 3, 
+      fontSize: '1rem', 
+      fontWeight: 600 
+    }}>
       본인 인증
     </DialogTitle>
-    <DialogContent>
+    <DialogContent sx={{ p: 3 }}>
       <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
+        <Typography variant="body2" sx={{ mb: 2, mt: 2, color: '#666' }}>
           계약서 서명을 위해 본인 인증이 필요합니다.<br />
           등록된 휴대폰 번호의 뒷자리 4자리를 입력해주세요.
         </Typography>
@@ -50,14 +63,39 @@ const AuthenticationDialog = React.memo(({
           helperText={authError}
           size="small"
           autoFocus
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: !!authError ? '#FF4D4F' : '#E0E0E0',
+              },
+              '&:hover fieldset': {
+                borderColor: !!authError ? '#FF4D4F' : '#BDBDBD',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: !!authError ? '#FF4D4F' : '#3182F6',
+              },
+            },
+          }}
         />
       </Box>
     </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 3 }}>
+    <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'center' }}>
       <Button 
         onClick={onVerify}
         variant="contained"
         fullWidth
+        sx={{ 
+          bgcolor: '#3182F6', 
+          '&:hover': {
+            bgcolor: '#1565C0',
+          },
+          '&.Mui-disabled': {
+            bgcolor: 'rgba(49, 130, 246, 0.3)',
+          },
+          fontWeight: 500,
+          boxShadow: 'none',
+          py: 1
+        }}
       >
         인증하기
       </Button>
@@ -878,29 +916,61 @@ const SignaturePdfViewer = () => {
         open={confirmDialogOpen}
         onClose={handleCloseConfirmDialog}
         aria-labelledby="confirm-dialog-title"
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle id="confirm-dialog-title">
+        <DialogTitle id="confirm-dialog-title" sx={{ 
+          borderBottom: '1px solid #F0F0F0', 
+          py: 2, 
+          px: 3, 
+          fontSize: '1rem', 
+          fontWeight: 600 
+        }}>
           서명 완료 확인
         </DialogTitle>
-        <DialogContent>
-          <Typography>
-            모든 계약서에 대한 서명을 완료하시겠습니까?
+        <DialogContent sx={{ p: 3 , mt: 2}}>
+          <Typography variant="body2" sx={{ color: '#505050' }}>
+            모든 계약서에 대한 서명을 완료하시겠습니까?<br/>
             완료 후에는 수정이 불가능합니다.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'flex-end' }}>
           <Button 
             onClick={handleCloseConfirmDialog} 
-            color="inherit"
-            variant="outlined"
+            sx={{ 
+              color: '#666',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+              fontWeight: 500,
+              px: 2
+            }}
           >
             취소
           </Button>
           <Button 
-            onClick={handleCompleteAllTemplates} 
-            color="primary"
+            onClick={handleCompleteAllTemplates}
             variant="contained"
             autoFocus
+            sx={{ 
+              bgcolor: '#3182F6', 
+              '&:hover': {
+                bgcolor: '#1565C0',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(49, 130, 246, 0.3)',
+              },
+              fontWeight: 500,
+              boxShadow: 'none',
+              px: 2
+            }}
           >
             확인
           </Button>
