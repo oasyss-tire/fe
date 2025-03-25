@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Paper, Stepper, Step, StepLabel } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -104,7 +104,12 @@ const AuthenticationDialog = React.memo(({
 ));
 
 const SignaturePdfViewer = () => {
-  const { contractId, participantId } = useParams();
+  // URL 파라미터와 쿼리 파라미터 모두 가져오기
+  const { contractId: urlContractId, participantId: urlParticipantId } = useParams();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const token = queryParams.get('token');
+  
   const navigate = useNavigate();
   const [numPages, setNumPages] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,13 +126,66 @@ const SignaturePdfViewer = () => {
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // 실제 사용할 계약ID와 참여자ID 상태 추가
+  const [contractId, setContractId] = useState(urlContractId);
+  const [participantId, setParticipantId] = useState(urlParticipantId);
+  const [tokenVerified, setTokenVerified] = useState(false);
+  
   // 다중 템플릿 관련 상태 추가
   const [currentTemplateIndex, setCurrentTemplateIndex] = useState(0);
   const [completedTemplates, setCompletedTemplates] = useState([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-  // 계약 정보 및 참여자 정보 조회
+  // 토큰이 있는 경우 토큰 검증 추가
   useEffect(() => {
+    const verifyToken = async () => {
+      if (!token) return;
+      
+      try {
+        setLoading(true);
+        const response = await fetch(`http://localhost:8080/api/signature/verify-token?token=${token}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (!data.isValid) {
+            alert('유효하지 않은 토큰입니다. 다시 시도해주세요.');
+            return;
+          }
+          
+          // 토큰에서 계약ID와 참여자ID 설정
+          setContractId(data.contractId);
+          setParticipantId(data.participantId);
+          setTokenVerified(true);
+          
+          // 이미 서명된 경우 바로 인증 상태로 설정
+          if (data.isSigned) {
+            alert('이미 서명이 완료된 계약서입니다.');
+            // 계약 상세 페이지로 이동
+            navigate(`/contract-detail/${data.contractId}`);
+            return;
+          }
+        } else {
+          alert('토큰 검증에 실패했습니다. 유효하지 않은 링크입니다.');
+        }
+      } catch (error) {
+        console.error('토큰 검증 오류:', error);
+        alert('토큰 검증 중 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (token) {
+      verifyToken();
+    }
+  }, [token, navigate]);
+
+  // 계약 정보 및 참여자 정보 조회 수정
+  useEffect(() => {
+    // 직접 URL의 계약ID, 참여자ID가 있거나 토큰 검증이 완료된 경우에만 실행
+    if ((!contractId || !participantId) && !tokenVerified) return;
+    
     const fetchInitialData = async () => {
       try {
         setLoading(true);
@@ -153,9 +211,6 @@ const SignaturePdfViewer = () => {
           await fetchFields(firstTemplatePdf.pdfId);
         }
         
-        // 5. 템플릿 상태 조회 (participant 설정 후에 실행)
-        // fetchTemplateStatus는 useEffect에 의해 participant가 업데이트된 후 자동으로 호출됨
-        
       } catch (error) {
         console.error('데이터 조회 실패:', error);
       } finally {
@@ -164,7 +219,7 @@ const SignaturePdfViewer = () => {
     };
     
     fetchInitialData();
-  }, [contractId, participantId]);
+  }, [contractId, participantId, tokenVerified]);
 
   // participant가 변경될 때마다 템플릿 상태 조회
   useEffect(() => {
@@ -496,21 +551,52 @@ const SignaturePdfViewer = () => {
         }
       }
       
-      // 모든 계약서 서명 완료 시 참여자 서명 완료 처리
-      const finalizeResponse = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/sign`, 
-        { 
-          method: 'POST'
-        }
-      );
+      // 서명 완료 처리 API 호출
+      // 토큰이 있는 비회원의 경우와 로그인한 회원의 경우 분기 처리
+      let finalizeResponse;
+      
+      if (token) {
+        // 비회원 서명의 경우 - 장기 토큰 발급 API 사용
+        finalizeResponse = await fetch(
+          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/complete-signing`, 
+          { method: 'POST' }
+        );
+      } else {
+        // 로그인한 회원의 경우 - 기존 API 사용
+        finalizeResponse = await fetch(
+          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/sign`, 
+          { method: 'POST' }
+        );
+      }
       
       if (finalizeResponse.ok) {
-        alert('모든 계약서에 대한 서명이 완료되었습니다.');
-        // 계약 상세 페이지로 이동
-        console.log('페이지 이동: /contract-detail/' + contractId);
-        setTimeout(() => {
-          window.location.href = `/contract-detail/${contractId}`;
-        }, 500);
+        // 토큰이 있는 비회원의 경우 비회원 결과 페이지로 이동
+        if (token) {
+          const responseData = await finalizeResponse.json();
+          if (responseData.success && responseData.redirectUrl) {
+            // 성공 메시지 변경: 알림 발송 정보 추가
+            alert(
+              '모든 계약서에 대한 서명이 완료되었습니다.\n\n' +
+              '계약 완료 알림 및 조회 링크가 이메일/SMS로 발송되었습니다.\n' +
+              '발송된 링크를 통해 언제든지 계약 내용을 확인하실 수 있습니다.'
+            );
+            
+            setTimeout(() => {
+              window.location.href = responseData.redirectUrl;
+            }, 500);
+          } else {
+            // 실패 시 기본 계약 상세 페이지로 이동
+            setTimeout(() => {
+              window.location.href = `/contract-detail/${contractId}`;
+            }, 500);
+          }
+        } else {
+          // 회원의 경우 계약 상세 페이지로 이동
+          alert('모든 계약서에 대한 서명이 완료되었습니다.');
+          setTimeout(() => {
+            window.location.href = `/contract-detail/${contractId}`;
+          }, 500);
+        }
       } else {
         throw new Error('서명 완료 처리 실패');
       }
@@ -536,9 +622,12 @@ const SignaturePdfViewer = () => {
         return;
       }
 
-      const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/verify`, 
-        {
+      // 토큰이 있는 경우와 없는 경우를 구분하여 처리
+      let response;
+      
+      if (token) {
+        // 토큰이 있는 경우 새로운 API 사용
+        response = await fetch(`http://localhost:8080/api/signature/verify-phone?contractId=${contractId}&participantId=${participantId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -546,8 +635,22 @@ const SignaturePdfViewer = () => {
           body: JSON.stringify({
             phoneLastDigits: phoneInput
           })
-        }
-      );
+        });
+      } else {
+        // 기존 방식 유지
+        response = await fetch(
+          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/verify`, 
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              phoneLastDigits: phoneInput
+            })
+          }
+        );
+      }
 
       if (response.ok) {
         setIsAuthenticated(true);
@@ -561,7 +664,7 @@ const SignaturePdfViewer = () => {
       console.error('인증 처리 중 오류:', error);
       setAuthError('인증 처리 중 오류가 발생했습니다.');
     }
-  }, [phoneInput, contractId, participantId]);
+  }, [phoneInput, contractId, participantId, token]);
 
   // 클릭하여 템플릿 변경 시 필드도 함께 업데이트하는 함수 추가
   const handleTemplateChange = async (index) => {

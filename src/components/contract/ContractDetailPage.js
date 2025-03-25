@@ -40,6 +40,11 @@ const ContractDetailPage = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailType, setDetailType] = useState('');
   const [detailContent, setDetailContent] = useState('');
+  
+  // 재서명 승인 관련 상태 추가
+  const [resignApproveDialogOpen, setResignApproveDialogOpen] = useState(false);
+  const [resignApproveLoading, setResignApproveLoading] = useState(false);
+  const [approver, setApprover] = useState('');
 
   // 계약 상세 정보 조회
   useEffect(() => {
@@ -106,6 +111,67 @@ const ContractDetailPage = () => {
   const handleCloseRejectDialog = () => {
     setRejectDialogOpen(false);
     setSelectedParticipant(null);
+  };
+
+  // 재서명 승인 다이얼로그 열기
+  const handleOpenResignApproveDialog = (participant) => {
+    setSelectedParticipant(participant);
+    setApprover(''); // 승인자 이름 초기화
+    setResignApproveDialogOpen(true);
+  };
+  
+  // 재서명 승인 다이얼로그 닫기
+  const handleCloseResignApproveDialog = () => {
+    setResignApproveDialogOpen(false);
+    setSelectedParticipant(null);
+  };
+  
+  // 재서명 승인 처리
+  const handleApproveResign = async () => {
+    if (!selectedParticipant || !approver.trim()) {
+      alert('승인자 이름을 입력해주세요.');
+      return;
+    }
+    
+    try {
+      setResignApproveLoading(true);
+      
+      const url = `http://localhost:8080/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve-resign`;
+      const response = await fetch(`${url}?approver=${encodeURIComponent(approver)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || '재서명 승인 처리 중 오류가 발생했습니다');
+      }
+      
+      // 승인 성공 후 알림
+      alert(`${selectedParticipant.name} 참여자의 재서명 요청이 승인되었습니다.`);
+      handleCloseResignApproveDialog();
+      
+      // 계약 정보 다시 조회
+      const fetchContractDetail = async () => {
+        try {
+          const response = await fetch(`http://localhost:8080/api/contracts/${id}`);
+          if (!response.ok) throw new Error('계약 조회 실패');
+          const data = await response.json();
+          setContract(data);
+        } catch (error) {
+          console.error('계약 조회 중 오류:', error);
+        }
+      };
+      
+      await fetchContractDetail();
+    } catch (error) {
+      console.error('재서명 승인 처리 중 오류:', error);
+      alert(error.message);
+    } finally {
+      setResignApproveLoading(false);
+    }
   };
 
   // 참여자 승인 처리
@@ -356,6 +422,11 @@ const ContractDetailPage = () => {
   // 참여자가 승인 대기 상태인지 확인
   const isParticipantWaitingApproval = (participant) => {
     return participant.statusCodeId === "008001_0001"; // 승인 대기 상태 확인
+  };
+
+  // 참여자가 재서명 요청 상태인지 확인
+  const isParticipantRequestingResign = (participant) => {
+    return participant.statusCodeId === "008001_0006"; // 재서명 요청 상태 확인
   };
 
   // 서명된 PDF 미리보기 핸들러
@@ -676,6 +747,52 @@ const ContractDetailPage = () => {
                           보기
                         </Button>
                       </>
+                    ) : isParticipantRequestingResign(participant) ? (
+                      // 재서명 요청 상태인 경우 재서명 승인 버튼 표시
+                      <>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<CheckIcon />}
+                          onClick={() => handleOpenResignApproveDialog(participant)}
+                          sx={{
+                            borderColor: '#E0E0E0',
+                            color: '#333333',
+                            '&:hover': {
+                              borderColor: '#CCCCCC',
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                            },
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            height: '28px',
+                            px: 0.75,
+                            minWidth: '100px'
+                          }}
+                        >
+                          재서명 승인
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<VisibilityIcon />}
+                          onClick={() => handlePreviewSignedPdf(participant)}
+                          sx={{
+                            borderColor: '#E0E0E0',
+                            color: '#333333',
+                            '&:hover': {
+                              borderColor: '#CCCCCC',
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                            },
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            height: '28px',
+                            px: 0.75,
+                            minWidth: '70px'
+                          }}
+                        >
+                          보기
+                        </Button>
+                      </>
                     ) : (
                       // 서명 완료됐거나 승인 완료된 경우 다운로드 버튼 표시
                       (participant.statusCodeId && ["008001_0001", "008001_0002", "008001_0005"].includes(participant.statusCodeId)) || participant.signed ? (
@@ -912,6 +1029,114 @@ const ContractDetailPage = () => {
             }}
           >
             {rejectLoading ? '처리중...' : '거부'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 재서명 승인 다이얼로그 */}
+      <Dialog
+        open={resignApproveDialogOpen}
+        onClose={handleCloseResignApproveDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #F0F0F0', 
+          py: 2, 
+          px: 3, 
+          fontSize: '1rem', 
+          fontWeight: 600 
+        }}>
+          참여자 재서명 요청 승인
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="body2" sx={{ mb: 3, mt: 2, color: '#505050' }}>
+            <strong>{selectedParticipant?.name}</strong> 님의 재서명 요청을 승인하시겠습니까?
+          </Typography>
+          {selectedParticipant?.resignRequestReason && (
+            <Paper sx={{ p: 2, mb: 3, bgcolor: '#F8F8FA', borderRadius: 1 }}>
+              <Typography variant="caption" sx={{ color: '#666', display: 'block', mb: 1 }}>
+                재서명 요청 사유:
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#333' }}>
+                {selectedParticipant.resignRequestReason}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 1 }}>
+                요청 시간: {selectedParticipant.resignRequestedAt ? 
+                  new Date(selectedParticipant.resignRequestedAt).toLocaleString('ko-KR') : ''}
+              </Typography>
+            </Paper>
+          )}
+          <Typography variant="body2" sx={{ mb: 1, mt: 2, color: '#505050', fontWeight: 500 }}>
+            승인자 이름
+          </Typography>
+          <TextField
+            fullWidth
+            value={approver}
+            onChange={(e) => setApprover(e.target.value)}
+            placeholder="승인자 이름을 입력하세요"
+            variant="outlined"
+            margin="normal"
+            required
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#E0E0E0',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#BDBDBD',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#3182F6',
+                },
+              },
+            }}
+          />
+          <Typography variant="body2" sx={{ mt: 3, color: '#FF4D4F', bgcolor: 'rgba(255, 77, 79, 0.08)', p: 2, borderRadius: '4px' }}>
+            주의: 재서명 요청을 승인하면 해당 참여자의 서명 상태가 초기화되고, 참여자는 처음부터 다시 서명을 진행해야 합니다.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'flex-end' }}>
+          <Button 
+            onClick={handleCloseResignApproveDialog}
+            sx={{ 
+              color: '#666',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              },
+              fontWeight: 500,
+              px: 2
+            }} 
+            disabled={resignApproveLoading}
+          >
+            취소
+          </Button>
+          <Button
+            onClick={handleApproveResign}
+            variant="contained"
+            disabled={resignApproveLoading || !approver.trim()}
+            startIcon={resignApproveLoading ? <CircularProgress size={20} color="inherit" /> : null}
+            sx={{ 
+              bgcolor: '#3182F6', 
+              '&:hover': {
+                bgcolor: '#1565C0',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(49, 130, 246, 0.3)',
+              },
+              fontWeight: 500,
+              boxShadow: 'none',
+              px: 2
+            }}
+          >
+            {resignApproveLoading ? '처리중...' : '승인'}
           </Button>
         </DialogActions>
       </Dialog>

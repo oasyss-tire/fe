@@ -42,6 +42,7 @@ const ContractDetailPage = React.lazy(() => import('./components/contract/Contra
 const FacilityDashboard = React.lazy(() => import('./components/facility/FacilityDashboard'));
 const CodeManagement = React.lazy(() => import('./components/settings/CodeManagement'));
 const PermissionManagement = React.lazy(() => import('./components/settings/PermissionManagement'));
+const ContractSignedPage = React.lazy(() => import('./components/contract/ContractSignedPage'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -99,9 +100,12 @@ const AppContent = () => {
             {/* 회원가입 페이지 - 인증 불필요 */}
             <Route path="/signup" element={<Signup />} />
             
-            {/* 루트 경로 접근 시 로그인 또는 메인 페이지로 리다이렉트 */}
-            {/* <Route path="/" element={<Navigate to="/contract-list" replace />} />
-             */}
+            {/* 비회원 서명 페이지 - 토큰 기반 인증 (인증 불필요) */}
+            <Route path="/contract-sign" element={<SignaturePdfViewer />} />
+            
+            {/* 비회원 서명 결과 페이지 (인증 불필요) */}
+            <Route path="/contract-signed" element={<ContractSignedPage />} />
+            
             {/* 보호된 라우트 - 인증 필요 */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainHome />} />
