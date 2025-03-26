@@ -592,7 +592,9 @@ const SignaturePdfViewer = () => {
           }
         } else {
           // 회원의 경우 계약 상세 페이지로 이동
-          alert('모든 계약서에 대한 서명이 완료되었습니다.');
+          alert('모든 계약서에 대한 서명이 완료되었습니다.\n\n' +
+            '서명이 완료된 계약서의 PDF 열람 암호가 이메일로 발송되었습니다.'
+          );
           setTimeout(() => {
             window.location.href = `/contract-detail/${contractId}`;
           }, 500);
