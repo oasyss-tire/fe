@@ -438,8 +438,8 @@ const ContractDetailPage = () => {
     }
     
     try {
-      // 새 창에서 PDF 미리보기 열기
-      window.open(`http://localhost:8080/api/contract-pdf/preview-signed-pdf/${participant.pdfId}`, '_blank');
+      // 새 창에서 PDF 미리보기 열기 대신 미리보기 페이지로 이동
+      navigate(`/contract-preview/${contract.id}/participant/${participant.id}`);
     } catch (error) {
       console.error('PDF 미리보기 중 오류:', error);
       alert('PDF 미리보기를 열 수 없습니다.');

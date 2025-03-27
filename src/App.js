@@ -45,6 +45,7 @@ const PermissionManagement = React.lazy(() => import('./components/settings/Perm
 const ContractSignedPage = React.lazy(() => import('./components/contract/ContractSignedPage'));
 const ContractCorrectionRequest = React.lazy(() => import('./components/contract/ContractCorrectionRequest'));
 const ContractCorrectionResponsePage = React.lazy(() => import('./components/contract/ContractCorrectionResponsePage'));
+const PreviewPdfViewer = React.lazy(() => import('./components/contract/PreviewPdfViewer'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -65,7 +66,7 @@ const AppContent = () => {
   const location = useLocation();
   
   const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer', '/login', '/signup', '/contract-correction-request',
-    '/contract-correction-request/:contractId/participant/:participantId', '/correction-request'];
+    '/contract-correction-request/:contractId/participant/:participantId', '/correction-request', '/contract-preview'];
   const shouldHideSidebar = hideSidebarPaths.some(path => 
     location.pathname.includes(path)
   );
@@ -139,6 +140,8 @@ const AppContent = () => {
               <Route path="/settings/codes" element={<CodeManagement />} />
               <Route path="/settings/permissions" element={<PermissionManagement />} />
               <Route path="/contract-correction-request/:contractId/participant/:participantId" element={<ContractCorrectionRequest />} />
+              <Route path="/contract-preview/:contractId/participant/:participantId" element={<PreviewPdfViewer />} />
+              <Route path="/contract-preview/:contractId/participant/:participantId/pdf/:pdfId" element={<PreviewPdfViewer />} />
             </Route>
           </Routes>
         </Suspense>

@@ -641,9 +641,29 @@ const ContractCorrectionResponsePage = () => {
           <Typography variant="h5" sx={{ mb: 2 }}>
             재서명이 완료되었습니다
           </Typography>
-          <Typography variant="body1" sx={{ mb: 4 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
             서명이 성공적으로 제출되었습니다. 감사합니다.
           </Typography>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              mb: 3,
+              backgroundColor: '#F8F8FA',
+              borderRadius: 1,
+              textAlign: 'left'
+            }}
+          >
+            <Typography variant="body2" sx={{ mb: 1, color: '#555' }}>
+              <strong>안내 사항 :</strong>
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1, color: '#555' }}>
+              • 이전에 메일로 전송된 결과 페이지에서 서명된 PDF를 다운로드하실 수 있습니다.
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#555' }}>
+              • 계약 상태는 메일에 포함된 링크를 통해 언제든지 확인하실 수 있습니다.
+            </Typography>
+          </Paper>
         </Paper>
       </Box>
     );
