@@ -20,7 +20,8 @@ import {
   Download as DownloadIcon,
   Check as CheckIcon,
   Close as CloseIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 
 const ContractDetailPage = () => {
@@ -680,8 +681,10 @@ const ContractDetailPage = () => {
                     justifyContent: 'flex-start',
                     minWidth: '240px'
                   }}>
-                    {/* 승인 대기 상태인 경우 승인/거부 버튼 표시 */}
-                    {isParticipantWaitingApproval(participant) ? (
+                    {/* 재서명 진행중인 경우 하이픈으로 표시 */}
+                    {participant.statusName === '재서명 진행중' || participant.statusCodeId === "008001_0007" ? (
+                      <Typography sx={{ color: '#666', ml: 1 }}>-</Typography>
+                    ) : isParticipantWaitingApproval(participant) ? (
                       <>
                         <Button
                           variant="outlined"
@@ -724,6 +727,27 @@ const ContractDetailPage = () => {
                           }}
                         >
                           거부
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<HistoryIcon />}
+                          onClick={() => navigate(`/contract-correction-request/${contract.id}/participant/${participant.id}`)}
+                          sx={{
+                            borderColor: '#E0E0E0',
+                            color: '#333333',
+                            '&:hover': {
+                              borderColor: '#CCCCCC',
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                            },
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            height: '28px',
+                            px: 0.75,
+                            minWidth: '100px'
+                          }}
+                        >
+                          재서명 요청
                         </Button>
                         <Button
                           variant="outlined"

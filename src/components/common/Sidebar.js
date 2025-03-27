@@ -21,13 +21,15 @@ import SendIcon from '@mui/icons-material/Send';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BuildIcon from '@mui/icons-material/Build';
 import LogoutIcon from '@mui/icons-material/Logout';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
+import EditIcon from '@mui/icons-material/Edit';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import EngineeringIcon from '@mui/icons-material/Engineering';
+import ForumIcon from '@mui/icons-material/Forum';
+import AnnouncementIcon from '@mui/icons-material/Announcement';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import ChatIcon from '@mui/icons-material/Chat';
 import { useAuth } from '../../contexts/AuthContext';
-import {
-  BusinessCenter as TemplateIcon,      // 서류가방 아이콘
-  Edit as ContractWriteIcon,           // 계약서 작성 아이콘
-  PeopleAlt as MeetingIcon,           // 미팅/대면 아이콘
-  Engineering as FacilityIcon,         // 시설물 관리 아이콘
-} from '@mui/icons-material';
 
 const DRAWER_WIDTH = 240;
 
@@ -47,19 +49,28 @@ const Sidebar = () => {
       items: [
         { text: '홈', icon: <HomeIcon />, path: '/' },
         { text: '계약 관리', icon: <DescriptionIcon />, path: '/contract-list' },
-        { text: '계약서 템플릿', icon: <TemplateIcon />, path: '/contract-templates' },
-        { text: '계약서 등록', icon: <ContractWriteIcon />, path: '/contract-upload' },
+        { text: '계약서 템플릿', icon: <BusinessCenterIcon />, path: '/contract-templates' },
+        { text: '계약서 등록', icon: <EditIcon />, path: '/contract-upload' },
         { text: '계약 생성', icon: <SendIcon />, path: '/contract-send' },
-        // { text: '현장 계약', icon: <MeetingIcon />, path: '/field-contracts' },
+        // { text: '현장 계약', icon: <PeopleAltIcon />, path: '/field-contracts' },
       ]
     },
     {
       category: '시설물',
       items: [
         { text: '시설물 리스트', icon: <ListAltIcon />, path: '/facility-list' },
-        { text: '시설물 등록', icon: <FacilityIcon />, path: '/facility-register' },
+        { text: '시설물 등록', icon: <EngineeringIcon />, path: '/facility-register' },
         { text: 'A/S 관리', icon: <BuildIcon />, path: '/facility-service' },
         { text: '시설물 대시보드', icon: <DashboardIcon />, path: '/facility-dashboard' },
+      ]
+    },
+    {
+      category: '커뮤니티',
+      items: [
+        { text: '게시판', icon: <ForumIcon />, path: '/service-preparing' },
+        { text: '공지사항', icon: <AnnouncementIcon />, path: '/service-preparing' },
+        { text: '자료실', icon: <FolderOpenIcon />, path: '/service-preparing' },
+        { text: '채팅', icon: <ChatIcon />, path: '/service-preparing' },
       ]
     },
     {

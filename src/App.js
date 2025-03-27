@@ -43,6 +43,8 @@ const FacilityDashboard = React.lazy(() => import('./components/facility/Facilit
 const CodeManagement = React.lazy(() => import('./components/settings/CodeManagement'));
 const PermissionManagement = React.lazy(() => import('./components/settings/PermissionManagement'));
 const ContractSignedPage = React.lazy(() => import('./components/contract/ContractSignedPage'));
+const ContractCorrectionRequest = React.lazy(() => import('./components/contract/ContractCorrectionRequest'));
+const ContractCorrectionResponsePage = React.lazy(() => import('./components/contract/ContractCorrectionResponsePage'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -62,7 +64,8 @@ const LoadingFallback = () => (
 const AppContent = () => {
   const location = useLocation();
   
-  const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer', '/login', '/signup'];
+  const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer', '/login', '/signup', '/contract-correction-request',
+    '/contract-correction-request/:contractId/participant/:participantId', '/correction-request'];
   const shouldHideSidebar = hideSidebarPaths.some(path => 
     location.pathname.includes(path)
   );
@@ -106,6 +109,9 @@ const AppContent = () => {
             {/* 비회원 서명 결과 페이지 (인증 불필요) */}
             <Route path="/contract-signed" element={<ContractSignedPage />} />
             
+            {/* 비회원 재서명 처리 페이지 (인증 불필요) */}
+            <Route path="/correction-request" element={<ContractCorrectionResponsePage />} />
+            
             {/* 보호된 라우트 - 인증 필요 */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainHome />} />
@@ -132,6 +138,7 @@ const AppContent = () => {
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/codes" element={<CodeManagement />} />
               <Route path="/settings/permissions" element={<PermissionManagement />} />
+              <Route path="/contract-correction-request/:contractId/participant/:participantId" element={<ContractCorrectionRequest />} />
             </Route>
           </Routes>
         </Suspense>
