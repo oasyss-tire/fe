@@ -117,10 +117,10 @@ const Sidebar = () => {
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
           <Box
             component="img"
-            src="/images/tirebank_header.png"
+            src="/images/header_logo.png"
             alt="로고"
             sx={{
-              height: '30px', // 로고 크기 약간 축소
+              height: '40px', // 로고 크기 약간 축소
               width: 'auto',
               cursor: 'pointer'
             }}

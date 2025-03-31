@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Box, 
@@ -11,7 +11,14 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  Divider,
+  Chip,
+  Menu,
+  MenuItem,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { 
   LocationOn as LocationOnIcon, 
@@ -21,7 +28,12 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   Visibility as VisibilityIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  FilePresent as FilePresentIcon,
+  Upload as UploadIcon,
+  AttachFile as AttachFileIcon,
+  PhotoCamera as PhotoCameraIcon,
+  InsertDriveFile as InsertDriveFileIcon
 } from '@mui/icons-material';
 
 const ContractDetailPage = () => {
@@ -46,6 +58,26 @@ const ContractDetailPage = () => {
   const [resignApproveDialogOpen, setResignApproveDialogOpen] = useState(false);
   const [resignApproveLoading, setResignApproveLoading] = useState(false);
   const [approver, setApprover] = useState('');
+
+  // 첨부파일 관련 상태 추가
+  const [participantDocuments, setParticipantDocuments] = useState({});
+  const [docLoading, setDocLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  
+  // 파일 업로드 메뉴 관련 상태
+  const [uploadMenuAnchor, setUploadMenuAnchor] = useState(null);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  
+  // 파일 입력을 위한 refs
+  const fileInputRef = useRef(null);
+  
+  // 웹캠 관련 상태 추가
+  const [cameraDialogOpen, setCameraDialogOpen] = useState(false);
+  const [stream, setStream] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // 계약 상세 정보 조회
   useEffect(() => {
@@ -73,6 +105,9 @@ const ContractDetailPage = () => {
         }
         
         setContract(data);
+        
+        // 계약 조회 후 문서 정보도 함께 조회
+        fetchContractDocuments(id);
       } catch (error) {
         console.error('계약 조회 중 오류:', error);
       } finally {
@@ -82,6 +117,212 @@ const ContractDetailPage = () => {
 
     fetchContractDetail();
   }, [id]);
+
+  // 첨부파일 정보 조회
+  const fetchContractDocuments = async (contractId) => {
+    try {
+      setDocLoading(true);
+      const response = await fetch(`http://localhost:8080/api/contracts/${contractId}/documents`);
+      if (!response.ok) throw new Error('첨부파일 조회 실패');
+      const data = await response.json();
+      console.log('참여자별 문서 목록:', data);
+      setParticipantDocuments(data);
+    } catch (error) {
+      console.error('첨부파일 조회 중 오류:', error);
+    } finally {
+      setDocLoading(false);
+    }
+  };
+
+  // 문서 다운로드 처리
+  const handleDocumentDownload = async (documentId, fileName) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/contracts/documents/${documentId}/download`);
+      if (!response.ok) {
+        throw new Error('문서 다운로드 실패');
+      }
+
+      // 파일 다운로드 처리
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || `document_${documentId}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('문서 다운로드 중 오류:', error);
+      alert('문서 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 업로드 메뉴 열기
+  const handleOpenUploadMenu = (event, participant, doc) => {
+    setUploadMenuAnchor(event.currentTarget);
+    setSelectedDoc({ participant, doc });
+  };
+
+  // 업로드 메뉴 닫기
+  const handleCloseUploadMenu = () => {
+    setUploadMenuAnchor(null);
+  };
+
+  // 파일 찾기로 업로드
+  const handleFileUpload = () => {
+    handleCloseUploadMenu();
+    fileInputRef.current.click();
+  };
+
+  // 카메라로 업로드
+  const handleCameraUpload = () => {
+    handleCloseUploadMenu();
+    // PC 환경에서는 웹캠 다이얼로그 열기
+    setCameraDialogOpen(true);
+    
+    // 웹캠 스트림 시작
+    startCameraStream();
+  };
+  
+  // 웹캠 스트림 시작
+  const startCameraStream = async () => {
+    try {
+      const constraints = { 
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user' // 전면 카메라 (PC 웹캠)
+        } 
+      };
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
+      
+      // 비디오 요소에 스트림 연결
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (error) {
+      console.error('웹캠 접근 오류:', error);
+      alert('웹캠에 접근할 수 없습니다. 권한을 확인해주세요.');
+      setCameraDialogOpen(false);
+    }
+  };
+  
+  // 웹캠 스트림 중지
+  const stopCameraStream = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+  
+  // 카메라 다이얼로그 닫기
+  const handleCloseCameraDialog = () => {
+    stopCameraStream();
+    setCameraDialogOpen(false);
+  };
+  
+  // 사진 촬영
+  const handleCapture = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    // 비디오 프레임 크기로 캔버스 설정
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // 캔버스에 현재 비디오 프레임 그리기
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // 캔버스 이미지를 Blob으로 변환
+    canvas.toBlob(async (blob) => {
+      if (!blob || !selectedDoc) return;
+      
+      // Blob을 File 객체로 변환
+      const file = new File([blob], `webcam_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // 파일 업로드
+      await uploadFile(file, selectedDoc.participant, selectedDoc.doc);
+      
+      // 다이얼로그 닫기
+      handleCloseCameraDialog();
+    }, 'image/jpeg', 0.95);
+  };
+
+  // 파일 선택 시 처리
+  const handleFileChange = async (event) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    const file = event.target.files[0];
+    if (!selectedDoc) return;
+    
+    await uploadFile(file, selectedDoc.participant, selectedDoc.doc);
+    
+    // 파일 입력 초기화
+    event.target.value = null;
+  };
+  
+  // 파일 업로드 처리
+  const uploadFile = async (file, participant, doc) => {
+    try {
+      setUploadLoading(true);
+      setUploadError(null);
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(
+        `http://localhost:8080/api/contracts/${contract.id}/participants/${participant.id}/documents/${doc.documentCodeId}`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '파일 업로드 실패');
+      }
+      
+      const result = await response.json();
+      console.log('업로드 성공:', result);
+      
+      // 업로드 성공 후 문서 목록 다시 조회
+      await fetchContractDocuments(contract.id);
+      setUploadSuccess(true);
+      
+      // 3초 후 성공 메시지 숨기기
+      setTimeout(() => {
+        setUploadSuccess(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('파일 업로드 중 오류:', error);
+      setUploadError(error.message);
+      
+      // 3초 후 에러 메시지 숨기기
+      setTimeout(() => {
+        setUploadError(null);
+      }, 3000);
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  // 에러 알림 닫기
+  const handleCloseErrorAlert = () => {
+    setUploadError(null);
+  };
+  
+  // 성공 알림 닫기
+  const handleCloseSuccessAlert = () => {
+    setUploadSuccess(false);
+  };
 
   // 서명 버튼 클릭 핸들러
   const handleSignatureClick = (participant) => {
@@ -607,269 +848,403 @@ const ContractDetailPage = () => {
 
               {/* 참여자 목록 */}
               {contract.participants.map((participant, index) => (
-                <Box 
-                  key={index}
-                  sx={{ 
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: '1fr 1.5fr 1fr 0.8fr 2fr',
-                      sm: '1fr 1.5fr 1fr 0.8fr 2fr', 
-                      md: '1fr 1.5fr 1fr 0.8fr 2fr'
-                    },
-                    gap: 2,
-                    py: 2,
-                    borderBottom: index < contract.participants.length - 1 ? '1px solid #EEEEEE' : 'none',
-                    alignItems: 'center'
-                  }}
-                >
-                  <Typography sx={{ 
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis', 
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {participant.name}
-                  </Typography>
-                  <Typography 
-                    onClick={() => handleOpenDetailDialog('이메일', participant.email)}
+                <React.Fragment key={index}>
+                  <Box 
                     sx={{ 
+                      display: 'grid',
+                      gridTemplateColumns: {
+                        xs: '1fr 1.5fr 1fr 0.8fr 2fr',
+                        sm: '1fr 1.5fr 1fr 0.8fr 2fr', 
+                        md: '1fr 1.5fr 1fr 0.8fr 2fr'
+                      },
+                      gap: 2,
+                      py: 2,
+                      borderBottom: 'none', // 기존 border 제거
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Typography sx={{ 
                       overflow: 'hidden', 
                       textOverflow: 'ellipsis', 
                       whiteSpace: 'nowrap',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        textDecoration: 'underline',
-                        color: '#3182F6'
-                      }
-                    }}
-                  >
-                    {participant.email}
-                  </Typography>
-                  <Typography 
-                    onClick={() => handleOpenDetailDialog('연락처', participant.phoneNumber)}
-                    sx={{ 
-                      overflow: 'hidden', 
-                      textOverflow: 'ellipsis', 
-                      whiteSpace: 'nowrap',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        textDecoration: 'underline',
-                        color: '#3182F6'
-                      }
-                    }}
-                  >
-                    {participant.phoneNumber}
-                  </Typography>
-                  {/* 참여자 상태 표시 - 백엔드에서 제공하는 statusName 직접 사용 */}
-                  <Box sx={{ 
-                    backgroundColor: getParticipantStatusColor(participant.statusCodeId || '').bgColor,
-                    color: getParticipantStatusColor(participant.statusCodeId || '').color,
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 1,
-                    width: 'fit-content',
-                    fontSize: '0.75rem',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {/* 상태명이 없는 경우 폴백 처리 */}
-                    {participant.statusName || (participant.signed ? '서명 완료' : '서명 대기')}
-                  </Box>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 1,
-                    flexWrap: 'nowrap',
-                    width: '100%',
-                    justifyContent: 'flex-start',
-                    minWidth: '240px'
-                  }}>
-                    {/* 재서명 진행중인 경우 하이픈으로 표시 */}
-                    {participant.statusName === '재서명 진행중' || participant.statusCodeId === "008001_0007" ? (
-                      <Typography sx={{ color: '#666', ml: 1 }}>-</Typography>
-                    ) : isParticipantWaitingApproval(participant) ? (
-                      <>
-                        <Button
-                          variant="outlined"
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      {participant.name}
+                      {participantDocuments[participant.id] && participantDocuments[participant.id].length > 0 && (
+                        <Chip
                           size="small"
-                          startIcon={<CheckIcon />}
-                          onClick={() => handleOpenApproveDialog(participant)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            minWidth: '70px'
+                          label={`문서 ${participantDocuments[participant.id].length}개`}
+                          sx={{ 
+                            ml: 1, 
+                            height: '20px', 
+                            fontSize: '0.65rem', 
+                            backgroundColor: '#E8F3FF', 
+                            color: '#1976d2'
                           }}
-                        >
-                          승인
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<CloseIcon />}
-                          onClick={() => handleOpenRejectDialog(participant)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            minWidth: '70px'
-                          }}
-                        >
-                          거부
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<HistoryIcon />}
-                          onClick={() => navigate(`/contract-correction-request/${contract.id}/participant/${participant.id}`)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            minWidth: '100px'
-                          }}
-                        >
-                          재서명 요청
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<VisibilityIcon />}
-                          onClick={() => handlePreviewSignedPdf(participant)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            minWidth: '70px'
-                          }}
-                        >
-                          보기
-                        </Button>
-                      </>
-                    ) : isParticipantRequestingResign(participant) ? (
-                      // 재서명 요청 상태인 경우 재서명 승인 버튼 표시
-                      <>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<CheckIcon />}
-                          onClick={() => handleOpenResignApproveDialog(participant)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            minWidth: '100px'
-                          }}
-                        >
-                          재서명 승인
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<VisibilityIcon />}
-                          onClick={() => handlePreviewSignedPdf(participant)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            minWidth: '70px'
-                          }}
-                        >
-                          보기
-                        </Button>
-                      </>
-                    ) : (
-                      // 서명 완료됐거나 승인 완료된 경우 다운로드 버튼 표시
-                      (participant.statusCodeId && ["008001_0001", "008001_0002", "008001_0005"].includes(participant.statusCodeId)) || participant.signed ? (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<DownloadIcon />}
-                          onClick={() => handleDownloadAllSignedPdfs(participant.id)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            whiteSpace: 'nowrap',
-                            width: '125px'
-                          }}
-                        >
-                          PDF 다운로드
-                        </Button>
+                        />
+                      )}
+                    </Typography>
+                    <Typography 
+                      onClick={() => handleOpenDetailDialog('이메일', participant.email)}
+                      sx={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                          color: '#3182F6'
+                        }
+                      }}
+                    >
+                      {participant.email}
+                    </Typography>
+                    <Typography 
+                      onClick={() => handleOpenDetailDialog('연락처', participant.phoneNumber)}
+                      sx={{ 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                          color: '#3182F6'
+                        }
+                      }}
+                    >
+                      {participant.phoneNumber}
+                    </Typography>
+                    {/* 참여자 상태 표시 - 백엔드에서 제공하는 statusName 직접 사용 */}
+                    <Box sx={{ 
+                      backgroundColor: getParticipantStatusColor(participant.statusCodeId || '').bgColor,
+                      color: getParticipantStatusColor(participant.statusCodeId || '').color,
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
+                      width: 'fit-content',
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {/* 상태명이 없는 경우 폴백 처리 */}
+                      {participant.statusName || (participant.signed ? '서명 완료' : '서명 대기')}
+                    </Box>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 1,
+                      flexWrap: 'nowrap',
+                      width: '100%',
+                      justifyContent: 'flex-start',
+                      minWidth: '240px'
+                    }}>
+                      {/* 재서명 진행중인 경우 하이픈으로 표시 */}
+                      {participant.statusName === '재서명 진행중' || participant.statusCodeId === "008001_0007" ? (
+                        <Typography sx={{ color: '#666', ml: 1 }}>-</Typography>
+                      ) : isParticipantWaitingApproval(participant) ? (
+                        <>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CheckIcon />}
+                            onClick={() => handleOpenApproveDialog(participant)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              minWidth: '70px'
+                            }}
+                          >
+                            승인
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CloseIcon />}
+                            onClick={() => handleOpenRejectDialog(participant)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              minWidth: '70px'
+                            }}
+                          >
+                            거부
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<HistoryIcon />}
+                            onClick={() => navigate(`/contract-correction-request/${contract.id}/participant/${participant.id}`)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              minWidth: '100px'
+                            }}
+                          >
+                            재서명 요청
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityIcon />}
+                            onClick={() => handlePreviewSignedPdf(participant)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              minWidth: '70px'
+                            }}
+                          >
+                            보기
+                          </Button>
+                        </>
+                      ) : isParticipantRequestingResign(participant) ? (
+                        // 재서명 요청 상태인 경우 재서명 승인 버튼 표시
+                        <>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CheckIcon />}
+                            onClick={() => handleOpenResignApproveDialog(participant)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              minWidth: '100px'
+                            }}
+                          >
+                            재서명 승인
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<VisibilityIcon />}
+                            onClick={() => handlePreviewSignedPdf(participant)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              minWidth: '70px'
+                            }}
+                          >
+                            보기
+                          </Button>
+                        </>
                       ) : (
-                        // 서명 대기 중인 경우 서명하기 버튼 표시
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<DrawIcon />}
-                          onClick={() => handleSignatureClick(participant)}
-                          sx={{
-                            borderColor: '#E0E0E0',
-                            color: '#333333',
-                            '&:hover': {
-                              borderColor: '#CCCCCC',
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            },
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            height: '28px',
-                            px: 0.75,
-                            whiteSpace: 'nowrap',
-                            width: '100px'
-                          }}
-                        >
-                          현장서명
-                        </Button>
-                      )
-                    )}
+                        // 서명 완료됐거나 승인 완료된 경우 다운로드 버튼 표시
+                        (participant.statusCodeId && ["008001_0001", "008001_0002", "008001_0005"].includes(participant.statusCodeId)) || participant.signed ? (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<DownloadIcon />}
+                            onClick={() => handleDownloadAllSignedPdfs(participant.id)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              whiteSpace: 'nowrap',
+                              width: '125px'
+                            }}
+                          >
+                            PDF 다운로드
+                          </Button>
+                        ) : (
+                          // 서명 대기 중인 경우 서명하기 버튼 표시
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<DrawIcon />}
+                            onClick={() => handleSignatureClick(participant)}
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#333333',
+                              '&:hover': {
+                                borderColor: '#CCCCCC',
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                              },
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              height: '28px',
+                              px: 0.75,
+                              whiteSpace: 'nowrap',
+                              width: '100px'
+                            }}
+                          >
+                            현장서명
+                          </Button>
+                        )
+                      )}
+                    </Box>
                   </Box>
-                </Box>
+
+                  {/* 첨부파일 목록 섹션 - 항상 표시되도록 변경 */}
+                  {participantDocuments[participant.id] && participantDocuments[participant.id].length > 0 && (
+                    <Box 
+                      sx={{ 
+                        ml: 0, 
+                        mr: 0, 
+                        mb: 2, 
+                        py: 1.5, 
+                        px: 0, 
+                        backgroundColor: 'transparent',
+                        borderRadius: 0,
+                        borderTop: '1px dashed #EEEEEE',
+                        borderBottom: 'none',
+                        border: 'none'
+                      }}
+                    >
+                      <Typography variant="subtitle2" sx={{ 
+                        mb: 1.5, 
+                        mt: 1,
+                        pl: 0, 
+                        fontWeight: 600, 
+                        color: '#505050',
+                        fontSize: '0.8rem' 
+                      }}>
+                        필수 첨부파일 목록 ({participantDocuments[participant.id].length}개)
+                      </Typography>
+                      
+                      <Box sx={{ pl: 0.5 }}>
+                        {participantDocuments[participant.id].map((doc, docIndex) => (
+                          <Box 
+                            key={doc.id} 
+                            sx={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              py: 1,
+                              borderBottom: docIndex < participantDocuments[participant.id].length - 1 ? '1px dashed #F0F0F0' : 'none'
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <FilePresentIcon sx={{ color: '#3182F6', mr: 1, fontSize: '1rem' }} />
+                              <Box>
+                                <Typography variant="body2" sx={{ color: '#333', fontWeight: 500, fontSize: '0.8rem' }}>
+                                  {doc.documentCodeName}
+                                </Typography>
+                                {doc.originalFileName && (
+                                  <Typography variant="caption" sx={{ color: '#666', display: 'block', fontSize: '0.75rem' }}>
+                                    {doc.originalFileName}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                            
+                            <Box>
+                              {doc.fileId ? (
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  startIcon={<DownloadIcon fontSize="small" />}
+                                  onClick={() => handleDocumentDownload(doc.id, doc.originalFileName)}
+                                  sx={{
+                                    borderColor: '#3182F6',
+                                    color: '#3182F6',
+                                    fontSize: '0.7rem',
+                                    height: '24px',
+                                    '&:hover': {
+                                      borderColor: '#1565C0',
+                                      backgroundColor: 'rgba(49, 130, 246, 0.04)'
+                                    }
+                                  }}
+                                >
+                                  다운로드
+                                </Button>
+                              ) : (
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <Chip
+                                    label="미제출"
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: doc.required ? '#FFF3E0' : '#EEEEEE',
+                                      color: doc.required ? '#FF9800' : '#666',
+                                      fontSize: '0.7rem',
+                                      height: '20px',
+                                      mr: 1
+                                    }}
+                                  />
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    aria-haspopup="true"
+                                    onClick={(e) => handleOpenUploadMenu(e, participant, doc)}
+                                    startIcon={<UploadIcon fontSize="small" />}
+                                    disabled={uploadLoading}
+                                    sx={{
+                                      borderColor: '#3182F6',
+                                      color: '#3182F6',
+                                      fontSize: '0.7rem',
+                                      height: '24px',
+                                      '&:hover': {
+                                        borderColor: '#1565C0',
+                                        backgroundColor: 'rgba(49, 130, 246, 0.04)'
+                                      }
+                                    }}
+                                  >
+                                    {uploadLoading && selectedDoc?.doc?.id === doc.id ? '업로드 중...' : '업로드'}
+                                  </Button>
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* 참여자 구분선 */}
+                  <Divider sx={{ my: index < contract.participants.length - 1 ? 1 : 0 }} />
+                </React.Fragment>
               ))}
             </Paper>
           </Box>
@@ -1212,6 +1587,146 @@ const ContractDetailPage = () => {
           </Box>
         </DialogContent>
       </Dialog>
+
+      {/* 파일 업로드 메뉴 */}
+      <Menu
+        anchorEl={uploadMenuAnchor}
+        open={Boolean(uploadMenuAnchor)}
+        onClose={handleCloseUploadMenu}
+        PaperProps={{
+          sx: { 
+            minWidth: 180, 
+            boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.08)',
+            borderRadius: '8px'
+          }
+        }}
+      >
+        <MenuItem 
+          onClick={handleFileUpload}
+          sx={{ py: 1 }}
+        >
+          <InsertDriveFileIcon fontSize="small" sx={{ mr: 1, color: '#666' }} />
+          <Typography variant="body2">파일 찾아보기</Typography>
+        </MenuItem>
+        <MenuItem 
+          onClick={handleCameraUpload}
+          sx={{ py: 1 }}
+        >
+          <PhotoCameraIcon fontSize="small" sx={{ mr: 1, color: '#666' }} />
+          <Typography variant="body2">사진 촬영하기</Typography>
+        </MenuItem>
+      </Menu>
+
+      {/* 카메라 다이얼로그 */}
+      <Dialog
+        open={cameraDialogOpen}
+        onClose={handleCloseCameraDialog}
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            overflow: 'hidden',
+            maxWidth: '640px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          p: 2, 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid #eee'
+        }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            웹캠으로 사진 촬영
+          </Typography>
+          <IconButton 
+            onClick={handleCloseCameraDialog}
+            size="small"
+            edge="end"
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, bgcolor: '#000', position: 'relative' }}>
+          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ 
+                width: '100%', 
+                maxHeight: '480px',
+                objectFit: 'contain',
+                display: 'block'
+              }}
+            />
+            <canvas
+              ref={canvasRef}
+              style={{ display: 'none' }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'center', borderTop: '1px solid #eee' }}>
+          <Button 
+            variant="contained"
+            onClick={handleCapture}
+            startIcon={<PhotoCameraIcon />}
+            sx={{ 
+              px: 3,
+              py: 1,
+              backgroundColor: '#3182F6',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#1565C0'
+              }
+            }}
+          >
+            촬영하기
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 파일 입력 (숨김) */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pdf,.jpg,.jpeg,.png"
+        style={{ display: 'none' }}
+      />
+
+      {/* 알림 메시지 */}
+      <Snackbar 
+        open={uploadSuccess} 
+        autoHideDuration={3000} 
+        onClose={handleCloseSuccessAlert}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSuccessAlert} 
+          severity="success" 
+          sx={{ width: '100%' }}
+        >
+          파일이 성공적으로 업로드되었습니다.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar 
+        open={Boolean(uploadError)} 
+        autoHideDuration={3000} 
+        onClose={handleCloseErrorAlert}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseErrorAlert} 
+          severity="error" 
+          sx={{ width: '100%' }}
+        >
+          {uploadError}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

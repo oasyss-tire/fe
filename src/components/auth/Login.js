@@ -99,10 +99,10 @@ const Login = () => {
       {/* 로고 영역 - 중앙 상단에 배치 */}
       <Box 
         component="img"
-        src="/images/tirebank_header.png"
+        src="/images/header_logo.png"
         alt="타이어뱅크 로고"
         sx={{
-          height: '40px',
+          height: '60px',
           mb: 5
         }}
       />
@@ -250,7 +250,7 @@ const Login = () => {
       </Paper>
       
       {/* 회원가입 링크 */}
-      <Box 
+      {/* <Box 
         sx={{ 
           mt: 3, 
           textAlign: 'center'
@@ -271,7 +271,7 @@ const Login = () => {
         >
           회원 가입
         </Link>
-      </Box>
+      </Box> */}
     </Box>
   );
 };

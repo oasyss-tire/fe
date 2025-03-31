@@ -14,7 +14,9 @@ import {
   InputAdornment,
   OutlinedInput,
   Autocomplete,
-  Paper
+  Paper,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -22,7 +24,8 @@ import {
   Add as AddIcon,
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -53,6 +56,10 @@ const ContractSend = () => {
   const [selectedTemplateIds, setSelectedTemplateIds] = useState([]);
   const [templateOrder, setTemplateOrder] = useState([]);
   const [companies, setCompanies] = useState([]);
+
+  // 첨부파일 관련 상태 추가
+  const [documents, setDocuments] = useState([]);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState([]);
 
   const [companySearchTerm, setCompanySearchTerm] = useState('');
 
@@ -112,10 +119,24 @@ const ContractSend = () => {
     }
   };
 
-  // 컴포넌트 마운트 시 템플릿 목록과 회사 목록 조회
+  // 첨부파일 코드 목록 조회 함수 추가
+  const fetchDocumentCodes = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/codes/groups/001003/codes/active');
+      if (!response.ok) throw new Error('첨부파일 코드 목록 조회 실패');
+      const data = await response.json();
+      setDocuments(data);
+      console.log('첨부파일 코드 목록:', data); // 데이터 구조 확인용 로그
+    } catch (error) {
+      console.error('첨부파일 코드 목록 조회 중 오류:', error);
+    }
+  };
+
+  // 컴포넌트 마운트 시 템플릿, 회사, 첨부파일 코드 목록 조회
   useEffect(() => {
     fetchTemplates();
     fetchCompanies();
+    fetchDocumentCodes();
   }, []);
 
   // 템플릿 선택 핸들러 수정
@@ -131,6 +152,12 @@ const ContractSend = () => {
     });
     
     setTemplateOrder(newOrder);
+  };
+  
+  // 첨부파일 선택 핸들러 추가
+  const handleDocumentChange = (event, newValues) => {
+    const newDocumentIds = newValues.map(doc => doc.codeId);
+    setSelectedDocumentIds(newDocumentIds);
   };
   
   // 템플릿 순서 변경 핸들러
@@ -237,6 +264,7 @@ const ContractSend = () => {
           createdBy: contractInfo.createdBy,
           department: contractInfo.department,
           companyId: contractInfo.companyId,
+          documentCodeIds: selectedDocumentIds, // 첨부파일 코드 ID 목록 추가
           participants: participants.map(p => ({
             name: p.name,
             email: p.email,
@@ -572,6 +600,102 @@ const ContractSend = () => {
               </IconButton>
             </Box>
           ))}
+        </Box>
+
+        {/* 첨부파일 섹션 추가 */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ 
+            mb: 3,
+            pb: 2,
+            borderBottom: '1px solid #EEEEEE'
+          }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              필수 첨부파일 선택
+            </Typography>
+          </Box>
+          <Autocomplete
+            multiple
+            id="documents-select"
+            options={documents}
+            value={documents.filter(doc => selectedDocumentIds.includes(doc.codeId))}
+            onChange={handleDocumentChange}
+            getOptionLabel={(option) => option.codeName}
+            isOptionEqualToValue={(option, value) => option.codeId === value.codeId}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                placeholder="필수 첨부파일 선택"
+                label="첨부파일 종류"
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="body2">{option.codeName}</Typography>
+                  {option.description && (
+                    <Typography variant="caption" color="text.secondary">
+                      {option.description}
+                    </Typography>
+                  )}
+                </Box>
+              </li>
+            )}
+            noOptionsText="사용 가능한 첨부파일이 없습니다"
+            sx={{ width: '100%' }}
+          />
+          
+          {/* 선택된 첨부파일 표시 */}
+          {selectedDocumentIds.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                선택된 첨부파일
+              </Typography>
+              <Box sx={{ 
+                border: '1px solid #E0E0E0', 
+                borderRadius: 1, 
+                p: 1,
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                {selectedDocumentIds.map((codeId, index) => {
+                  const document = documents.find(d => d.codeId === codeId);
+                  if (!document) return null;
+                  
+                  return (
+                    <Box 
+                      key={document.codeId}
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        p: 1,
+                        mb: 0.5,
+                        border: '1px solid #F0F0F0',
+                        borderRadius: 1,
+                        '&:hover': { backgroundColor: '#F8F9FA' }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <DescriptionIcon 
+                          fontSize="small" 
+                          sx={{ color: '#3182F6', mr: 1 }} 
+                        />
+                        <Box>
+                          <Typography variant="body2">{document.codeName}</Typography>
+                          {document.description && (
+                            <Typography variant="caption" color="text.secondary">
+                              {document.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
         </Box>
 
         {/* 계약서 선택 섹션 */}
