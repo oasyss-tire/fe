@@ -44,6 +44,8 @@ const ContractSignedPage = () => {
   const [resignRequestResult, setResignRequestResult] = useState(null);
   //
   // 토큰으로 계약 정보 조회
+
+  //진
   useEffect(() => {
     const fetchContractInfo = async () => {
       if (!token) {
