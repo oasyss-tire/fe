@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Paper, Stepper, Step, StepLabel } from '@mui/material';
+import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Paper, Stepper, Step, StepLabel, Menu, MenuItem, Chip, IconButton } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -9,6 +9,11 @@ import TextInputModal from '../common/fields/TextInputModal';
 import SaveIcon from '@mui/icons-material/Save';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import FilePresentIcon from '@mui/icons-material/FilePresent';
+import DownloadIcon from '@mui/icons-material/Download';
+import UploadIcon from '@mui/icons-material/Upload';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import CloseIcon from '@mui/icons-material/Close';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -136,6 +141,24 @@ const SignaturePdfViewer = () => {
   const [completedTemplates, setCompletedTemplates] = useState([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
+  // 첨부파일 관련 상태 추가
+  const [participantDocuments, setParticipantDocuments] = useState([]);
+  const [uploadMenuAnchor, setUploadMenuAnchor] = useState(null);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  
+  // 파일 업로드를 위한 refs
+  const fileInputRef = useRef(null);
+  
+  // 웹캠 관련 상태
+  const [cameraDialogOpen, setCameraDialogOpen] = useState(false);
+  const [stream, setStream] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
   // 토큰이 있는 경우 토큰 검증 추가
   useEffect(() => {
     const verifyToken = async () => {
@@ -210,6 +233,9 @@ const SignaturePdfViewer = () => {
           const firstTemplatePdf = participantData.templatePdfs[0];
           await fetchFields(firstTemplatePdf.pdfId);
         }
+        
+        // 5. 첨부파일 정보 조회
+        await fetchParticipantDocuments(participantId);
         
       } catch (error) {
         console.error('데이터 조회 실패:', error);
@@ -504,8 +530,46 @@ const SignaturePdfViewer = () => {
     }
   };
 
+  // 필수 첨부파일이 모두 업로드되었는지 확인하는 함수
+  const areRequiredDocumentsUploaded = () => {
+    // 첨부파일이 없는 경우 조건 충족
+    if (!participantDocuments || participantDocuments.length === 0) {
+      console.log("첨부파일 없음 - 조건 충족");
+      return true;
+    }
+    
+    // 필수 첨부파일 필터링 (문자열이나 숫자 모두 고려)
+    const requiredDocuments = participantDocuments.filter(
+      doc => doc.required === 1 || doc.required === '1' || doc.required === true
+    );
+    
+    console.log("필수 첨부파일:", requiredDocuments);
+    
+    // 필수 첨부파일이 없는 경우 조건 충족
+    if (requiredDocuments.length === 0) {
+      console.log("필수 첨부파일 없음 - 조건 충족");
+      return true;
+    }
+    
+    // 모든 필수 문서의 업로드 상태 확인
+    const allUploaded = requiredDocuments.every(doc => doc.fileId && doc.fileId.trim() !== '');
+    console.log("모든 필수 첨부파일 업로드 완료:", allUploaded);
+    
+    return allUploaded;
+  };
+
   // 서명 완료 확인 다이얼로그 열기
   const handleConfirmComplete = () => {
+    // 필수 첨부파일 업로드 확인
+    const requiredUploaded = areRequiredDocumentsUploaded();
+    console.log("필수 첨부파일 업로드 확인:", requiredUploaded);
+    
+    // 필수 첨부파일이 업로드되지 않은 경우 경고
+    if (!requiredUploaded) {
+      alert('모든 필수 첨부파일을 업로드해야 서명을 완료할 수 있습니다.');
+      return;
+    }
+    
     setConfirmDialogOpen(true);
   };
 
@@ -686,6 +750,222 @@ const SignaturePdfViewer = () => {
     }
   };
 
+  // 첨부파일 정보 조회 함수
+  const fetchParticipantDocuments = async (participantId) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents`);
+      if (!response.ok) throw new Error('첨부파일 정보 조회 실패');
+      const data = await response.json();
+      setParticipantDocuments(data);
+    } catch (error) {
+      console.error('첨부파일 정보 조회 실패:', error);
+    }
+  };
+  
+  // 업로드 메뉴 열기
+  const handleOpenUploadMenu = (event, doc) => {
+    setUploadMenuAnchor(event.currentTarget);
+    setSelectedDoc(doc);
+  };
+  
+  // 업로드 메뉴 닫기
+  const handleCloseUploadMenu = () => {
+    setUploadMenuAnchor(null);
+  };
+  
+  // 파일 선택
+  const handleFileUpload = () => {
+    handleCloseUploadMenu();
+    fileInputRef.current.click();
+  };
+  
+  // 카메라로 촬영
+  const handleCameraUpload = () => {
+    handleCloseUploadMenu();
+    setCameraDialogOpen(true);
+    startCameraStream();
+  };
+  
+  // 파일 선택 변경 핸들러
+  const handleFileChange = async (e) => {
+    if (!e.target.files || e.target.files.length === 0 || !selectedDoc) return;
+    
+    const file = e.target.files[0];
+    await uploadFile(file, selectedDoc);
+    
+    // 파일 입력 초기화
+    e.target.value = '';
+  };
+  
+  // 파일 업로드 처리
+  const uploadFile = async (file, doc) => {
+    try {
+      setUploadLoading(true);
+      setUploadError('');
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // 백엔드 API 경로에 맞게 수정
+      const response = await fetch(
+        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents/${doc.documentCodeId}`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: '업로드 실패' }));
+        throw new Error(errorData.message || '파일 업로드 중 오류가 발생했습니다.');
+      }
+      
+      // 업로드 성공
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 3000);
+      
+      // 첨부파일 목록 갱신
+      await fetchParticipantDocuments(participantId);
+      
+    } catch (error) {
+      console.error('파일 업로드 오류:', error);
+      setUploadError(error.message || '파일 업로드 중 오류가 발생했습니다.');
+      setTimeout(() => setUploadError(''), 3000);
+    } finally {
+      setUploadLoading(false);
+      setSelectedDoc(null);
+    }
+  };
+  
+  // 첨부파일 다운로드
+  const handleDocumentDownload = async (documentId, filename) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents/${documentId}/download`
+      );
+      
+      if (!response.ok) throw new Error('파일 다운로드 실패');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'document';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+    } catch (error) {
+      console.error('파일 다운로드 오류:', error);
+    }
+  };
+  
+  // 웹캠 스트림 시작
+  const startCameraStream = async () => {
+    try {
+      const constraints = { 
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user' // 전면 카메라 (PC 웹캠)
+        } 
+      };
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
+      
+      // 비디오 요소에 스트림 연결
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (error) {
+      console.error('웹캠 접근 오류:', error);
+      alert('웹캠에 접근할 수 없습니다. 권한을 확인해주세요.');
+      setCameraDialogOpen(false);
+    }
+  };
+  
+  // 웹캠 스트림 중지
+  const stopCameraStream = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+  
+  // 카메라 다이얼로그 닫기
+  const handleCloseCameraDialog = () => {
+    stopCameraStream();
+    setCameraDialogOpen(false);
+  };
+  
+  // 사진 촬영
+  const handleCapture = () => {
+    if (!videoRef.current || !canvasRef.current || !selectedDoc) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    // 비디오 프레임 크기로 캔버스 설정
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // 캔버스에 현재 비디오 프레임 그리기
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // 캔버스 이미지를 Blob으로 변환
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      
+      // Blob을 File 객체로 변환
+      const file = new File([blob], `webcam_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // 파일 업로드
+      await uploadFile(file, selectedDoc);
+      
+      // 다이얼로그 닫기
+      handleCloseCameraDialog();
+    }, 'image/jpeg', 0.95);
+  };
+
+  // 첨부파일 삭제 처리 함수 추가
+  const handleDeleteFile = async (documentId) => {
+    if (!documentId) return;
+    
+    try {
+      setUploadLoading(true);
+      setUploadError('');
+      
+      const response = await fetch(
+        `http://localhost:8080/api/contracts/documents/${documentId}/file`,
+        {
+          method: 'DELETE'
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: '삭제 실패' }));
+        throw new Error(errorData.message || '파일 삭제 중 오류가 발생했습니다.');
+      }
+      
+      // 삭제 성공 알림
+      setDeleteSuccess(true);
+      setTimeout(() => setDeleteSuccess(false), 3000);
+      
+      // 첨부파일 목록 갱신
+      await fetchParticipantDocuments(participantId);
+      
+    } catch (error) {
+      console.error('파일 삭제 오류:', error);
+      setUploadError(error.message || '파일 삭제 중 오류가 발생했습니다.');
+      setTimeout(() => setUploadError(''), 3000);
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   // 인증되지 않은 경우의 렌더링
   if (!isAuthenticated) {
     return (
@@ -839,7 +1119,7 @@ const SignaturePdfViewer = () => {
         p: 2,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between'
+        overflowY: 'auto'
       }}>
         <Box>
           <Typography variant="h6">계약서 서명</Typography>
@@ -847,8 +1127,9 @@ const SignaturePdfViewer = () => {
             모든 계약서의 필수 필드를 작성하고 서명을 완료해주세요.
           </Typography>
           
+          {/* 계약서 목록 */}
           <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>계약서 진행 상황</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>계약서 목록</Typography>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column', 
@@ -857,7 +1138,7 @@ const SignaturePdfViewer = () => {
               borderRadius: 1,
               p: 1.5
             }}>
-              {participant.templatePdfs.map((template, index) => (
+              {participant?.templatePdfs?.map((template, index) => (
                 <Box 
                   key={template.mappingId} 
                   sx={{ 
@@ -925,9 +1206,192 @@ const SignaturePdfViewer = () => {
               ))}
             </Box>
           </Box>
+          
+          {/* 첨부파일 섹션 추가 */}
+          {participantDocuments.length > 0 && (
+            <Box sx={{ mt: 3, mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>필수 첨부파일</Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                mt: 2,
+                border: '1px solid #E0E0E0',
+                borderRadius: 1,
+                p: 1.5,
+                overflow: 'hidden'
+              }}>
+                {participantDocuments.map((doc, index) => (
+                  <Box 
+                    key={doc.id} 
+                    sx={{ 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      mb: index === participantDocuments.length - 1 ? 0 : 1.5,
+                      pb: index === participantDocuments.length - 1 ? 0 : 1.5,
+                      borderBottom: index === participantDocuments.length - 1 ? 'none' : '1px solid #EEEEEE',
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start', 
+                      justifyContent: 'space-between',
+                      width: '100%'
+                    }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start',
+                        minWidth: 0, // 필수! flexbox에서 자식이 넘치지 않도록 함
+                        flex: 1
+                      }}>
+                        <FilePresentIcon sx={{ 
+                          color: '#3182F6', 
+                          mr: 1, 
+                          fontSize: '1rem',
+                          mt: 0.2, // 아이콘을 텍스트와 수직 중앙 정렬
+                          flexShrink: 0 // 아이콘은 크기 고정
+                        }} />
+                        <Box sx={{ minWidth: 0, flex: 1 }}> {/* 텍스트 컨테이너 */}
+                          <Typography variant="body2" sx={{ 
+                            fontWeight: 500,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: '#333',
+                            fontSize: '0.85rem'
+                          }}>
+                            {doc.documentCodeName}
+                            {(doc.required === 1 || doc.required === '1' || doc.required === true) && (
+                              <Chip
+                                label="필수"
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  backgroundColor: '#FFFFFF',
+                                  color: '#FF9800',
+                                  fontSize: '0.65rem',
+                                  height: '18px',
+                                  '& .MuiChip-label': { 
+                                    px: 1 
+                                  }
+                                }}
+                              />
+                            )}
+                          </Typography>
+                          
+                          {doc.originalFileName && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Typography variant="caption" sx={{ 
+                                color: '#666', 
+                                display: 'block', 
+                                mt: 0.2,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontSize: '0.75rem'
+                              }}>
+                                {doc.originalFileName}
+                              </Typography>
+                              {doc.fileId && (
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('첨부파일을 삭제하시겠습니까?')) {
+                                      handleDeleteFile(doc.id);
+                                    }
+                                  }}
+                                  sx={{
+                                    p: 0,
+                                    ml: 0.5,
+                                    '&:hover': {
+                                      backgroundColor: 'transparent',
+                                      color: '#F44336'
+                                    },
+                                    color: '#757575',
+                                    fontSize: '0.75rem'
+                                  }}
+                                >
+                                  <CloseIcon fontSize="inherit" />
+                                </IconButton>
+                              )}
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+                      
+
+                    </Box>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'flex-end', 
+                      mt: 1,
+                      ml: 'auto' // 오른쪽 정렬
+                    }}>
+                      {doc.fileId ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip
+                            label="제출완료"
+                            size="small"
+                            sx={{
+                              backgroundColor: '#E8F5E9',
+                              color: '#4CAF50',
+                              fontSize: '0.7rem',
+                              height: '24px',
+                            }}
+                          />
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            aria-haspopup="true"
+                            onClick={(e) => handleOpenUploadMenu(e, doc)}
+                            startIcon={<UploadIcon fontSize="small" />}
+                            disabled={uploadLoading}
+                            sx={{
+                              borderColor: '#3182F6',
+                              color: '#3182F6',
+                              fontSize: '0.7rem',
+                              height: '26px',
+                              '&:hover': {
+                                borderColor: '#1565C0',
+                                backgroundColor: 'rgba(49, 130, 246, 0.04)'
+                              }
+                            }}
+                          >
+                            {uploadLoading && selectedDoc?.id === doc.id ? '업로드 중...' : '재업로드'}
+                          </Button>
+                        </Box>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          aria-haspopup="true"
+                          onClick={(e) => handleOpenUploadMenu(e, doc)}
+                          startIcon={<UploadIcon fontSize="small" />}
+                          disabled={uploadLoading}
+                          sx={{
+                            borderColor: doc.required === 1 ? '#FF9800' : '#3182F6',
+                            color: doc.required === 1 ? '#FF9800' : '#3182F6',
+                            fontSize: '0.7rem',
+                            height: '26px',
+                            '&:hover': {
+                              borderColor: doc.required === 1 ? '#F57C00' : '#1565C0',
+                              backgroundColor: 'rgba(49, 130, 246, 0.04)'
+                            }
+                          }}
+                        >
+                          {uploadLoading && selectedDoc?.id === doc.id ? '업로드 중...' : (doc.required === 1 ? '필수 업로드' : '업로드')}
+                        </Button>
+                      )}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
         </Box>
         
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mt: 'auto', mb: 2 }}>
           {/* 계약서 이동 버튼 */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Button
@@ -953,7 +1417,7 @@ const SignaturePdfViewer = () => {
               variant="outlined"
               endIcon={<NavigateNextIcon />}
               onClick={handleNextTemplate}
-              disabled={currentTemplateIndex === participant.templatePdfs.length - 1}
+              disabled={currentTemplateIndex === participant?.templatePdfs?.length - 1}
               sx={{
                 py: 0.5,
                 px: 1,
@@ -973,27 +1437,211 @@ const SignaturePdfViewer = () => {
           <Button
             variant="contained"
             onClick={handleConfirmComplete}
-            disabled={loading || completedTemplates.length === participant.templatePdfs.length}
+            disabled={
+              loading || 
+              (participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length) ||
+              !areRequiredDocumentsUploaded() // 필수 첨부파일 업로드 여부 확인
+            }
             startIcon={<SaveIcon />}
             fullWidth
             sx={{
               px: 4,
               py: 1,
-              backgroundColor: '#1976d2',
+              backgroundColor: areRequiredDocumentsUploaded() ? '#1976d2' : '#9e9e9e',
               '&:hover': {
-                backgroundColor: '#1565c0',
+                backgroundColor: areRequiredDocumentsUploaded() ? '#1565c0' : '#757575',
               },
               borderRadius: '8px',
               fontSize: '1rem',
               mb: 1.5
             }}
           >
-            {completedTemplates.length === participant.templatePdfs.length ? 
-              '모든 서명 완료' : 
-              loading ? '처리중...' : '모든 계약서 서명 완료'}
+            {!areRequiredDocumentsUploaded() ? 
+              '필수 첨부파일을 업로드해야 합니다' :
+              participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length ? 
+                '모든 서명 완료' : 
+                loading ? '처리중...' : '모든 계약서 서명 완료'
+            }
           </Button>
         </Box>
       </Box>
+
+      {/* 업로드 메뉴 */}
+      <Menu
+        anchorEl={uploadMenuAnchor}
+        open={Boolean(uploadMenuAnchor)}
+        onClose={handleCloseUploadMenu}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={handleFileUpload}>
+          <UploadIcon fontSize="small" sx={{ mr: 1 }} /> 파일 업로드
+        </MenuItem>
+        <MenuItem onClick={handleCameraUpload}>
+          <PhotoCameraIcon fontSize="small" sx={{ mr: 1 }} /> 사진 촬영하기
+        </MenuItem>
+      </Menu>
+      
+      {/* 카메라 다이얼로그 */}
+      <Dialog
+        open={cameraDialogOpen}
+        onClose={handleCloseCameraDialog}
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            overflow: 'hidden',
+            maxWidth: '640px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          p: 2, 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid #eee'
+        }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            웹캠으로 사진 촬영
+          </Typography>
+          <IconButton 
+            onClick={handleCloseCameraDialog}
+            size="small"
+            edge="end"
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, bgcolor: '#000', position: 'relative' }}>
+          <Box sx={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ 
+                width: '100%', 
+                maxHeight: '480px',
+                objectFit: 'contain',
+                display: 'block'
+              }}
+            />
+            <canvas
+              ref={canvasRef}
+              style={{ display: 'none' }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'center', borderTop: '1px solid #eee' }}>
+          <Button 
+            variant="contained"
+            onClick={handleCapture}
+            startIcon={<PhotoCameraIcon />}
+            sx={{ 
+              px: 3,
+              py: 1,
+              backgroundColor: '#3182F6',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#1565C0'
+              }
+            }}
+          >
+            촬영하기
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* 파일 입력 (숨김) */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pdf,.jpg,.jpeg,.png"
+        style={{ display: 'none' }}
+      />
+      
+      {/* 알림 메시지 - 업로드 성공 */}
+      <Dialog 
+        open={uploadSuccess} 
+        onClose={() => setUploadSuccess(false)}
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            overflow: 'hidden',
+            minWidth: '300px'
+          }
+        }}
+      >
+        <Alert 
+          severity="success"
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            fontSize: '0.9rem'
+          }}
+        >
+          파일이 성공적으로 업로드되었습니다.
+        </Alert>
+      </Dialog>
+      
+      {/* 알림 메시지 - 업로드 오류 */}
+      <Dialog 
+        open={!!uploadError} 
+        onClose={() => setUploadError('')}
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            overflow: 'hidden',
+            minWidth: '300px'
+          }
+        }}
+      >
+        <Alert 
+          severity="error"
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            fontSize: '0.9rem'
+          }}
+        >
+          {uploadError}
+        </Alert>
+      </Dialog>
+
+      {/* 알림 메시지 - 삭제 성공 추가 */}
+      <Dialog 
+        open={deleteSuccess} 
+        onClose={() => setDeleteSuccess(false)}
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            overflow: 'hidden',
+            minWidth: '300px'
+          }
+        }}
+      >
+        <Alert 
+          severity="success"
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            fontSize: '0.9rem'
+          }}
+        >
+          파일이 성공적으로 삭제되었습니다.
+        </Alert>
+      </Dialog>
 
       {/* 모달 유지 */}
       <SignatureModal
@@ -1016,7 +1664,7 @@ const SignaturePdfViewer = () => {
         initialValue={selectedField?.value || ''}
       />
 
-      {/* 확인 다이얼로그 추가 */}
+      {/* 확인 다이얼로그 유지 */}
       <Dialog
         open={confirmDialogOpen}
         onClose={handleCloseConfirmDialog}

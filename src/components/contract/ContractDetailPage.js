@@ -158,6 +158,20 @@ const ContractDetailPage = () => {
     }
   };
 
+  // 문서 파일 미리보기 핸들러 추가
+  const handleDocumentPreview = async (documentId, fileName) => {
+    try {
+      // 미리보기 URL 생성
+      const previewUrl = `http://localhost:8080/api/contracts/documents/${documentId}/preview`;
+      
+      // 새 창에서 미리보기 열기
+      window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('파일 미리보기 오류:', error);
+      alert('파일 미리보기 중 오류가 발생했습니다.');
+    }
+  };
+
   // 업로드 메뉴 열기
   const handleOpenUploadMenu = (event, participant, doc) => {
     setUploadMenuAnchor(event.currentTarget);
@@ -1127,7 +1141,7 @@ const ContractDetailPage = () => {
                     </Box>
                   </Box>
 
-                  {/* 첨부파일 목록 섹션 - 항상 표시되도록 변경 */}
+                  {/* 첨부파일 목록 섹션 */}
                   {participantDocuments[participant.id] && participantDocuments[participant.id].length > 0 && (
                     <Box 
                       sx={{ 
@@ -1182,24 +1196,43 @@ const ContractDetailPage = () => {
                             
                             <Box>
                               {doc.fileId ? (
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  startIcon={<DownloadIcon fontSize="small" />}
-                                  onClick={() => handleDocumentDownload(doc.id, doc.originalFileName)}
-                                  sx={{
-                                    borderColor: '#3182F6',
-                                    color: '#3182F6',
-                                    fontSize: '0.7rem',
-                                    height: '24px',
-                                    '&:hover': {
-                                      borderColor: '#1565C0',
-                                      backgroundColor: 'rgba(49, 130, 246, 0.04)'
-                                    }
-                                  }}
-                                >
-                                  다운로드
-                                </Button>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<DownloadIcon fontSize="small" />}
+                                    onClick={() => handleDocumentDownload(doc.id, doc.originalFileName)}
+                                    sx={{
+                                      borderColor: '#3182F6',
+                                      color: '#3182F6',
+                                      fontSize: '0.7rem',
+                                      height: '24px',
+                                      '&:hover': {
+                                        borderColor: '#1565C0',
+                                        backgroundColor: 'rgba(49, 130, 246, 0.04)'
+                                      }
+                                    }}
+                                  >
+                                    다운로드
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => handleDocumentPreview(doc.id, doc.originalFileName)}
+                                    sx={{
+                                      borderColor: '#4CAF50',
+                                      color: '#4CAF50',
+                                      fontSize: '0.7rem',
+                                      height: '24px',
+                                      '&:hover': {
+                                        borderColor: '#388E3C',
+                                        backgroundColor: 'rgba(76, 175, 80, 0.04)'
+                                      }
+                                    }}
+                                  >
+                                    미리보기
+                                  </Button>
+                                </Box>
                               ) : (
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <Chip
