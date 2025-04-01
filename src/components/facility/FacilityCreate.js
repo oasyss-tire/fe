@@ -318,7 +318,7 @@ const FacilityCreate = () => {
               disabled={loading}
               sx={{
                 minWidth: 200,
-                bgcolor: '#343959',
+                bgcolor: '#3182F6',
                 '&:hover': { bgcolor: '#3d63b8' }
               }}
             >

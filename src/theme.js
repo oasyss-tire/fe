@@ -5,7 +5,7 @@ const theme = createTheme({
   palette: {
     /* 색상 적용*/
     primary: {
-      main: '#343959',
+      main: '#3182F6',
     },
     text: {
       primary: '#2A2A2A',
@@ -26,7 +26,7 @@ const theme = createTheme({
           boxShadow: 'none',
         },
         contained: {
-          backgroundColor: '#343959',
+          backgroundColor: '#3182F6',
           color: '#FFFFFF',
           '&:hover': {
             backgroundColor: '#3d63b8',
@@ -34,8 +34,8 @@ const theme = createTheme({
           },
         },
         outlined: {
-          borderColor: '#343959',
-          color: '#343959',
+          borderColor: '#3182F6',
+          color: '#3182F6',
           '&:hover': {
             borderColor: '#3d63b8',
             color: '#3d63b8',
@@ -55,16 +55,16 @@ const theme = createTheme({
               borderColor: '#e0e0e0',
             },
             '&:hover fieldset': {
-              borderColor: '#343959',
+              borderColor: '#3182F6',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#343959',
+              borderColor: '#3182F6',
             }
           },
           '& .MuiInputLabel-root': {
             color: '#666',
             '&.Mui-focused': {
-              color: '#343959',
+              color: '#3182F6',
             }
           }
         }
@@ -79,10 +79,10 @@ const theme = createTheme({
             borderColor: '#e0e0e0',
           },
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#343959',
+            borderColor: '#3182F6',
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#343959',
+            borderColor: '#3182F6',
           }
         }
       }
@@ -116,11 +116,11 @@ const theme = createTheme({
     fontFamily: 'Pretendard, sans-serif',
     h6: {
       fontWeight: 500,
-      color: '#343959',
+      color: '#3182F6',
     },
     subtitle1: {
       fontWeight: 500,
-      color: '#343959',
+      color: '#3182F6',
     },
     body1: {
       color: '#2A2A2A',

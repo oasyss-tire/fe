@@ -471,7 +471,7 @@ const FacilityDetail = () => {
             <Button
               startIcon={<AddIcon />}
               onClick={() => {/* 이미지 추가 기능 */}}
-              sx={{ color: '#343959' }}
+              sx={{ color: '#3182F6' }}
             >
               이미지 추가
             </Button>
@@ -526,7 +526,7 @@ const FacilityDetail = () => {
             <Button
               startIcon={<AddIcon />}
               onClick={() => setContractDialogOpen(true)}
-              sx={{ color: '#343959' }}
+              sx={{ color: '#3182F6' }}
             >
               계약 등록
             </Button>
@@ -608,7 +608,7 @@ const FacilityDetail = () => {
             startIcon={<EditIcon />}
             onClick={() => setEditDialogOpen(true)}
             sx={{
-              bgcolor: '#343959',
+              bgcolor: '#3182F6',
               '&:hover': { bgcolor: '#3d63b8' }
             }}
           >
@@ -799,7 +799,7 @@ const FacilityDetail = () => {
           <Button 
             onClick={handleContractSubmit}
             variant="contained"
-            sx={{ bgcolor: '#343959', '&:hover': { bgcolor: '#3d63b8' } }}
+            sx={{ bgcolor: '#3182F6', '&:hover': { bgcolor: '#3d63b8' } }}
           >
             등록
           </Button>
@@ -885,7 +885,7 @@ const FacilityDetail = () => {
           <Button 
             onClick={handleEdit}
             variant="contained"
-            sx={{ bgcolor: '#343959', '&:hover': { bgcolor: '#3d63b8' } }}
+            sx={{ bgcolor: '#3182F6', '&:hover': { bgcolor: '#3d63b8' } }}
           >
             수정
           </Button>
@@ -978,7 +978,7 @@ const FacilityDetail = () => {
           <Button
             onClick={handleUpdateContract}
             variant="contained"
-            sx={{ bgcolor: '#343959', '&:hover': { bgcolor: '#3d63b8' } }}
+            sx={{ bgcolor: '#3182F6', '&:hover': { bgcolor: '#3d63b8' } }}
           >
             수정
           </Button>

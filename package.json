@@ -14,7 +14,8 @@
     "@mui/icons-material": "5.15.10",
     "@mui/lab": "^5.0.0-alpha.165",
     "@mui/material": "5.15.10",
-    "@mui/x-date-pickers": "6.19.4",
+    "@mui/x-date-pickers": "^6.19.4",
+    "@mui/x-date-pickers-pro": "^7.28.2",
     "@mui/x-tree-view": "^7.28.0",
     "@react-pdf-viewer/core": "^3.12.0",
     "@react-pdf-viewer/default-layout": "^3.12.0",
@@ -25,9 +26,11 @@
     "audio-recorder-polyfill": "^0.4.1",
     "axios": "^1.6.7",
     "date-fns": "^2.30.0",
+    "dayjs": "^1.11.13",
     "lamejs": "^1.2.1",
     "pdfjs-dist": "^3.11.174",
     "react": "^18.2.0",
+    "react-datepicker": "^8.2.1",
     "react-dom": "^18.2.0",
     "react-material-ui-carousel": "^3.4.2",
     "react-pdf": "^7.7.0",
@@ -40,9 +43,9 @@
     "slick-carousel": "^1.8.1"
   },
   "scripts": {
-    "start": "cross-env PORT=3001 react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "cross-env GENERATE_SOURCEMAP=false PORT=3001 react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
   "browserslist": {
@@ -59,6 +62,8 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "customize-cra": "^1.0.0",
+    "react-app-rewired": "^2.2.1"
   }
 }

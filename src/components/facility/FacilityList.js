@@ -243,7 +243,7 @@ const FacilityList = () => {
             startIcon={<AddIcon />}
             onClick={() => navigate('/facility/create')}
             sx={{
-              bgcolor: '#343959',
+              bgcolor: '#3182F6',
               '&:hover': { bgcolor: '#3d63b8' },
               minWidth: 'auto',
               whiteSpace: 'nowrap'

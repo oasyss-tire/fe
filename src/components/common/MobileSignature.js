@@ -171,7 +171,7 @@ const MobileSignature = ({
           onClick={handleSave}
           disabled={loading}
           sx={{ 
-            bgcolor: '#343959',
+            bgcolor: '#3182F6',
             '&:hover': { bgcolor: '#3d63b8' }
           }}
         >
