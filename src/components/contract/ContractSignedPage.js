@@ -19,6 +19,8 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Snackbar,
+  Alert
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
@@ -42,10 +44,13 @@ const ContractSignedPage = () => {
   const [resignReason, setResignReason] = useState("");
   const [resignRequestLoading, setResignRequestLoading] = useState(false);
   const [resignRequestResult, setResignRequestResult] = useState(null);
-  //
-  // 토큰으로 계약 정보 조회
 
-  //진
+  // 비밀번호 이메일 전송 상태 추가
+  const [passwordEmailSending, setPasswordEmailSending] = useState(false);
+  const [passwordEmailResult, setPasswordEmailResult] = useState(null);
+  const [signedPdfs, setSignedPdfs] = useState([]);
+
+  // 토큰으로 계약 정보 조회
   useEffect(() => {
     const fetchContractInfo = async () => {
       if (!token) {
@@ -95,6 +100,11 @@ const ContractSignedPage = () => {
               data.participant?.statusCodeId
           );
           setContractInfo(data);
+          
+          // 계약 정보를 받은 후 서명된 PDF 목록도 함께 조회
+          if (data.participant && data.participant.id) {
+            await fetchSignedPdfs(data.participant.id);
+          }
         } else {
           throw new Error(
             data.message || "서명된 계약 정보를 불러오는데 실패했습니다."
@@ -113,6 +123,94 @@ const ContractSignedPage = () => {
 
     fetchContractInfo();
   }, [token]);
+
+  // 서명된 PDF 목록 조회
+  const fetchSignedPdfs = async (participantId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
+        { method: "GET" }
+      );
+
+      if (!response.ok) {
+        console.error("서명된 PDF 목록 조회 실패");
+        return;
+      }
+
+      const pdfList = await response.json();
+      console.log("서명된 PDF 목록:", pdfList);
+      setSignedPdfs(pdfList);
+    } catch (error) {
+      console.error("서명된 PDF 목록 조회 오류:", error);
+    }
+  };
+
+  // 비밀번호 이메일 전송 함수
+  const handleSendPasswordEmail = async () => {
+    if (!signedPdfs || signedPdfs.length === 0) {
+      setPasswordEmailResult({
+        type: 'error',
+        message: '서명된 PDF가 없습니다.'
+      });
+      return;
+    }
+
+    try {
+      setPasswordEmailSending(true);
+      setPasswordEmailResult(null);
+      
+      // 첫 번째 서명된 PDF의 ID 사용
+      const firstPdfId = signedPdfs[0].pdfId;
+      
+      // URL에 토큰을 쿼리 파라미터로 추가
+      const response = await fetch(
+        `http://localhost:8080/api/contract-pdf/password/${firstPdfId}/send-email?token=${token}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('인증에 실패했습니다. 다시 로그인해주세요.');
+        }
+        
+        const errorData = await response.json().catch(() => {
+          // JSON 파싱 오류 시 기본 에러 메시지 사용
+          return { message: '비밀번호 이메일 전송에 실패했습니다.' };
+        });
+        
+        throw new Error(errorData.message || '비밀번호 이메일 전송에 실패했습니다.');
+      }
+      
+      // 응답 처리 - JSON 파싱 오류 방지
+      const data = await response.json().catch(() => {
+        return { message: '비밀번호가 이메일로 전송되었습니다.' };
+      });
+      
+      setPasswordEmailResult({
+        type: 'success',
+        message: data.message || '비밀번호가 이메일로 전송되었습니다.'
+      });
+      
+    } catch (error) {
+      console.error('비밀번호 이메일 전송 오류:', error);
+      setPasswordEmailResult({
+        type: 'error',
+        message: error.message || '비밀번호 이메일 전송 중 오류가 발생했습니다.'
+      });
+    } finally {
+      setPasswordEmailSending(false);
+    }
+  };
+
+  // 알림 메시지 닫기
+  const handleCloseAlert = () => {
+    setPasswordEmailResult(null);
+  };
 
   // 재서명 요청 다이얼로그 열기
   const handleOpenResignDialog = () => {
@@ -283,12 +381,12 @@ const ContractSignedPage = () => {
 
     // 상태 코드 ID와 이름 매핑
     const STATUS_MAPPING = {
-      "007001_0001": "승인 대기",
-      "007001_0002": "승인 완료",
-      "007001_0003": "서명 대기",
-      "007001_0004": "서명 중",
-      "007001_0005": "승인 거부",
-      "007001_0006": "재서명 요청",
+      "008001_0001": "승인 대기",
+      "008001_0002": "승인 완료",
+      "008001_0003": "서명 대기",
+      "008001_0004": "서명 중",
+      "008001_0005": "승인 거부",
+      "008001_0006": "재서명 요청",
     };
 
     // 다양한 데이터 구조에 대응
@@ -301,9 +399,9 @@ const ContractSignedPage = () => {
 
     // 상태 이름을 통한 확인 (상태 코드가 없는 경우)
     const matchByName =
-      (statusToCheck === "007001_0003" &&
+      (statusToCheck === "008001_0003" &&
         contractInfo.participant.statusName === "서명 대기") ||
-      (statusToCheck === "007001_0006" &&
+      (statusToCheck === "008001_0006" &&
         contractInfo.participant.statusName === "재서명 요청");
 
     // 백엔드로부터 받은 상태 정보 로그
@@ -537,10 +635,10 @@ const ContractSignedPage = () => {
           variant="h5"
           sx={{
             fontWeight: 600,
-            color: isParticipantStatus("007001_0003") ? "#FF9800" : "#3A3A3A",
+            color: isParticipantStatus("008001_0003") ? "#FF9800" : "#3A3A3A",
           }}
         >
-          {isParticipantStatus("007001_0003")
+          {isParticipantStatus("008001_0003")
             ? "재서명 필요"
             : "계약서 서명 완료"}
         </Typography>
@@ -552,21 +650,14 @@ const ContractSignedPage = () => {
         sx={{ p: 4, mb: 3, borderRadius: 2, border: "1px solid #EEEEEE" }}
       >
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-          {isParticipantStatus("007001_0003") ? (
-            // 서명 대기 상태일 때는 경고 아이콘 표시
-            <HistoryIcon sx={{ fontSize: 40, mr: 2, color: "#FF9800" }} />
-          ) : (
-            // 서명 완료 상태일 때는 체크마크 아이콘 표시
-            <CheckCircleIcon sx={{ fontSize: 30, mr: 2, color: "#3182F6" }} />
-          )}
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {isParticipantStatus("007001_0003")
+              {isParticipantStatus("008001_0003")
                 ? `${participant.name}님, 재서명이 필요합니다.`
-                : `${participant.name}님, 계약서 서명이 완료되었습니다.`}
+                : `${participant.name}님, 계약서 확인 페이지입니다.`}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {isParticipantStatus("007001_0003")
+              {isParticipantStatus("008001_0003")
                 ? "관리자가 재서명 요청을 승인했습니다. 새로운 서명 링크를 확인하여 다시 서명해주세요."
                 : "아래에서 계약 정보를 확인하고 필요한 문서를 다운로드할 수 있습니다."}
             </Typography>
@@ -594,12 +685,12 @@ const ContractSignedPage = () => {
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ mb: 1, color: "#666" }}>
-              {isParticipantStatus("007001_0003")
+              {isParticipantStatus("008001_0003")
                 ? "재서명 승인 시간"
                 : "서명 시간"}
             </Typography>
             <Typography variant="body1">
-              {isParticipantStatus("007001_0003")
+              {isParticipantStatus("008001_0003")
                 ? participant.resignApprovedAt
                   ? formatDate(participant.resignApprovedAt)
                   : "-"
@@ -612,11 +703,11 @@ const ContractSignedPage = () => {
             </Typography>
             <Chip
               label={participant.statusName || "서명 완료"}
-              color={isParticipantStatus("007001_0003") ? "warning" : "primary"}
+              color={isParticipantStatus("008001_0003") ? "warning" : "primary"}
               size="small"
               sx={{
                 fontWeight: 500,
-                backgroundColor: isParticipantStatus("007001_0003")
+                backgroundColor: isParticipantStatus("008001_0003")
                   ? "#FF9800"
                   : "#3182F6",
                 color: "white",
@@ -626,7 +717,7 @@ const ContractSignedPage = () => {
         </Grid>
 
         <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
-          {isParticipantStatus("007001_0003") ? (
+          {isParticipantStatus("008001_0003") ? (
             // 서명 대기 상태일 때는 서명하기 안내 버튼 표시
             <Button
               variant="contained"
@@ -654,7 +745,7 @@ const ContractSignedPage = () => {
               variant="outlined"
               startIcon={<HistoryIcon />}
               onClick={handleOpenResignDialog}
-              disabled={isParticipantStatus("007001_0006")}
+              disabled={isParticipantStatus("008001_0006")}
               sx={{
                 borderColor: "#E0E0E0",
                 color: "#333333",
@@ -672,7 +763,7 @@ const ContractSignedPage = () => {
                 height: "32px",
               }}
             >
-              {isParticipantStatus("007001_0006")
+              {isParticipantStatus("008001_0006")
                 ? "재서명 요청 중"
                 : "재서명 요청"}
             </Button>
@@ -704,28 +795,58 @@ const ContractSignedPage = () => {
               </Typography>
 
               {/* 서명 대기 상태가 아닐 때만 다운로드 버튼 표시 */}
-              {!isParticipantStatus("007001_0003") ? (
+              {!isParticipantStatus("008001_0003") ? (
                 <>
-                  <Button
-                    variant="contained"
-                    startIcon={<DownloadIcon />}
-                    onClick={handleDownloadAllPdfs}
-                    sx={{
-                      bgcolor: "#3182F6",
-                      color: "white",
-                      "&:hover": {
-                        bgcolor: "#1565C0",
-                      },
-                      borderRadius: "4px",
-                      fontSize: "0.85rem",
-                      height: "36px",
-                      px: 2,
-                      fontWeight: 500,
-                      boxShadow: "none",
-                    }}
-                  >
-                    모든 계약문서 다운로드
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<DownloadIcon />}
+                      onClick={handleDownloadAllPdfs}
+                      sx={{
+                        bgcolor: "#3182F6",
+                        color: "white",
+                        "&:hover": {
+                          bgcolor: "#1565C0",
+                        },
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        height: "36px",
+                        px: 2,
+                        fontWeight: 500,
+                        boxShadow: "none",
+                      }}
+                    >
+                      모든 계약문서 다운로드
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<EmailIcon />}
+                      onClick={handleSendPasswordEmail}
+                      disabled={passwordEmailSending || !signedPdfs || signedPdfs.length === 0}
+                      sx={{
+                        borderColor: "#3182F6",
+                        color: "#3182F6",
+                        "&:hover": {
+                          borderColor: "#1565C0",
+                          bgcolor: "rgba(49, 130, 246, 0.04)",
+                        },
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        height: "36px",
+                        px: 2,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {passwordEmailSending ? (
+                        <>
+                          <CircularProgress size={16} sx={{ mr: 1 }} />
+                          이메일 전송 중...
+                        </>
+                      ) : (
+                        "비밀번호 이메일로 재발급"
+                      )}
+                    </Button>
+                  </Box>
                   <Typography
                     variant="caption"
                     sx={{
@@ -920,6 +1041,22 @@ const ContractSignedPage = () => {
           )}
         </DialogActions>
       </Dialog>
+
+      {/* 비밀번호 이메일 전송 결과 알림 */}
+      <Snackbar
+        open={passwordEmailResult !== null}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity={passwordEmailResult?.type || "info"}
+          sx={{ width: "100%" }}
+        >
+          {passwordEmailResult?.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -67,14 +67,16 @@ const CodeManagement = () => {
     level: 1,
     parentGroupId: null,
     description: '',
-    active: true
+    active: true,
+    isProtected: false
   });
 
   const [codeFormData, setCodeFormData] = useState({
     codeName: '',
     sortOrder: 0,
     description: '',
-    active: true
+    active: true,
+    isProtected: false
   });
   
   // 삭제 확인 다이얼로그 상태
@@ -153,7 +155,8 @@ const CodeManagement = () => {
       level: nextLevel,
       parentGroupId: selectedGroup?.groupId || null,
       description: '',
-      active: true
+      active: true,
+      isProtected: false
     });
   };
 
@@ -163,7 +166,8 @@ const CodeManagement = () => {
       codeName: '',
       sortOrder: codes.length + 1,
       description: '',
-      active: true
+      active: true,
+      isProtected: false
     });
   };
 
@@ -176,13 +180,15 @@ const CodeManagement = () => {
     
     setIsEditMode(isEdit);
     if (isEdit && group) {
+      const isProtected = isProtectedGroup(group.groupId);
       setGroupFormData({
         groupId: group.groupId,
         groupName: group.groupName,
         level: group.level,
         parentGroupId: group.parentGroupId,
         description: group.description || '',
-        active: group.active
+        active: group.active,
+        isProtected: isProtected
       });
     } else {
       resetGroupForm();
@@ -199,11 +205,14 @@ const CodeManagement = () => {
     
     setIsEditMode(isEdit);
     if (isEdit && code) {
+      const isProtected = isProtectedCode(code.codeId);
       setCodeFormData({
+        codeId: code.codeId,
         codeName: code.codeName,
         sortOrder: code.sortOrder || 0,
         description: code.description || '',
-        active: code.active
+        active: code.active,
+        isProtected: isProtected
       });
       setSelectedCode(code);
     } else {
@@ -351,11 +360,17 @@ const CodeManagement = () => {
       return;
     }
 
-    const codeData = {
-      ...codeFormData,
-      sortOrder: parseInt(codeFormData.sortOrder, 10) || 0,
-      groupId: selectedGroup.groupId
-    };
+    // 보호된 코드인 경우, 코드명만 수정 가능
+    const codeData = codeFormData.isProtected 
+      ? { 
+          groupId: selectedGroup.groupId,
+          codeName: codeFormData.codeName
+        }
+      : {
+          ...codeFormData,
+          sortOrder: parseInt(codeFormData.sortOrder, 10) || 0,
+          groupId: selectedGroup.groupId
+        };
 
     setLoading(true);
     try {
@@ -393,12 +408,40 @@ const CodeManagement = () => {
     handleOpenCodeDialog(true, code);
   };
 
+  // 시스템에서 사용되는 보호된 코드인지 확인
+  const isProtectedCode = (codeId) => {
+    // 특정 코드만 보호
+    const protectedCodes = [
+      '001002_0001', '001002_0002', '001002_0003', '001002_0004', '001002_0005', '001002_0006',
+      '008001_0001', '008001_0002', '008001_0003', '008001_0004', '008001_0005', '008001_0006', '008001_0007'
+    ];
+    return protectedCodes.includes(codeId);
+  };
+
+  // 시스템에서 사용되는 보호된 그룹인지 확인
+  const isProtectedGroup = (groupId) => {
+    // 특정 코드 그룹만 보호
+    const protectedGroups = [
+      '001', '001001', '001002', '001002001', '001003',
+      '002', '003', '004', '005', '006', '008', '008001'
+    ];
+    return protectedGroups.includes(groupId);
+  };
+
   // 그룹 수정
   const handleUpdateGroup = async () => {
     if (!groupFormData.groupId) {
       setError('수정할 그룹 정보가 올바르지 않습니다.');
       return;
     }
+
+    // 보호된 그룹인 경우, 그룹명만 수정 가능
+    const updateData = groupFormData.isProtected 
+      ? { 
+          groupId: groupFormData.groupId,
+          groupName: groupFormData.groupName
+        }
+      : groupFormData;
 
     setLoading(true);
     try {
@@ -407,7 +450,7 @@ const CodeManagement = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(groupFormData)
+        body: JSON.stringify(updateData)
       });
 
       if (!response.ok) {
@@ -430,6 +473,8 @@ const CodeManagement = () => {
 
   // 그룹 수정 버튼 추가
   const renderGroupActions = (group) => {
+    const isProtected = isProtectedGroup(group.groupId);
+    
     return (
       <Box sx={{ ml: 'auto', display: 'flex' }}>
         <IconButton 
@@ -441,16 +486,21 @@ const CodeManagement = () => {
         >
           <EditIcon fontSize="small" />
         </IconButton>
-        <IconButton 
-          size="small"
-          color="error"
-          onClick={(e) => {
-            e.stopPropagation();
-            openDeleteDialog('group', group);
-          }}
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
+        <Tooltip title={isProtected ? "시스템에서 사용 중인 코드 그룹은 삭제할 수 없습니다" : ""}>
+          <span>
+            <IconButton 
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                openDeleteDialog('group', group);
+              }}
+              disabled={isProtected}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
       </Box>
     );
   };
@@ -521,6 +571,12 @@ const CodeManagement = () => {
 
   // 삭제 다이얼로그 열기
   const openDeleteDialog = (type, item) => {
+    // 보호된 코드나 그룹은 삭제 다이얼로그를 열지 않음
+    if ((type === 'code' && isProtectedCode(item.codeId)) || 
+        (type === 'group' && isProtectedGroup(item.groupId))) {
+      return;
+    }
+    
     setDeleteType(type);
     setItemToDelete(item);
     setDeleteDialogOpen(true);
@@ -994,7 +1050,18 @@ const CodeManagement = () => {
                             sx={{ cursor: 'pointer' }}
                           >
                             <TableCell>{index + 1}</TableCell>
-                            <TableCell>{code.codeId}</TableCell>
+                            <TableCell>
+                              {code.codeId}
+                              {isProtectedCode(code.codeId) && (
+                                <Chip 
+                                  size="small" 
+                                  label="보호됨" 
+                                  color="primary" 
+                                  variant="outlined"
+                                  sx={{ height: 18, ml: 1, fontSize: '0.7rem' }}
+                                />
+                              )}
+                            </TableCell>
                             <TableCell>{code.codeName}</TableCell>
                             <TableCell>{code.sortOrder || '-'}</TableCell>
                             <TableCell>{code.active ? '사용' : '미사용'}</TableCell>
@@ -1013,21 +1080,26 @@ const CodeManagement = () => {
                               >
                                 <EditIcon fontSize="small" />
                               </IconButton>
-                              <IconButton 
-                                size="small" 
-                                sx={{ 
-                                  color: '#FF4D4D',
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(255, 77, 77, 0.04)'
-                                  }
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openDeleteDialog('code', code);
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
+                              <Tooltip title={isProtectedCode(code.codeId) ? "시스템에서 사용 중인 코드는 삭제할 수 없습니다" : ""}>
+                                <span>
+                                  <IconButton 
+                                    size="small" 
+                                    sx={{ 
+                                      color: '#FF4D4D',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(255, 77, 77, 0.04)'
+                                      }
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openDeleteDialog('code', code);
+                                    }}
+                                    disabled={isProtectedCode(code.codeId)}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
                             </TableCell>
                           </TableRow>
                         ))
@@ -1053,7 +1125,7 @@ const CodeManagement = () => {
               }}>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                   좌측에서 코드 그룹을 선택하면 코드 목록이 표시됩니다.
-          </Typography>
+                </Typography>
                 <ChevronRightIcon sx={{ fontSize: 40, color: '#cccccc' }} />
               </Box>
             )}
@@ -1083,11 +1155,25 @@ const CodeManagement = () => {
           fontWeight: 600 
         }}>
           {isEditMode ? '코드 그룹 수정' : '코드 그룹 추가'}
+          {groupFormData.isProtected && (
+            <Chip 
+              size="small" 
+              label="보호됨" 
+              color="primary" 
+              variant="outlined"
+              sx={{ height: 20, ml: 1, fontSize: '0.75rem' }}
+            />
+          )}
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
+          {groupFormData.isProtected && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              이 코드 그룹은 시스템에서 사용 중이므로 그룹명만 수정할 수 있습니다.
+            </Alert>
+          )}
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth sx={{ mt: 2 }}>
+              <FormControl fullWidth sx={{ mt: 2 }} disabled={groupFormData.isProtected}>
                 <InputLabel>그룹 레벨</InputLabel>
                 <Select
                   name="level"
@@ -1191,10 +1277,11 @@ const CodeManagement = () => {
                     },
                   },
                 }}
+                disabled={groupFormData.isProtected}
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled={groupFormData.isProtected}>
                 <InputLabel>사용 여부</InputLabel>
                 <Select
                   name="active"
@@ -1278,8 +1365,22 @@ const CodeManagement = () => {
           fontWeight: 600 
         }}>
           {isEditMode ? '코드 수정' : '코드 추가'}
+          {codeFormData.isProtected && (
+            <Chip 
+              size="small" 
+              label="보호됨" 
+              color="primary" 
+              variant="outlined"
+              sx={{ height: 20, ml: 1, fontSize: '0.75rem' }}
+            />
+          )}
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
+          {codeFormData.isProtected && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              이 코드는 시스템에서 사용 중이므로 코드명만 수정할 수 있습니다.
+            </Alert>
+          )}
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <FormControl fullWidth disabled sx={{ mt: 2 }}>
@@ -1345,10 +1446,11 @@ const CodeManagement = () => {
                     },
                   },
                 }}
+                disabled={codeFormData.isProtected}
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled={codeFormData.isProtected}>
                 <InputLabel>사용 여부</InputLabel>
                 <Select
                   name="active"
@@ -1395,6 +1497,7 @@ const CodeManagement = () => {
                     },
                   },
                 }}
+                disabled={codeFormData.isProtected}
               />
             </Grid>
           </Grid>

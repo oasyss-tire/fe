@@ -681,23 +681,23 @@ const ContractDetailPage = () => {
 
     // 참여자 상태 코드에 따른 색상 설정
     switch (statusCodeId) {
-      case "007001_0001": // 승인 대기
+      case "008001_0001": // 승인 대기
         color = "#FF9800";
         bgColor = "#FFF3E0";
         break;
-      case "007001_0002": // 승인 완료
+      case "008001_0002": // 승인 완료
         color = "#4CAF50";
         bgColor = "#E8F5E9";
         break;
-      case "007001_0003": // 서명 대기
+      case "008001_0003": // 서명 대기
         color = "#666666";
         bgColor = "#F5F5F5";
         break;
-      case "007001_0004": // 서명 중
+      case "008001_0004": // 서명 중
         color = "#2196F3";
         bgColor = "#E3F2FD";
         break;
-      case "007001_0005": // 승인 거부
+      case "008001_0005": // 승인 거부
         color = "#F44336";
         bgColor = "#FFEBEE";
         break;
@@ -710,12 +710,12 @@ const ContractDetailPage = () => {
 
   // 참여자가 승인 대기 상태인지 확인
   const isParticipantWaitingApproval = (participant) => {
-    return participant.statusCodeId === "007001_0001"; // 승인 대기 상태 확인
+    return participant.statusCodeId === "008001_0001"; // 승인 대기 상태 확인
   };
 
   // 참여자가 재서명 요청 상태인지 확인
   const isParticipantRequestingResign = (participant) => {
-    return participant.statusCodeId === "007001_0006"; // 재서명 요청 상태 확인
+    return participant.statusCodeId === "008001_0006"; // 재서명 요청 상태 확인
   };
 
   // 서명된 PDF 미리보기 핸들러
@@ -1083,7 +1083,7 @@ const ContractDetailPage = () => {
                       {/* 통합 관리 버튼 영역 */}
                       <Box sx={{ display: "flex", gap: 1 }}>
                         {participant.statusName === "재서명 진행중" ||
-                        participant.statusCodeId === "007001_0007" ? (
+                        participant.statusCodeId === "008001_0007" ? (
                           <Typography
                             sx={{ color: "#666", fontSize: "0.75rem" }}
                           >
@@ -1213,9 +1213,9 @@ const ContractDetailPage = () => {
                           </>
                         ) : (participant.statusCodeId &&
                             [
-                              "007001_0001",
-                              "007001_0002",
-                              "007001_0005",
+                              "008001_0001",
+                              "008001_0002",
+                              "008001_0005",
                             ].includes(participant.statusCodeId)) ||
                           participant.signed ? (
                           <Button
