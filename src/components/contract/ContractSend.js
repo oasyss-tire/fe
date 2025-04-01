@@ -16,7 +16,7 @@ import {
   Autocomplete,
   Paper,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -25,7 +25,7 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
   Delete as DeleteIcon,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -37,7 +37,7 @@ import { sendContractSMS } from '../../services/SMSService';
 
 const ContractSend = () => {
   const [participants, setParticipants] = useState([
-    { id: 1, name: '', email: '', phone: '', sendMethod: '' }
+    { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -71,7 +71,8 @@ const ContractSend = () => {
       name: '',
       email: '',
       phone: '',
-      sendMethod: ''
+      sendMethod: '',
+      userId: null
     };
     setParticipants([...participants, newParticipant]);
   };
@@ -93,6 +94,68 @@ const ContractSend = () => {
       ...prev,
       [field]: value
     }));
+
+    // 회사 선택 시 계약 시작일과 만료일을 자동으로 설정
+    if (field === 'companyId' && value) {
+      const selectedCompany = companies.find(company => company.id === value);
+      if (selectedCompany) {
+        // 회사의 startDate와 endDate가 있는 경우에만 적용
+        if (selectedCompany.startDate) {
+          setContractInfo(prev => ({
+            ...prev,
+            startDate: new Date(selectedCompany.startDate)
+          }));
+        }
+        if (selectedCompany.endDate) {
+          setContractInfo(prev => ({
+            ...prev,
+            expiryDate: new Date(selectedCompany.endDate)
+          }));
+        }
+      }
+      
+      // 회사 직원 정보 자동 불러오기
+      fetchCompanyUsers(value);
+    }
+  };
+
+  // 회사 사용자 정보 조회 함수 수정
+  const fetchCompanyUsers = async (companyId) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/companies/${companyId}/users`);
+      if (!response.ok) throw new Error('회사 사용자 목록 조회 실패');
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        // 회사 직원 정보로 참여자 설정 (userId 필드 추가)
+        const newParticipants = data.map((user, index) => ({
+          id: index + 1,
+          name: user.userName || '',
+          email: user.email || '',
+          phone: user.phoneNumber || '',
+          sendMethod: '',  // 발송 방법은 사용자가 선택하도록 비워둠
+          userId: user.id  // 사용자 ID 추가
+        }));
+        
+        setParticipants(newParticipants);
+        
+        // 콘솔에 로그만 출력하고 알림은 표시하지 않음
+        console.log(`회사 직원 ${newParticipants.length}명의 정보가 자동으로 입력되었습니다.`);
+      } else {
+        // 직원 정보가 없을 경우 기본 참여자 1명 설정
+        setParticipants([
+          { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
+        ]);
+        console.log('조회된 회사 직원 정보가 없습니다. 참여자 정보를 직접 입력해주세요.');
+      }
+    } catch (error) {
+      console.error('회사 사용자 목록 조회 중 오류:', error);
+      // 오류 발생 시 기본 참여자 1명 설정
+      setParticipants([
+        { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
+      ]);
+    }
   };
 
   // 템플릿 목록 조회
@@ -247,7 +310,7 @@ const ContractSend = () => {
         .sort((a, b) => a.order - b.order)
         .map(item => item.id);
       
-      // 1. 계약 생성 - templateId → templateIds로 변경
+      // 계약 생성 요청 - userId 필드 추가
       const response = await fetch('http://localhost:8080/api/contracts', {
         method: 'POST',
         headers: {
@@ -270,7 +333,8 @@ const ContractSend = () => {
             email: p.email,
             phoneNumber: p.phone,
             notifyType: p.sendMethod.toUpperCase(),
-            signed: false
+            signed: false,
+            userId: p.userId // 사용자 ID 추가
           }))
         })
       });
@@ -395,7 +459,7 @@ const ContractSend = () => {
               renderInput={(params) => (
                 <TextField 
                   {...params} 
-                  label="계약 회사" 
+                  label="계약 위수탁 업체" 
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -416,6 +480,11 @@ const ContractSend = () => {
                     <Typography variant="caption" color="text.secondary">
                       {option.businessNumber} {option.companyName ? `| ${option.companyName}` : ''}
                     </Typography>
+                    {option.startDate && option.endDate && (
+                      <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
+                        계약 기간: {new Date(option.startDate).toLocaleDateString()} ~ {new Date(option.endDate).toLocaleDateString()}
+                      </Typography>
+                    )}
                   </Box>
                 </li>
               )}
@@ -433,7 +502,9 @@ const ContractSend = () => {
                   {...props} 
                   sx={{ 
                     maxHeight: 300,
-                    overflowY: 'auto'
+                    overflowY: 'auto',
+                    width: 'auto',
+                    minWidth: '400px'
                   }} 
                 />
               )}

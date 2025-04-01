@@ -27,6 +27,7 @@ const CompanyCreate = React.lazy(() => import('./components/company/CompanyCreat
 const CompanyDetail = React.lazy(() => import('./components/company/CompanyDetail'));
 const UserList = React.lazy(() => import('./components/auth/UserList'));
 const UserManagement = React.lazy(() => import('./components/auth/UserDetailPage'));
+const UserMyPage = React.lazy(() => import('./components/auth/UserMyPage'));
 const FacilityList = React.lazy(() => import('./components/facility/FacilityList'));
 const FacilityCreate = React.lazy(() => import('./components/facility/FacilityCreate'));
 const FacilityDetail = React.lazy(() => import('./components/facility/FacilityDetail'));
@@ -121,6 +122,7 @@ const AppContent = () => {
               <Route path="/companies/:companyId" element={<CompanyDetail />} />
               <Route path="/users" element={<UserList />} />
               <Route path="/users/:userId" element={<UserManagement />} />
+              <Route path="/users/mypage" element={<UserMyPage />} />
               <Route path="/facility" element={<FacilityList />} />
               <Route path="/facility/create" element={<FacilityCreate />} />
               <Route path="/facility/:id" element={<FacilityDetail />} />
@@ -139,8 +141,9 @@ const AppContent = () => {
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/codes" element={<CodeManagement />} />
               <Route path="/settings/permissions" element={<PermissionManagement />} />
+              <Route path="/mypage" element={<UserMyPage />} />
               <Route path="/contract-correction-request/:contractId/participant/:participantId" element={<ContractCorrectionRequest />} />
-              <Route path="/contract-preview/:contractId/participant/:participantId" element={<PreviewPdfViewer />} />
+              <Route path="/contract-preview/:contractId" element={<PreviewPdfViewer />} />
               <Route path="/contract-preview/:contractId/participant/:participantId/pdf/:pdfId" element={<PreviewPdfViewer />} />
             </Route>
           </Routes>

@@ -29,6 +29,7 @@ import ForumIcon from '@mui/icons-material/Forum';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ChatIcon from '@mui/icons-material/Chat';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useAuth } from '../../contexts/AuthContext';
 
 const DRAWER_WIDTH = 240;
@@ -219,6 +220,26 @@ const Sidebar = () => {
         {/* 로그아웃 버튼 */}
         <Box sx={{ p: 2 }}>
           <Divider sx={{ mb: 2, opacity: 0.5 }} />
+          <Button
+            variant="outlined"
+            startIcon={<AccountCircleIcon />}
+            onClick={() => navigate('/mypage')}
+            fullWidth
+            sx={{
+              justifyContent: 'flex-start',
+              color: '#666',
+              borderColor: '#E0E0E0',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: '#BDBDBD',
+              },
+              textTransform: 'none',
+              fontSize: '0.8rem',
+              mb: 1
+            }}
+          >
+            내 정보
+          </Button>
           <Button
             variant="outlined"
             startIcon={<LogoutIcon />}

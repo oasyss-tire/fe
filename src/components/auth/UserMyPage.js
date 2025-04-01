@@ -4,26 +4,20 @@ import {
   Paper,
   Typography,
   TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Button,
-  FormControlLabel,
-  Switch,
+  FormControl,
   Stack,
   Divider,
   Alert,
   CircularProgress
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-const UserDetailPage = () => {
-  const { userId } = useParams();
+const UserMyPage = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth(); // AuthContext에서 현재 로그인한 사용자 정보 가져오기
-  
+
   const [user, setUser] = useState({
     id: '',
     userId: '',
@@ -31,7 +25,6 @@ const UserDetailPage = () => {
     email: '',
     phoneNumber: '',
     role: '',
-    active: true,
     companyId: '',
     companyName: '',
     storeCode: ''
@@ -49,51 +42,6 @@ const UserDetailPage = () => {
     newPassword: '',
     confirmPassword: ''
   });
-  const [companies, setCompanies] = useState([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
-
-  // 세션 스토리지에 저장된 사용자 정보 콘솔에 출력 (디버깅용)
-  const sessionUser = JSON.parse(sessionStorage.getItem('user') || '{}');
-
-  // ADMIN 권한 체크 - AuthContext 사용
-  const isAdmin = authUser?.role?.toUpperCase() === 'ADMIN';
-  
-  // 현재 로그인한 사용자 ID
-  const currentUserId = authUser?.id?.toString();
-  
-  // 자기 자신의 정보를 수정하는지 확인
-  const isSelfEdit = currentUserId === userId;
-
-  // 권한 및 상태 수정 가능 여부 확인
-  const canEditRoleAndStatus = isAdmin; // 관리자만 권한과 상태 수정 가능
-
-  // 회사 목록 가져오기
-  useEffect(() => {
-    if (isAdmin) {
-      fetchCompanies();
-    }
-  }, [isAdmin]);
-
-  const fetchCompanies = async () => {
-    setIsLoadingCompanies(true);
-    try {
-      const token = sessionStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/companies', {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      if (!response.ok) {
-        throw new Error('회사 목록을 불러오는데 실패했습니다.');
-      }
-      const data = await response.json();
-      setCompanies(data);
-    } catch (error) {
-      console.error('회사 목록 조회 오류:', error);
-    } finally {
-      setIsLoadingCompanies(false);
-    }
-  };
 
   // 비밀번호 유효성 검사 함수
   const validatePassword = (password) => {
@@ -125,20 +73,11 @@ const UserDetailPage = () => {
     setUser({ ...user, phoneNumber: formattedNumber });
   };
 
-  // 회사 변경 핸들러
-  const handleCompanyChange = (e) => {
-    const companyId = e.target.value;
-    const selectedCompany = companies.find(c => c.id === companyId);
-    setUser({ 
-      ...user, 
-      companyId: companyId,
-      companyName: selectedCompany ? selectedCompany.companyName : '',
-      storeCode: selectedCompany ? selectedCompany.storeCode : ''
-    });
-  };
-
+  // 사용자 정보 가져오기
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!authUser) return;
+
       setIsLoading(true);
       setError(null);
       
@@ -146,14 +85,14 @@ const UserDetailPage = () => {
         // 인증 토큰 가져오기
         const token = sessionStorage.getItem('token');
         
-        const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
+        const response = await fetch(`http://localhost:8080/api/users/${authUser.id}`, {
           headers: {
             'Authorization': token ? `Bearer ${token}` : ''
           }
         });
         
         if (!response.ok) {
-          throw new Error('사용자 정보를 불러오는데 실패했습니다.');
+          throw new Error('내 정보를 불러오는데 실패했습니다.');
         }
         
         const data = await response.json();
@@ -166,22 +105,8 @@ const UserDetailPage = () => {
       }
     };
 
-    if (userId) {
-      fetchUserData();
-    }
-  }, [userId]);
-
-  // 권한 변경 핸들러
-  const handleRoleChange = (e) => {
-    const newRole = e.target.value;
-    setUser({ ...user, role: newRole });
-  };
-
-  // 활성화 상태 변경 핸들러
-  const handleActiveChange = (e) => {
-    const newActive = e.target.checked;
-    setUser({ ...user, active: newActive });
-  };
+    fetchUserData();
+  }, [authUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -243,7 +168,6 @@ const UserDetailPage = () => {
         companyId: user.companyId ? parseInt(user.companyId) : null
       };
       
-
       const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
         method: 'PUT',
         headers: {
@@ -254,7 +178,7 @@ const UserDetailPage = () => {
       });
 
       if (response.ok) {
-        setSuccess('사용자 정보가 성공적으로 수정되었습니다.');
+        setSuccess('내 정보가 성공적으로 수정되었습니다.');
         // 성공 시 비밀번호 필드 초기화
         setPasswordData({
           currentPassword: '',
@@ -279,7 +203,7 @@ const UserDetailPage = () => {
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || '사용자 정보 수정에 실패했습니다.');
+        throw new Error(errorData.message || '내 정보 수정에 실패했습니다.');
       }
     } catch (error) {
       console.error('사용자 정보 수정 오류:', error);
@@ -307,7 +231,7 @@ const UserDetailPage = () => {
         mb: 3 
       }}>
         <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          사용자 상세 정보
+          내 정보
         </Typography>
       </Box>
 
@@ -386,77 +310,29 @@ const UserDetailPage = () => {
               </Box>
 
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                {isAdmin ? (
-                  <FormControl fullWidth size="small">
-                    <InputLabel>회사</InputLabel>
-                    <Select
-                      value={user.companyId || ''}
-                      onChange={handleCompanyChange}
-                      label="회사"
-                      disabled={isLoadingCompanies}
-                    >
-                      {isLoadingCompanies ? (
-                        <MenuItem value="" disabled>로딩 중...</MenuItem>
-                      ) : (
-                        companies.map((company) => (
-                          <MenuItem key={company.id} value={company.id}>
-                            {company.companyName} ({company.storeCode})
-                          </MenuItem>
-                        ))
-                      )}
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <TextField
-                    label="회사"
-                    value={user.companyName ? `${user.companyName} (${user.storeCode})` : '회사 정보 없음'}
-                    fullWidth
-                    disabled
-                    size="small"
-                    InputProps={{
-                      sx: { bgcolor: '#f5f5f5' }
-                    }}
-                  />
-                )}
-
-                <FormControl fullWidth size="small">
-                  <InputLabel>권한</InputLabel>
-                  <Select
-                    value={user.role || ''}
-                    onChange={handleRoleChange}
-                    label="권한"
-                    disabled={!canEditRoleAndStatus}
-                  >
-                    <MenuItem value="ADMIN">관리자</MenuItem>
-                    <MenuItem value="MANAGER">업체담당자</MenuItem>
-                    <MenuItem value="USER">사용자</MenuItem>
-                  </Select>
-                  {!canEditRoleAndStatus && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      관리자만 권한을 변경할 수 있습니다.
-                    </Typography>
-                  )}
-                </FormControl>
-              </Box>
-              
-              <Box>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={user.active}
-                      onChange={handleActiveChange}
-                      color={user.active ? "success" : "default"}
-                      disabled={!canEditRoleAndStatus}
-                    />
-                  }
-                  label={user.active ? "사용" : "미사용"}
-                  sx={{ ml: 1 }}
+                <TextField
+                  label="회사"
+                  value={user.companyName ? `${user.companyName} (${user.storeCode})` : '회사 정보 없음'}
+                  fullWidth
+                  disabled
+                  size="small"
+                  InputProps={{
+                    sx: { bgcolor: '#f5f5f5' }
+                  }}
                 />
-                {!canEditRoleAndStatus && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    관리자만 상태를 변경할 수 있습니다.
-                  </Typography>
-                )}
+
+                <TextField
+                  label="권한"
+                  value={user.role === 'ADMIN' ? '관리자' : 
+                         user.role === 'MANAGER' ? '업체담당자' : 
+                         user.role === 'USER' ? '사용자' : user.role || ''}
+                  fullWidth
+                  disabled
+                  size="small"
+                  InputProps={{
+                    sx: { bgcolor: '#f5f5f5' }
+                  }}
+                />
               </Box>
             </Stack>
           </Box>
@@ -549,7 +425,7 @@ const UserDetailPage = () => {
             
             <Button 
               variant="outlined"
-              onClick={() => navigate('/users')}
+              onClick={() => navigate('/')}
               disabled={isLoading}
               sx={{ 
                 minWidth: '120px',
@@ -561,7 +437,7 @@ const UserDetailPage = () => {
                 }
               }}
             >
-              목록으로 
+              돌아가기
             </Button>
           </Box>
         </form>
@@ -570,4 +446,4 @@ const UserDetailPage = () => {
   );
 };
 
-export default UserDetailPage; 
+export default UserMyPage;

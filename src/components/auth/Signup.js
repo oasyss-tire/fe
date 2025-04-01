@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,7 +12,8 @@ import {
   FormControl,
   FormHelperText,
   Select,
-  MenuItem
+  MenuItem,
+  InputLabel
 } from '@mui/material';
 import { Visibility, VisibilityOff, ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -25,7 +26,8 @@ const Signup = () => {
     userName: '',
     email: '',
     phoneNumber: '',
-    role: 'MANAGER'
+    role: 'MANAGER',
+    companyId: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -33,8 +35,33 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [companies, setCompanies] = useState([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   
   const navigate = useNavigate();
+
+  // 회사 목록 불러오기
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  // 회사 목록 가져오기
+  const fetchCompanies = async () => {
+    setIsLoadingCompanies(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/companies');
+      if (!response.ok) {
+        throw new Error('회사 목록을 불러오는데 실패했습니다.');
+      }
+      const data = await response.json();
+      setCompanies(data);
+    } catch (error) {
+      console.error('회사 목록 조회 오류:', error);
+      setApiError('회사 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoadingCompanies(false);
+    }
+  };
 
   // 뒤로가기 핸들러 - 이전 페이지로 이동
   const handleGoBack = () => {
@@ -190,6 +217,14 @@ const Signup = () => {
         }
         break;
         
+      case 'companyId':
+        if (!value) {
+          newErrors.companyId = '회사를 선택해주세요.';
+        } else {
+          newErrors.companyId = '';
+        }
+        break;
+        
       default:
         break;
     }
@@ -266,6 +301,11 @@ const Signup = () => {
       isValid = false;
     }
     
+    if (!formData.companyId) {
+      newErrors.companyId = '회사를 선택해주세요.';
+      isValid = false;
+    }
+    
     // 선택 필드 검사 (입력된 경우에만)
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = '유효한 이메일 주소를 입력해주세요.';
@@ -305,7 +345,8 @@ const Signup = () => {
           userName: formData.userName,
           email: formData.email || null,
           phoneNumber: formData.phoneNumber || null,
-          role: formData.role
+          role: formData.role,
+          companyId: parseInt(formData.companyId)
         })
       });
       
@@ -507,15 +548,42 @@ const Signup = () => {
           />
           
           <FormControl fullWidth margin="normal">
+            <InputLabel>권한 *</InputLabel>
             <Select
               value={formData.role}
               onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-              displayEmpty
+              label="권한 *"
             >
               <MenuItem value="ADMIN">관리자</MenuItem>
+              <MenuItem value="MANAGER">매니저</MenuItem>
               <MenuItem value="USER">일반 사용자</MenuItem>
             </Select>
             <FormHelperText>권한 설정</FormHelperText>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal" error={!!errors.companyId}>
+            <InputLabel>회사 *</InputLabel>
+            <Select
+              value={formData.companyId}
+              onChange={handleChange}
+              name="companyId"
+              label="회사 *"
+              disabled={isLoadingCompanies}
+              required
+            >
+              {isLoadingCompanies ? (
+                <MenuItem value="" disabled>
+                  로딩 중...
+                </MenuItem>
+              ) : (
+                companies.map((company) => (
+                  <MenuItem key={company.id} value={company.id}>
+                    {company.companyName} ({company.storeCode})
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+            {errors.companyId && <FormHelperText>{errors.companyId}</FormHelperText>}
           </FormControl>
           
           {apiError && (
