@@ -83,8 +83,8 @@ const PermissionManagement = () => {
   // 역할 리스트
   const roles = [
     { id: 'ADMIN', name: '관리자' },
-    { id: 'MANAGER', name: '업체담당자' },
-    { id: 'USER', name: '사용자' }
+    { id: 'MANAGER', name: '위수탁업체 담당자' },
+    { id: 'USER', name: '위수탁업체 사용자' }
   ];
 
   // 권한 초기화 - 서버에서 데이터를 받아오기 전까지의 기본값

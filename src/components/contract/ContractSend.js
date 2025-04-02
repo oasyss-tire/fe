@@ -345,10 +345,10 @@ const ContractSend = () => {
 
       const contractData = await response.json();
 
-      // 2. 알림 발송 (이메일 & SMS)
+      // 2. 알림 발송 (이메일 & 알림톡)
       const [emailResult, smsResult] = await Promise.all([
         sendContractEmail(contractData.id, contractData.participants),
-        sendContractSMS(contractData.id, contractData.participants)
+        sendContractSMS(contractData.id, contractData.participants, contractInfo)
       ]);
 
       // 3. 결과 처리
@@ -366,8 +366,8 @@ const ContractSend = () => {
       if (smsResult.smsCount > 0) {
         notifications.push(
           smsResult.success 
-            ? `SMS 발송 완료 (${smsResult.smsCount}명)` 
-            : `SMS 발송 실패 (${smsResult.error})`
+            ? `알림톡 발송 완료 (${smsResult.smsCount}명)` 
+            : `알림톡 발송 실패 (${smsResult.error})`
         );
       }
 
@@ -653,8 +653,8 @@ const ContractSend = () => {
                   }}
                 >
                   <MenuItem value="">발송 방법</MenuItem>
-                  <MenuItem value="email">이메일</MenuItem>
-                  <MenuItem value="sms">SMS</MenuItem>
+                  <MenuItem value="EMAIL">이메일</MenuItem>
+                  <MenuItem value="KAKAO">알림톡</MenuItem>
                 </Select>
               </FormControl>
               <IconButton 
