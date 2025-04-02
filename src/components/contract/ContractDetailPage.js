@@ -34,6 +34,9 @@ import {
   AttachFile as AttachFileIcon,
   PhotoCamera as PhotoCameraIcon,
   InsertDriveFile as InsertDriveFileIcon,
+  ContentCopy as ContentCopyIcon,
+  VisibilityOff as VisibilityOffIcon,
+  Lock as LockIcon,
 } from "@mui/icons-material";
 
 const ContractDetailPage = () => {
@@ -78,6 +81,18 @@ const ContractDetailPage = () => {
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // 서명된 PDF ID를 저장할 상태
+  const [signedPdfIds, setSignedPdfIds] = useState({});
+  
+  // 비밀번호 모달 상태
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordData, setPasswordData] = useState('');
+  const [currentPdfId, setCurrentPdfId] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // 계약 상세 정보 조회
   useEffect(() => {
@@ -580,29 +595,19 @@ const ContractDetailPage = () => {
     }
   };
 
-  // 모든 서명된 PDF 다운로드 핸들러 추가
+  // 모든 서명된 PDF 다운로드 핸들러 
   const handleDownloadAllSignedPdfs = async (participantId) => {
     try {
-      // 서명된 모든 PDF 목록 조회
-      const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
-        { method: "GET" }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData || "PDF 조회 실패");
-      }
-
-      const signedPdfs = await response.json();
-
-      if (signedPdfs.length === 0) {
+      // 서명된 PDF 목록 조회
+      const pdfList = await fetchSignedPdfIds(participantId);
+      
+      if (!pdfList || pdfList.length === 0) {
         alert("다운로드할 서명된 문서가 없습니다.");
         return;
       }
 
       // 각 PDF 순차적으로 다운로드
-      for (const pdfInfo of signedPdfs) {
+      for (const pdfInfo of pdfList) {
         await new Promise((resolve) => setTimeout(resolve, 300)); // 다운로드 간격 설정
 
         const downloadResponse = await fetch(
@@ -746,6 +751,121 @@ const ContractDetailPage = () => {
   // 상세 정보 다이얼로그 닫기 함수
   const handleCloseDetailDialog = () => {
     setDetailDialogOpen(false);
+  };
+
+  // 비밀번호 조회 및 모달 열기 함수
+  const handleOpenPasswordModal = async (participantId, pdfId) => {
+    try {
+      setPasswordModalOpen(true);
+      setPasswordLoading(true);
+      setPasswordError(null);
+      setPasswordData('');
+      setCurrentPdfId(pdfId);
+      setShowPassword(false);
+      setCopied(false);
+      
+      // 비밀번호 API 호출
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(
+        `http://localhost:8080/api/contract-pdf/password/${encodeURIComponent(pdfId)}?token=${encodeURIComponent(token)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(
+          response.status === 403
+            ? '비밀번호 조회 권한이 없습니다.'
+            : '비밀번호 조회 중 오류가 발생했습니다.'
+        );
+      }
+      
+      const data = await response.json();
+      setPasswordData(data.password);
+    } catch (error) {
+      console.error('비밀번호 조회 오류:', error);
+      setPasswordError(error.message);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+  
+  // 비밀번호 모달 닫기
+  const handleClosePasswordModal = () => {
+    setPasswordModalOpen(false);
+    setPasswordData('');
+    setPasswordError(null);
+    setCurrentPdfId('');
+  };
+  
+  // 비밀번호 복사
+  const handleCopyPassword = () => {
+    if (!passwordData) return;
+    
+    navigator.clipboard.writeText(passwordData)
+      .then(() => {
+        setCopied(true);
+        // 3초 후 복사 상태 초기화
+        setTimeout(() => setCopied(false), 3000);
+      })
+      .catch(err => {
+        console.error('클립보드 복사 실패:', err);
+        setPasswordError('비밀번호 복사에 실패했습니다.');
+      });
+  };
+  
+  // 비밀번호 표시/숨김 토글
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  // PDF ID를 직접 조회하는 함수 추가
+  const fetchSignedPdfIds = async (participantId) => {
+    try {
+      // 서명된 모든 PDF 목록 조회
+      const response = await fetch(
+        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
+        { 
+          method: "GET",
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData || "PDF 조회 실패");
+      }
+
+      const signedPdfs = await response.json();
+      console.log("서명된 PDF 목록:", signedPdfs);
+      
+      // PDF ID 목록 저장
+      if (signedPdfs && signedPdfs.length > 0) {
+        setSignedPdfIds(prev => ({
+          ...prev,
+          [participantId]: signedPdfs
+        }));
+        
+        // 첫 번째 PDF ID 반환
+        return signedPdfs;
+      }
+      
+      if (signedPdfs.length === 0) {
+        throw new Error("다운로드할 서명된 문서가 없습니다.");
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error fetching PDF IDs:", error);
+      throw error;
+    }
   };
 
   if (loading) return <Box>로딩중...</Box>;
@@ -900,6 +1020,56 @@ const ContractDetailPage = () => {
                           </Typography>
                         </Box>
                       ))}
+                    </Box>
+                  </Box>
+                )}
+                
+                {/* PDF 다운로드 및 비밀번호 확인 버튼 추가 */}
+                {contract?.status?.includes("COMPLETED") && (
+                  <Box sx={{ mt: 2 }}>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<DownloadIcon />}
+                        onClick={() => handleDownloadAllSignedPdfs(contract.participants[0]?.id)}
+                        disabled={loading}
+                      >
+                        계약서 다운로드
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<LockIcon />}
+                        onClick={async () => {
+                          // PDF ID가 없으면 먼저 조회
+                          const participantId = contract.participants[0]?.id;
+                          if (!participantId) {
+                            alert("참여자 정보를 찾을 수 없습니다.");
+                            return;
+                          }
+                          
+                          try {
+                            // PDF ID가 없으면 먼저 조회
+                            if (!signedPdfIds[participantId]) {
+                              const pdfList = await fetchSignedPdfIds(participantId);
+                              if (pdfList && pdfList.length > 0) {
+                                handleOpenPasswordModal(participantId, pdfList[0].pdfId);
+                              }
+                            } else if (signedPdfIds[participantId] && signedPdfIds[participantId].length > 0) {
+                              handleOpenPasswordModal(participantId, signedPdfIds[participantId][0].pdfId);
+                            } else {
+                              alert("PDF ID를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.");
+                            }
+                          } catch (error) {
+                            console.error("비밀번호 조회 오류:", error);
+                            alert(error.message || "비밀번호 조회 중 오류가 발생했습니다.");
+                          }
+                        }}
+                        disabled={loading}
+                      >
+                        비밀번호 확인
+                      </Button>
                     </Box>
                   </Box>
                 )}
@@ -1083,7 +1253,7 @@ const ContractDetailPage = () => {
                       {/* 통합 관리 버튼 영역 */}
                       <Box sx={{ display: "flex", gap: 1 }}>
                         {participant.statusName === "재서명 진행중" ||
-                        participant.statusCodeId === "008001_0007" ? (
+                        participant.statusCodeId === "008001_0008" ? (
                           <Typography
                             sx={{ color: "#666", fontSize: "0.75rem" }}
                           >
@@ -1218,28 +1388,67 @@ const ContractDetailPage = () => {
                               "008001_0005",
                             ].includes(participant.statusCodeId)) ||
                           participant.signed ? (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={
-                              <DownloadIcon sx={{ fontSize: "0.8rem" }} />
-                            }
-                            onClick={() =>
-                              handleDownloadAllSignedPdfs(participant.id)
-                            }
-                            sx={{
-                              borderColor: "#3182F6",
-                              color: "#3182F6",
-                              fontSize: "0.7rem",
-                              height: "24px",
-                              "&:hover": {
-                                borderColor: "#1565C0",
-                                backgroundColor: "rgba(49, 130, 246, 0.04)",
-                              },
-                            }}
-                          >
-                            계약문서 다운로드
-                          </Button>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={
+                                <DownloadIcon sx={{ fontSize: "0.8rem" }} />
+                              }
+                              onClick={() =>
+                                handleDownloadAllSignedPdfs(participant.id)
+                              }
+                              sx={{
+                                borderColor: "#3182F6",
+                                color: "#3182F6",
+                                fontSize: "0.7rem",
+                                height: "24px",
+                                "&:hover": {
+                                  borderColor: "#1565C0",
+                                  backgroundColor: "rgba(49, 130, 246, 0.04)",
+                                },
+                              }}
+                            >
+                              계약문서 다운로드
+                            </Button>
+                            
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={async () => {
+                                try {
+                                  // PDF ID가 없으면 먼저 조회
+                                  if (!signedPdfIds[participant.id]) {
+                                    const pdfList = await fetchSignedPdfIds(participant.id);
+                                    if (pdfList && pdfList.length > 0) {
+                                      handleOpenPasswordModal(participant.id, pdfList[0].pdfId);
+                                    } else {
+                                      alert("PDF ID를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.");
+                                    }
+                                  } else if (signedPdfIds[participant.id] && signedPdfIds[participant.id].length > 0) {
+                                    handleOpenPasswordModal(participant.id, signedPdfIds[participant.id][0].pdfId);
+                                  } else {
+                                    alert("PDF ID를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.");
+                                  }
+                                } catch (error) {
+                                  console.error("비밀번호 조회 오류:", error);
+                                  alert(error.message || "비밀번호 조회 중 오류가 발생했습니다.");
+                                }
+                              }}
+                              sx={{
+                                borderColor: "#3182F6",
+                                color: "#3182F6",
+                                fontSize: "0.7rem",
+                                height: "24px",
+                                "&:hover": {
+                                  borderColor: "#388E3C",
+                                  backgroundColor: "rgba(76, 175, 80, 0.04)",
+                                },
+                              }}
+                            >
+                              비밀번호 확인
+                            </Button>
+                          </Box>
                         ) : (
                           <Button
                             variant="outlined"
@@ -2077,6 +2286,159 @@ const ContractDetailPage = () => {
           {uploadError}
         </Alert>
       </Snackbar>
+      
+      {/* 비밀번호 모달 */}
+      <Dialog
+        open={passwordModalOpen}
+        onClose={handleClosePasswordModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.08)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            borderBottom: "1px solid #F0F0F0",
+            py: 2,
+            px: 3,
+            fontSize: "1rem",
+            fontWeight: 600,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          계약서 비밀번호
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 3, mt: 2 }}>
+          {passwordLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={40} sx={{ color: "#3182F6" }} />
+            </Box>
+          ) : passwordError ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {passwordError}
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="body2" sx={{ mb: 3, color: "#666" }}>
+                계약서 파일을 열 때 필요한 비밀번호입니다. 계약서 PDF 파일은 보안을 위해 비밀번호로 보호되어 있습니다.
+              </Typography>
+
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  mb: 2,
+                  backgroundColor: "#F8F8FE",
+                  border: "1px solid #E0E0E0",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: "#505050" }}>
+                    PDF 비밀번호
+                  </Typography>
+                  {copied && (
+                    <Box
+                      sx={{
+                        display: "inline-block",
+                        ml: 1,
+                        px: 1,
+                        py: 0.2,
+                        backgroundColor: "#4CAF50",
+                        color: "white",
+                        borderRadius: "4px",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      복사됨
+                    </Box>
+                  )}
+                </Box>
+
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <TextField
+                    fullWidth
+                    value={passwordData}
+                    type={showPassword ? "text" : "password"}
+                    InputProps={{
+                      readOnly: true,
+                      sx: {
+                        backgroundColor: "white",
+                        fontFamily: "monospace",
+                        letterSpacing: "0.1em",
+                      },
+                      endAdornment: (
+                        <Box sx={{ display: "flex" }}>
+                          <IconButton onClick={toggleShowPassword} edge="end" size="small">
+                            {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                          <IconButton
+                            onClick={handleCopyPassword}
+                            edge="end"
+                            size="small"
+                            disabled={!passwordData}
+                          >
+                            <ContentCopyIcon />
+                          </IconButton>
+                        </Box>
+                      ),
+                    }}
+                    variant="outlined"
+                    size="small"
+                  />
+                </Box>
+              </Paper>
+
+              <Alert severity="info" sx={{ mt: 2 }}>
+                PDF 파일을 열 때 이 비밀번호를 입력하세요. 비밀번호는 보안을 위해 공유하지 마세요.
+              </Alert>
+            </>
+          )}
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            px: 3,
+            py: 2,
+            borderTop: "1px solid #F0F0F0",
+            justifyContent: "space-between",
+          }}
+        >
+          <Button
+            onClick={handleCopyPassword}
+            disabled={passwordLoading || !passwordData}
+            startIcon={<ContentCopyIcon />}
+            sx={{
+              color: "#3182F6",
+              "&:hover": {
+                backgroundColor: "rgba(49, 130, 246, 0.04)",
+              },
+            }}
+          >
+            비밀번호 복사
+          </Button>
+          <Button
+            onClick={handleClosePasswordModal}
+            variant="contained"
+            sx={{
+              bgcolor: "#3182F6",
+              "&:hover": {
+                bgcolor: "#1565C0",
+              },
+            }}
+          >
+            닫기
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
