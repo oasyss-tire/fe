@@ -95,11 +95,11 @@ const ContractSend = () => {
       [field]: value
     }));
 
-    // 회사 선택 시 계약 시작일과 만료일을 자동으로 설정
+    // 위수탁 업체 선택 시 계약 시작일과 만료일을 자동으로 설정
     if (field === 'companyId' && value) {
       const selectedCompany = companies.find(company => company.id === value);
       if (selectedCompany) {
-        // 회사의 startDate와 endDate가 있는 경우에만 적용
+        // 위수탁 업체 startDate와 endDate가 있는 경우에만 적용
         if (selectedCompany.startDate) {
           setContractInfo(prev => ({
             ...prev,
@@ -114,21 +114,21 @@ const ContractSend = () => {
         }
       }
       
-      // 회사 직원 정보 자동 불러오기
+      // 위수탁 업체 직원 정보 자동 불러오기
       fetchCompanyUsers(value);
     }
   };
 
-  // 회사 사용자 정보 조회 함수 수정
+  // 위수탁 업체 사용자 정보 조회 함수 수정
   const fetchCompanyUsers = async (companyId) => {
     try {
       const response = await fetch(`http://localhost:8080/api/companies/${companyId}/users`);
-      if (!response.ok) throw new Error('회사 사용자 목록 조회 실패');
+      if (!response.ok) throw new Error('위수탁 업체 사용자 목록 조회 실패');
       
       const data = await response.json();
       
       if (data && data.length > 0) {
-        // 회사 직원 정보로 참여자 설정 (userId 필드 추가)
+        // 위수탁 업체 직원 정보로 참여자 설정 (userId 필드 추가)
         const newParticipants = data.map((user, index) => ({
           id: index + 1,
           name: user.userName || '',
@@ -141,44 +141,20 @@ const ContractSend = () => {
         setParticipants(newParticipants);
         
         // 콘솔에 로그만 출력하고 알림은 표시하지 않음
-        console.log(`회사 직원 ${newParticipants.length}명의 정보가 자동으로 입력되었습니다.`);
+        console.log(`위수탁 업체 직원 ${newParticipants.length}명의 정보가 자동으로 입력되었습니다.`);
       } else {
         // 직원 정보가 없을 경우 기본 참여자 1명 설정
         setParticipants([
           { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
         ]);
-        console.log('조회된 회사 직원 정보가 없습니다. 참여자 정보를 직접 입력해주세요.');
+        console.log('조회된 위수탁 업체 직원 정보가 없습니다. 참여자 정보를 직접 입력해주세요.');
       }
     } catch (error) {
-      console.error('회사 사용자 목록 조회 중 오류:', error);
+      console.error('위수탁 업체 사용자 목록 조회 중 오류:', error);
       // 오류 발생 시 기본 참여자 1명 설정
       setParticipants([
         { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
       ]);
-    }
-  };
-
-  // 템플릿 목록 조회
-  const fetchTemplates = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/contract-pdf/templates');
-      if (!response.ok) throw new Error('템플릿 목록 조회 실패');
-      const data = await response.json();
-      setTemplates(data);
-    } catch (error) {
-      console.error('템플릿 목록 조회 중 오류:', error);
-    }
-  };
-
-  // 회사 목록 조회
-  const fetchCompanies = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/companies?active=true');
-      if (!response.ok) throw new Error('회사 목록 조회 실패');
-      const data = await response.json();
-      setCompanies(data);
-    } catch (error) {
-      console.error('회사 목록 조회 중 오류:', error);
     }
   };
 
@@ -189,13 +165,57 @@ const ContractSend = () => {
       if (!response.ok) throw new Error('첨부파일 코드 목록 조회 실패');
       const data = await response.json();
       setDocuments(data);
-      console.log('첨부파일 코드 목록:', data); // 데이터 구조 확인용 로그
+      
+      // 모든 첨부파일을 기본으로 선택
+      if (data && data.length > 0) {
+        const allDocumentIds = data.map(doc => doc.codeId);
+        setSelectedDocumentIds(allDocumentIds);
+      }
+      
+      console.log('첨부파일 코드 목록:', data);
     } catch (error) {
       console.error('첨부파일 코드 목록 조회 중 오류:', error);
     }
   };
 
-  // 컴포넌트 마운트 시 템플릿, 회사, 첨부파일 코드 목록 조회
+  // 템플릿 목록 조회
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/contract-pdf/templates');
+      if (!response.ok) throw new Error('템플릿 목록 조회 실패');
+      const data = await response.json();
+      setTemplates(data);
+      
+      // 모든 템플릿을 기본으로 선택
+      if (data && data.length > 0) {
+        const allTemplateIds = data.map(template => template.id);
+        setSelectedTemplateIds(allTemplateIds);
+        
+        // 템플릿 순서 설정
+        const initialOrder = allTemplateIds.map((id, index) => ({
+          id,
+          order: index + 1
+        }));
+        setTemplateOrder(initialOrder);
+      }
+    } catch (error) {
+      console.error('템플릿 목록 조회 중 오류:', error);
+    }
+  };
+
+  // 위수탁 업체 목록 조회
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/companies?active=true');
+      if (!response.ok) throw new Error('위수탁 업체 목록 조회 실패');
+      const data = await response.json();
+      setCompanies(data);
+    } catch (error) {
+      console.error('위수탁 업체 목록 조회 중 오류:', error);
+    }
+  };
+
+  // 컴포넌트 마운트 시 템플릿, 위수탁 업체, 첨부파일 코드 목록 조회
   useEffect(() => {
     fetchTemplates();
     fetchCompanies();
@@ -257,12 +277,12 @@ const ContractSend = () => {
     setTemplateOrder(newOrder);
   };
 
-  // 회사 검색어 변경 핸들러
+  // 위수탁 업체 검색어 변경 핸들러
   const handleCompanySearchChange = (e) => {
     setCompanySearchTerm(e.target.value);
   };
   
-  // 회사 목록 필터링
+  // 위수탁 업체 목록 필터링
   const filteredCompanies = companySearchTerm 
     ? companies.filter(company => 
         company.storeName?.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
@@ -293,14 +313,103 @@ const ContractSend = () => {
   // 계약 생성 및 이메일 발송을 처리하는 함수
   const handleCreateContractAndSendEmail = async () => {
     try {
-      if (!contractInfo.companyId) {
-        alert('회사를 선택해주세요.');
+      // 계약 제목 검사
+      if (!contractInfo.title || contractInfo.title.trim() === '') {
+        alert('계약 제목을 입력해주세요.');
         return;
       }
 
+      // 위수탁 업체 검사
+      if (!contractInfo.companyId) {
+        alert('위수탁 업체를 선택해주세요.');
+        return;
+      }
+
+      // 담당자 검사
+      if (!contractInfo.createdBy || contractInfo.createdBy.trim() === '') {
+        alert('담당자를 입력해주세요.');
+        return;
+      }
+
+      // 담당 부서 검사
+      if (!contractInfo.department || contractInfo.department.trim() === '') {
+        alert('담당 부서를 입력해주세요.');
+        return;
+      }
+
+      // 계약 설명 검사
+      if (!contractInfo.description || contractInfo.description.trim() === '') {
+        alert('계약 설명을 입력해주세요.');
+        return;
+      }
+
+      // 계약 시작일 검사
+      if (!contractInfo.startDate) {
+        alert('계약 시작일을 선택해주세요.');
+        return;
+      }
+
+      // 계약 만료일 검사
+      if (!contractInfo.expiryDate) {
+        alert('계약 만료일을 선택해주세요.');
+        return;
+      }
+
+      // 서명 마감일 검사
+      if (!contractInfo.deadlineDate) {
+        alert('서명 마감일을 선택해주세요.');
+        return;
+      }
+
+      // 템플릿 선택 검사
       if (selectedTemplateIds.length === 0) {
         alert('최소 하나 이상의 템플릿을 선택해주세요.');
         return;
+      }
+
+      // 첨부파일 선택 검사
+      if (selectedDocumentIds.length === 0) {
+        alert('최소 하나 이상의 첨부파일을 선택해주세요.');
+        return;
+      }
+
+      // 참여자 정보 검사
+      for (let i = 0; i < participants.length; i++) {
+        const p = participants[i];
+        
+        if (!p.name || p.name.trim() === '') {
+          alert(`${i+1}번째 참여자의 이름을 입력해주세요.`);
+          return;
+        }
+        
+        if (!p.email || p.email.trim() === '') {
+          alert(`${i+1}번째 참여자의 이메일을 입력해주세요.`);
+          return;
+        }
+        
+        // 이메일 형식 검사
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(p.email)) {
+          alert(`${i+1}번째 참여자의 이메일 형식이 올바르지 않습니다.`);
+          return;
+        }
+
+        if (!p.phone || p.phone.trim() === '') {
+          alert(`${i+1}번째 참여자의 연락처를 입력해주세요.`);
+          return;
+        }
+        
+        // 전화번호 형식 검사
+        const phoneRegex = /^\d{3}-\d{3,4}-\d{4}$/;
+        if (!phoneRegex.test(p.phone)) {
+          alert(`${i+1}번째 참여자의 연락처 형식이 올바르지 않습니다. (예: 010-1234-5678)`);
+          return;
+        }
+
+        if (!p.sendMethod || p.sendMethod.trim() === '') {
+          alert(`${i+1}번째 참여자의 발송 방법을 선택해주세요.`);
+          return;
+        }
       }
       
       setIsLoading(true);  // 로딩 시작
@@ -340,7 +449,29 @@ const ContractSend = () => {
       });
 
       if (!response.ok) {
-        throw new Error('계약 생성 실패');
+        const errorData = await response.text();
+        console.error('서버 응답 에러:', errorData);
+        
+        // 서버 에러 메시지 파싱 시도
+        try {
+          const parsedError = JSON.parse(errorData);
+          if (parsedError.message) {
+            throw new Error(parsedError.message);
+          } else if (parsedError.error) {
+            throw new Error(parsedError.error);
+          }
+        } catch (parseError) {
+          // JSON 파싱에 실패하면 원본 에러 메시지 사용
+          if (errorData.includes("code not found") || errorData.includes("Status code not found")) {
+            throw new Error("필요한 상태 코드를 찾을 수 없습니다. 관리자에게 문의하세요.");
+          } else if (errorData.includes("EntityNotFoundException")) {
+            throw new Error("필요한 기본 데이터를 찾을 수 없습니다. 관리자에게 문의하세요.");
+          }
+        }
+        
+        throw new Error(response.status === 500 ? 
+          '서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.' : 
+          '계약 생성에 실패했습니다.');
       }
 
       const contractData = await response.json();
@@ -380,7 +511,7 @@ const ContractSend = () => {
 
     } catch (error) {
       console.error('처리 중 오류:', error);
-      alert('처리 중 오류가 발생했습니다.');
+      alert(`처리 중 오류가 발생했습니다.\n${error.message || ''}`);
     } finally {
       setIsLoading(false);  // 로딩 종료
     }
@@ -433,9 +564,14 @@ const ContractSend = () => {
             pb: 2,
             borderBottom: '1px solid #EEEEEE'
           }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              계약 정보
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                계약 정보
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#FF4D4D', ml: 1 }}>
+                (필수)
+              </Typography>
+            </Box>
           </Box>
 
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', mb: 3 }}>
@@ -445,6 +581,8 @@ const ContractSend = () => {
               onChange={(e) => handleContractInfoChange('title', e.target.value)}
               fullWidth
               size="small"
+              required
+              InputLabelProps={{ required: true }}
             />
             <Autocomplete
               size="small"
@@ -460,6 +598,8 @@ const ContractSend = () => {
                 <TextField 
                   {...params} 
                   label="계약 위수탁 업체" 
+                  required
+                  InputLabelProps={{ required: true }}
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -489,7 +629,7 @@ const ContractSend = () => {
                 </li>
               )}
               noOptionsText="검색 결과가 없습니다"
-              loadingText="회사 목록을 불러오는 중..."
+              loadingText="위수탁 업체 목록을 불러오는 중..."
               filterOptions={(options, { inputValue }) => {
                 return options.filter(option => 
                   option.storeName?.toLowerCase().includes(inputValue.toLowerCase()) ||
@@ -518,6 +658,8 @@ const ContractSend = () => {
               onChange={(e) => handleContractInfoChange('createdBy', e.target.value)}
               fullWidth
               size="small"
+              required
+              InputLabelProps={{ required: true }}
             />
             <TextField
               label="담당 부서"
@@ -525,6 +667,8 @@ const ContractSend = () => {
               onChange={(e) => handleContractInfoChange('department', e.target.value)}
               fullWidth
               size="small"
+              required
+              InputLabelProps={{ required: true }}
             />
           </Box>
 
@@ -534,19 +678,37 @@ const ContractSend = () => {
                 label="계약 시작일"
                 value={contractInfo.startDate}
                 onChange={(newValue) => handleContractInfoChange('startDate', newValue)}
-                slotProps={{ textField: { size: 'small' } }}
+                slotProps={{ 
+                  textField: { 
+                    size: 'small',
+                    required: true,
+                    InputLabelProps: { required: true }
+                  } 
+                }}
               />
               <DateTimePicker
                 label="계약 만료일"
                 value={contractInfo.expiryDate}
                 onChange={(newValue) => handleContractInfoChange('expiryDate', newValue)}
-                slotProps={{ textField: { size: 'small' } }}
+                slotProps={{ 
+                  textField: { 
+                    size: 'small',
+                    required: true,
+                    InputLabelProps: { required: true }
+                  } 
+                }}
               />
               <DateTimePicker
                 label="서명 마감일"
                 value={contractInfo.deadlineDate}
                 onChange={(newValue) => handleContractInfoChange('deadlineDate', newValue)}
-                slotProps={{ textField: { size: 'small' } }}
+                slotProps={{ 
+                  textField: { 
+                    size: 'small',
+                    required: true,
+                    InputLabelProps: { required: true }
+                  } 
+                }}
               />
             </Box>
           </LocalizationProvider>
@@ -559,6 +721,8 @@ const ContractSend = () => {
             multiline
             rows={3}
             size="small"
+            required
+            InputLabelProps={{ required: true }}
           />
         </Box>
 
@@ -572,9 +736,14 @@ const ContractSend = () => {
             pb: 2,
             borderBottom: '1px solid #EEEEEE'
           }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              서명 참여자
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                서명 참여자
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#FF4D4D', ml: 1 }}>
+                (필수)
+              </Typography>
+            </Box>
             <Button
               startIcon={<AddIcon />}
               onClick={handleAddParticipant}
@@ -604,6 +773,7 @@ const ContractSend = () => {
                 size="small"
                 value={participant.name}
                 onChange={(e) => handleParticipantChange(participant.id, 'name', e.target.value)}
+                required
                 sx={{ 
                   flex: 1,
                   '& .MuiOutlinedInput-root': {
@@ -618,6 +788,7 @@ const ContractSend = () => {
                 size="small"
                 value={participant.email}
                 onChange={(e) => handleParticipantChange(participant.id, 'email', e.target.value)}
+                required
                 sx={{ 
                   flex: 2,
                   '& .MuiOutlinedInput-root': {
@@ -632,6 +803,7 @@ const ContractSend = () => {
                 size="small"
                 value={participant.phone}
                 onChange={(e) => handleParticipantChange(participant.id, 'phone', formatPhoneNumber(e.target.value))}
+                required
                 sx={{ 
                   flex: 1,
                   '& .MuiOutlinedInput-root': {
@@ -641,7 +813,7 @@ const ContractSend = () => {
                   },
                 }}
               />
-              <FormControl size="small" sx={{ flex: 1 }}>
+              <FormControl size="small" sx={{ flex: 1 }} required>
                 <Select
                   displayEmpty
                   value={participant.sendMethod}
@@ -651,6 +823,7 @@ const ContractSend = () => {
                       borderColor: '#E0E0E0',
                     },
                   }}
+                  required
                 >
                   <MenuItem value="">발송 방법</MenuItem>
                   <MenuItem value="EMAIL">이메일</MenuItem>
@@ -680,9 +853,31 @@ const ContractSend = () => {
             pb: 2,
             borderBottom: '1px solid #EEEEEE'
           }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              필수 첨부파일 선택
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  필수 첨부파일 선택
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#FF4D4D', ml: 1 }}>
+                  (필수)
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                onClick={() => {
+                  if (selectedDocumentIds.length === documents.length) {
+                    // 모두 선택된 상태라면 모두 해제
+                    setSelectedDocumentIds([]);
+                  } else {
+                    // 일부만 선택되었거나 아무것도 선택되지 않았다면 모두 선택
+                    setSelectedDocumentIds(documents.map(doc => doc.codeId));
+                  }
+                }}
+                sx={{ fontSize: '0.75rem' }}
+              >
+                {selectedDocumentIds.length === documents.length ? '모두 해제' : '모두 선택'}
+              </Button>
+            </Box>
           </Box>
           <Autocomplete
             multiple
@@ -698,6 +893,8 @@ const ContractSend = () => {
                 variant="outlined"
                 placeholder="필수 첨부파일 선택"
                 label="첨부파일 종류"
+                required
+                InputLabelProps={{ required: true }}
               />
             )}
             renderOption={(props, option) => (
@@ -761,6 +958,15 @@ const ContractSend = () => {
                           )}
                         </Box>
                       </Box>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => {
+                          setSelectedDocumentIds(selectedDocumentIds.filter(id => id !== codeId));
+                        }}
+                        sx={{ color: '#FF4D4D' }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                     </Box>
                   );
                 })}
@@ -776,9 +982,40 @@ const ContractSend = () => {
             pb: 2,
             borderBottom: '1px solid #EEEEEE'
           }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              계약서 선택
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  계약서 선택
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#FF4D4D', ml: 1 }}>
+                  (필수)
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                onClick={() => {
+                  if (selectedTemplateIds.length === templates.length) {
+                    // 모두 선택된 상태라면 모두 해제
+                    setSelectedTemplateIds([]);
+                    setTemplateOrder([]);
+                  } else {
+                    // 일부만 선택되었거나 아무것도 선택되지 않았다면 모두 선택
+                    const allTemplateIds = templates.map(template => template.id);
+                    setSelectedTemplateIds(allTemplateIds);
+                    
+                    // 템플릿 순서 설정
+                    const initialOrder = allTemplateIds.map((id, index) => ({
+                      id,
+                      order: index + 1
+                    }));
+                    setTemplateOrder(initialOrder);
+                  }
+                }}
+                sx={{ fontSize: '0.75rem' }}
+              >
+                {selectedTemplateIds.length === templates.length ? '모두 해제' : '모두 선택'}
+              </Button>
+            </Box>
           </Box>
           <Autocomplete
             multiple
@@ -794,6 +1031,8 @@ const ContractSend = () => {
                 variant="outlined"
                 placeholder="계약서 템플릿 선택"
                 label="계약서 템플릿"
+                required
+                InputLabelProps={{ required: true }}
               />
             )}
             renderOption={(props, option) => (

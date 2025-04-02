@@ -11,7 +11,12 @@ import {
   FormControl,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Menu,
+  Popover
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -22,16 +27,28 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
+import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
 
 const CompanyList = () => {
   const [companies, setCompanies] = useState([]);
+  const [allCompanies, setAllCompanies] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState('all');
   const [sortBy, setSortBy] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
+  const [searchMenuAnchorEl, setSearchMenuAnchorEl] = useState(null);
+  
+  // 날짜 필터 상태 추가
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [dateDialogOpen, setDateDialogOpen] = useState(false);
+  const [dateFilterActive, setDateFilterActive] = useState(false);
+  
   const navigate = useNavigate();
 
   // 회사 목록 조회 함수
@@ -46,6 +63,8 @@ const CompanyList = () => {
       let url = 'http://localhost:8080/api/companies';
       if (statusFilter === 'ACTIVE') {
         url += '?active=true';
+      } else if (statusFilter === 'INACTIVE') {
+        url += '?active=false';
       }
       
       const response = await fetch(url, {
@@ -61,22 +80,73 @@ const CompanyList = () => {
       }
       
       const data = await response.json();
+      setAllCompanies(data);
       
       // 검색어 필터링
       let filteredData = data;
       if (searchTerm) {
         const searchTermLower = searchTerm.toLowerCase();
-        filteredData = data.filter(company => 
-          (company.storeName && company.storeName.toLowerCase().includes(searchTermLower)) ||
-          (company.address && company.address.toLowerCase().includes(searchTermLower)) ||
-          (company.phoneNumber && company.phoneNumber.toLowerCase().includes(searchTermLower)) ||
-          (company.email && company.email.toLowerCase().includes(searchTermLower))
-        );
+        
+        filteredData = data.filter(company => {
+          // 검색 타입에 따른 필터링
+          if (searchType === 'storeName' || searchType === 'all') {
+            if (company.storeName && company.storeName.toLowerCase().includes(searchTermLower)) {
+              return true;
+            }
+          }
+          
+          if (searchType === 'address' || searchType === 'all') {
+            if (company.address && company.address.toLowerCase().includes(searchTermLower)) {
+              return true;
+            }
+          }
+          
+          if (searchType === 'phoneNumber' || searchType === 'all') {
+            if (company.phoneNumber && company.phoneNumber.toLowerCase().includes(searchTermLower)) {
+              return true;
+            }
+          }
+          
+          if (searchType === 'representativeName' || searchType === 'all') {
+            if (company.representativeName && company.representativeName.toLowerCase().includes(searchTermLower)) {
+              return true;
+            }
+          }
+          
+          return false;
+        });
+      }
+      
+      // 날짜 필터링 적용
+      if (dateFilterActive && startDate && endDate) {
+        try {
+          const startDayStart = startOfDay(new Date(startDate));
+          const endDayEnd = endOfDay(new Date(endDate));
+          
+          filteredData = filteredData.filter(company => {
+            // 날짜가 없으면 필터링에서 제외
+            if (!company.createdAt) return false;
+            
+            try {
+              const companyDate = parseISO(company.createdAt);
+              return isWithinInterval(companyDate, { start: startDayStart, end: endDayEnd });
+            } catch (error) {
+              console.error('업체 날짜 파싱 오류:', error, company.createdAt);
+              return false;
+            }
+          });
+        } catch (error) {
+          console.error('날짜 필터링 적용 중 오류:', error);
+        }
       }
       
       // 정렬
       if (sortBy === 'name') {
-        filteredData.sort((a, b) => a.storeName.localeCompare(b.storeName));
+        filteredData.sort((a, b) => {
+          if (!a.storeName) return 1;
+          if (!b.storeName) return -1;
+          return a.storeName.localeCompare(b.storeName);
+        });
       } else if (sortBy === 'address') {
         filteredData.sort((a, b) => {
           if (!a.address) return 1;
@@ -100,23 +170,11 @@ const CompanyList = () => {
   // 검색어, 정렬, 상태 필터 변경 시 회사 목록 다시 조회
   useEffect(() => {
     fetchCompanies();
-  }, [sortBy, statusFilter]);
+  }, [sortBy, statusFilter, searchType, dateFilterActive, startDate, endDate, searchTerm]);
 
   // 검색어 입력 핸들러
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-  };
-
-  // 검색 실행 핸들러
-  const handleSearch = () => {
-    fetchCompanies();
-  };
-
-  // 엔터 키 검색 핸들러
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
   };
 
   // 정렬 변경 핸들러
@@ -127,6 +185,70 @@ const CompanyList = () => {
   // 상태 필터 변경 핸들러
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
+  };
+  
+  // 검색 타입 변경 핸들러
+  const handleSearchTypeChange = (type) => {
+    setSearchType(type);
+    handleCloseSearchMenu();
+  };
+  
+  // 검색 메뉴 열기
+  const handleOpenSearchMenu = (event) => {
+    setSearchMenuAnchorEl(event.currentTarget);
+  };
+  
+  // 검색 메뉴 닫기
+  const handleCloseSearchMenu = () => {
+    setSearchMenuAnchorEl(null);
+  };
+  
+  // 날짜 다이얼로그 열기
+  const handleOpenDateDialog = () => {
+    setDateDialogOpen(true);
+  };
+  
+  // 날짜 다이얼로그 닫기
+  const handleCloseDateDialog = () => {
+    setDateDialogOpen(false);
+  };
+  
+  // 날짜 변경 핸들러
+  const handleDateChange = (start, end) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
+  
+  // 날짜 필터 적용
+  const handleApplyDateFilter = () => {
+    if (startDate && endDate) {
+      setDateFilterActive(true);
+      handleCloseDateDialog();
+    }
+  };
+  
+  // 날짜 필터 초기화
+  const handleResetDateFilter = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setDateFilterActive(false);
+    handleCloseDateDialog();
+  };
+  
+  // 날짜 범위 텍스트 구성
+  const getDateRangeText = () => {
+    if (!dateFilterActive) return '전체';
+    
+    if (!startDate || !endDate) return '전체';
+    
+    try {
+      const startFormatted = format(new Date(startDate), 'yy-MM-dd');
+      const endFormatted = format(new Date(endDate), 'yy-MM-dd');
+      return `${startFormatted} ~ ${endFormatted}`;
+    } catch (error) {
+      console.error('날짜 형식 오류:', error);
+      return '전체';
+    }
   };
 
   const handleMenuClick = (event, companyId) => {
@@ -141,6 +263,23 @@ const CompanyList = () => {
 
   const handleCompanyClick = (companyId) => {
     navigate(`/companies/${companyId}`);
+  };
+  
+  // 검색 타입에 따른 플레이스홀더 텍스트 반환
+  const getSearchPlaceholderText = () => {
+    switch (searchType) {
+      case 'storeName':
+        return '업체명으로 검색';
+      case 'address':
+        return '주소로 검색';
+      case 'phoneNumber':
+        return '연락처로 검색';
+      case 'representativeName':
+        return '대표자명으로 검색';
+      case 'all':
+      default:
+        return '업체명, 주소, 연락처, 대표자명으로 검색';
+    }
   };
 
   return (
@@ -187,11 +326,10 @@ const CompanyList = () => {
             검색어
           </Typography>
           <TextField
-            placeholder="업체명, 주소, 연락처 검색"
+            placeholder={getSearchPlaceholderText()}
             size="small"
             value={searchTerm}
             onChange={handleSearchChange}
-            onKeyPress={handleKeyPress}
             sx={{ 
               width: '100%',
               backgroundColor: 'white',
@@ -204,13 +342,39 @@ const CompanyList = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconButton size="small" onClick={handleSearch}>
-                    <SearchIcon sx={{ color: '#9E9E9E' }} />
-                  </IconButton>
+                  <SearchIcon sx={{ color: '#9E9E9E' }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Button 
+                    size="small" 
+                    onClick={handleOpenSearchMenu}
+                    endIcon={<KeyboardArrowDownIcon />}
+                    sx={{ color: '#666', minWidth: 'auto', ml: -1 }}
+                  >
+                    {searchType === 'all' ? '전체' : 
+                     searchType === 'storeName' ? '업체명' :
+                     searchType === 'address' ? '주소' :
+                     searchType === 'phoneNumber' ? '연락처' : '대표자명'}
+                  </Button>
                 </InputAdornment>
               ),
             }}
           />
+          
+          {/* 검색 타입 메뉴 */}
+          <Menu
+            anchorEl={searchMenuAnchorEl}
+            open={Boolean(searchMenuAnchorEl)}
+            onClose={handleCloseSearchMenu}
+          >
+            <MenuItem onClick={() => handleSearchTypeChange('all')}>전체</MenuItem>
+            <MenuItem onClick={() => handleSearchTypeChange('storeName')}>업체명</MenuItem>
+            <MenuItem onClick={() => handleSearchTypeChange('address')}>주소</MenuItem>
+            <MenuItem onClick={() => handleSearchTypeChange('phoneNumber')}>연락처</MenuItem>
+            <MenuItem onClick={() => handleSearchTypeChange('representativeName')}>대표자명</MenuItem>
+          </Menu>
         </Box>
 
         {/* 정렬 필터 */}
@@ -264,26 +428,56 @@ const CompanyList = () => {
         {/* 등록일 필터 */}
         <Box>
           <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-            등록일
+            계약일
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<CalendarTodayIcon />}
-            endIcon={<KeyboardArrowDownIcon />}
-            sx={{
-              borderColor: '#E0E0E0',
-              color: '#666',
-              backgroundColor: 'white',
-              minWidth: 120,
-              '&:hover': {
-                backgroundColor: '#F8F9FA',
-                borderColor: '#E0E0E0',
-              },
+          <DateRangeButton
+            startDate={startDate}
+            endDate={endDate}
+            isActive={dateFilterActive}
+            onClick={handleOpenDateDialog}
+            getDateRangeText={getDateRangeText}
+            buttonProps={{
+              startIcon: <CalendarTodayIcon />,
+              endIcon: <KeyboardArrowDownIcon />
             }}
-          >
-            전체
-          </Button>
+          />
         </Box>
+        
+        {/* 날짜 범위 선택 캘린더 다이얼로그 */}
+        <DateRangeCalendar
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={handleDateChange}
+          open={dateDialogOpen}
+          onClose={handleCloseDateDialog}
+          onApply={handleApplyDateFilter}
+          onReset={handleResetDateFilter}
+        />
+      </Box>
+      
+      {/* 검색 결과 요약 */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        p: 2,
+        backgroundColor: 'white',
+        borderRadius: 2,
+        mb: 2
+      }}>
+        <Typography variant="body2" sx={{ color: '#666' }}>
+          전체 {allCompanies.length}건 중 {companies.length}건 검색됨
+        </Typography>
+        {(searchTerm || statusFilter || dateFilterActive) && (
+          <Typography variant="body2" sx={{ color: '#1976d2' }}>
+            {searchTerm && `검색어(${searchType === 'all' ? '전체' : 
+                            searchType === 'storeName' ? '업체명' :
+                            searchType === 'address' ? '주소' :
+                            searchType === 'phoneNumber' ? '연락처' : '대표자명'}): "${searchTerm}" `}
+            {statusFilter && `상태: ${statusFilter === 'ACTIVE' ? '사용' : '해지'} `}
+            {dateFilterActive && `계약일: ${getDateRangeText()}`}
+          </Typography>
+        )}
       </Box>
 
       {/* 로딩 표시 */}
@@ -603,7 +797,7 @@ const CompanyList = () => {
               ))
             ) : (
               <Box sx={{ p: 4, textAlign: 'center', width: '100%', borderBottom: '1px solid #EEEEEE' }}>
-                <Typography color="text.secondary">등록된 업체가 없습니다.</Typography>
+                <Typography color="text.secondary">검색 조건에 맞는 업체가 없습니다.</Typography>
               </Box>
             )}
           </Box>

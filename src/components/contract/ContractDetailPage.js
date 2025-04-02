@@ -725,13 +725,45 @@ const ContractDetailPage = () => {
 
   // 서명된 PDF 미리보기 핸들러
   const handlePreviewSignedPdf = async (participant) => {
-    if (!participant.pdfId) {
-      alert("서명된 PDF 정보를 찾을 수 없습니다.");
+    if (!participant) {
+      alert("참여자 정보를 찾을 수 없습니다.");
       return;
     }
 
     try {
-      // 새 창에서 PDF 미리보기 열기 대신 미리보기 페이지로 이동
+      // 참여자의 템플릿 매핑 확인
+      if (participant.templatePdfs && participant.templatePdfs.length > 0) {
+        // 첫 번째 PDF ID를 사용
+        const firstPdfId = participant.templatePdfs[0]?.pdfId;
+        if (firstPdfId) {
+          console.log("미리보기 이동: 참여자ID =", participant.id, "PDF ID =", firstPdfId);
+          
+          // PDF ID를 포함하여 미리보기 페이지로 이동
+          navigate(
+            `/contract-preview/${contract.id}/participant/${participant.id}/pdf/${encodeURIComponent(firstPdfId)}`
+          );
+          return;
+        }
+      }
+      
+      // PDF ID가 없을 경우 서명된 PDF 목록 조회 시도
+      try {
+        const pdfList = await fetchSignedPdfIds(participant.id);
+        if (pdfList && pdfList.length > 0) {
+          const pdfId = pdfList[0].pdfId;
+          console.log("PDF 목록 조회 후 미리보기 이동: 참여자ID =", participant.id, "PDF ID =", pdfId);
+          
+          navigate(
+            `/contract-preview/${contract.id}/participant/${participant.id}/pdf/${encodeURIComponent(pdfId)}`
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("서명된 PDF 목록 조회 실패:", error);
+      }
+      
+      // 그래도 PDF ID가 없으면 PDF ID 없이 미리보기 페이지로 이동
+      console.log("PDF ID 없이 미리보기 이동: 참여자ID =", participant.id);
       navigate(
         `/contract-preview/${contract.id}/participant/${participant.id}`
       );
