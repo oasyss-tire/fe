@@ -28,9 +28,6 @@ const CompanyDetail = React.lazy(() => import('./components/company/CompanyDetai
 const UserList = React.lazy(() => import('./components/auth/UserList'));
 const UserManagement = React.lazy(() => import('./components/auth/UserDetailPage'));
 const UserMyPage = React.lazy(() => import('./components/auth/UserMyPage'));
-const FacilityList = React.lazy(() => import('./components/facility/FacilityList'));
-const FacilityCreate = React.lazy(() => import('./components/facility/FacilityCreate'));
-const FacilityDetail = React.lazy(() => import('./components/facility/FacilityDetail'));
 const ServicePreparingPage = React.lazy(() => import('./components/common/ServicePreparingPage'));
 const ContractPdfUploader = React.lazy(() => import('./components/contract/ContractPdfUploader'));
 const PdfViewerPage = React.lazy(() => import('./components/contract/PdfViewerPage'));
@@ -39,6 +36,7 @@ const ContractSend = React.lazy(() => import('./components/contract/ContractSend
 const FacilitiesList = React.lazy(() => import('./components/facility/FacilitiesList'));
 const FacilitiesRegister = React.lazy(() => import('./components/facility/FacilitiesRegister'));
 const FacilitiesService = React.lazy(() => import('./components/facility/FacilitiesService'));
+const FacilitiesDetail = React.lazy(() => import('./components/facility/FacilitiesDetail'));
 const ContractDetailPage = React.lazy(() => import('./components/contract/ContractDetailPage'));
 const FacilityDashboard = React.lazy(() => import('./components/facility/FacilityDashboard'));
 const CodeManagement = React.lazy(() => import('./components/settings/CodeManagement'));
@@ -47,6 +45,10 @@ const ContractSignedPage = React.lazy(() => import('./components/contract/Contra
 const ContractCorrectionRequest = React.lazy(() => import('./components/contract/ContractCorrectionRequest'));
 const ContractCorrectionResponsePage = React.lazy(() => import('./components/contract/ContractCorrectionResponsePage'));
 const PreviewPdfViewer = React.lazy(() => import('./components/contract/PreviewPdfViewer'));
+const ServiceRequestCreate = React.lazy(() => import('./components/facility/ServiceRequestCreate'));
+const ServiceRequestList = React.lazy(() => import('./components/facility/ServiceRequestList'));
+const FacilityTransfer = React.lazy(() => import('./components/facility/FacilityTransfer'));
+const FacilityHistoryPage = React.lazy(() => import('./components/facility/FacilityHistoryPage'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -123,9 +125,6 @@ const AppContent = () => {
               <Route path="/users" element={<UserList />} />
               <Route path="/users/:userId" element={<UserManagement />} />
               <Route path="/users/mypage" element={<UserMyPage />} />
-              <Route path="/facility" element={<FacilityList />} />
-              <Route path="/facility/create" element={<FacilityCreate />} />
-              <Route path="/facility/:id" element={<FacilityDetail />} />
               <Route path="/service-preparing" element={<ServicePreparingPage />} />
               <Route path="/contract-upload" element={<ContractPdfUploader />} />
               <Route path="/pdf-editor/:pdfId" element={<PdfViewerPage />} />
@@ -136,6 +135,8 @@ const AppContent = () => {
               <Route path="/facility-list" element={<FacilitiesList />} />
               <Route path="/facility-register" element={<FacilitiesRegister />} />
               <Route path="/facility-service" element={<FacilitiesService />} />
+              <Route path="/facility-detail/:id" element={<FacilitiesDetail />} />
+              <Route path="/facility-transfer" element={<FacilityTransfer />} />
               <Route path="/contract-detail/:id" element={<ContractDetailPage />} />
               <Route path="/facility-dashboard" element={<FacilityDashboard />} />
               <Route path="/settings" element={<Settings />} />
@@ -145,6 +146,10 @@ const AppContent = () => {
               <Route path="/contract-correction-request/:contractId/participant/:participantId" element={<ContractCorrectionRequest />} />
               <Route path="/contract-preview/:contractId" element={<PreviewPdfViewer />} />
               <Route path="/contract-preview/:contractId/participant/:participantId/pdf/:pdfId" element={<PreviewPdfViewer />} />
+              <Route path="/service-request/create" element={<ServiceRequestCreate />} />
+              <Route path="/service-request/create/:facilityId" element={<ServiceRequestCreate />} />
+              <Route path="/service-request/list" element={<ServiceRequestList />} />
+              <Route path="/facility-history" element={<FacilityHistoryPage />} />
             </Route>
           </Routes>
         </Suspense>

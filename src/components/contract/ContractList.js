@@ -101,7 +101,8 @@ const ContractList = () => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(contract => 
-        // 계약 제목, 위수탁 업체명으로 검색
+        // 계약번호, 계약 제목, 위수탁 업체명으로 검색
+        (contract.contractNumber && contract.contractNumber.toLowerCase().includes(query)) ||
         (contract.title && contract.title.toLowerCase().includes(query)) || 
         (contract.companyName && contract.companyName.toLowerCase().includes(query))
       );
@@ -331,7 +332,7 @@ const ContractList = () => {
             검색어
           </Typography>
           <TextField
-            placeholder="계약 제목 또는 위수탁 업체명"
+            placeholder="계약번호, 계약 제목 또는 위수탁 업체명"
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -504,11 +505,12 @@ const ContractList = () => {
         {/* 목록 헤더 */}
         <Box sx={{ 
           display: 'grid',
-          gridTemplateColumns: '1fr 150px 150px 150px 50px',
+          gridTemplateColumns: '200px 1.5fr 140px 160px 120px 50px',
           p: 2,
           borderBottom: '1px solid #EEEEEE',
           backgroundColor: '#F8F9FA'
         }}>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>계약번호</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>계약명</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>계약상태</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>위수탁 업체명</Typography>
@@ -528,14 +530,16 @@ const ContractList = () => {
               key={contract.id}
               sx={{ 
                 display: 'grid',
-                gridTemplateColumns: '1fr 150px 150px 150px 50px',
+                gridTemplateColumns: '200px 1.5fr 140px 160px 120px 50px',
                 p: 2,
                 borderBottom: '1px solid #EEEEEE',
                 '&:hover': { backgroundColor: '#F8F9FA' }
               }}
             >
+              <Typography sx={{ display: 'flex', alignItems: 'center' }}>
+                {contract.contractNumber || '-'}
+              </Typography>
               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                <DescriptionIcon sx={{ color: '#3182F6', mr: 2, mt: 0.5 }} />
                 <Box 
                   onClick={() => handleContractClick(contract.id)}
                   sx={{ 

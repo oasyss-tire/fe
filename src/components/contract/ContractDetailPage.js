@@ -940,6 +940,10 @@ const ContractDetailPage = () => {
             >
               <Box sx={{ display: "grid", rowGap: 3 }}>
                 <Box sx={{ display: "grid", gridTemplateColumns: "120px 1fr" }}>
+                  <Typography sx={{ color: "#666" }}>계약번호</Typography>
+                  <Typography>{contract.contractNumber || '-'}</Typography>
+                </Box>
+                <Box sx={{ display: "grid", gridTemplateColumns: "120px 1fr" }}>
                   <Typography sx={{ color: "#666" }}>제목</Typography>
                   <Typography>{contract.title}</Typography>
                 </Box>
@@ -1285,7 +1289,7 @@ const ContractDetailPage = () => {
                       {/* 통합 관리 버튼 영역 */}
                       <Box sx={{ display: "flex", gap: 1 }}>
                         {participant.statusName === "재서명 진행중" ||
-                        participant.statusCodeId === "008001_0008" ? (
+                        participant.statusCodeId === "008001_0007" ? (
                           <Typography
                             sx={{ color: "#666", fontSize: "0.75rem" }}
                           >

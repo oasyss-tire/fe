@@ -30,6 +30,7 @@ import AnnouncementIcon from '@mui/icons-material/Announcement';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ChatIcon from '@mui/icons-material/Chat';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useAuth } from '../../contexts/AuthContext';
 
 const DRAWER_WIDTH = 240;
@@ -58,19 +59,19 @@ const Sidebar = () => {
         const defaultPermissions = {
           ADMIN: {
             contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } },
-            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_dashboard: true } },
+            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_history: true, facility_transfer: true } },
             community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
             admin: { all: true, items: { company: true, user: true, settings: true } }
           },
           MANAGER: {
             contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } },
-            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_dashboard: true } },
+            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_history: true, facility_transfer: true } },
             community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
             admin: { all: false, items: { company: false, user: false, settings: false } }
           },
           USER: {
             contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } }, 
-            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_dashboard: true } },
+            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_history: true, facility_transfer: true  } },
             community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
             admin: { all: false, items: { company: false, user: false, settings: false } }
           }
@@ -118,8 +119,9 @@ const Sidebar = () => {
       items: [
         { text: '시설물 리스트', icon: <ListAltIcon />, path: '/facility-list', id: 'facility_list' },
         { text: '시설물 등록', icon: <EngineeringIcon />, path: '/facility-register', id: 'facility_register' },
-        { text: 'A/S 관리', icon: <BuildIcon />, path: '/facility-service', id: 'facility_service' },
-        { text: '시설물 대시보드', icon: <DashboardIcon />, path: '/facility-dashboard', id: 'facility_dashboard' },
+        { text: 'A/S 관리', icon: <BuildIcon />, path: '/service-request/list', id: 'facility_service' },
+        { text: '시설물 이동/폐기 등록', icon: <SwapHorizIcon />, path: '/facility-transfer', id: 'facility_transfer' },
+        { text: '시설물 이력관리', icon: <DashboardIcon />, path: '/facility-history', id: 'facility_history' },
       ]
     },
     {
