@@ -122,7 +122,7 @@ const ContractSend = () => {
   // 위수탁 업체 사용자 정보 조회 함수 수정
   const fetchCompanyUsers = async (companyId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/companies/${companyId}/users`);
+      const response = await fetch(`https://sign.jebee.net/api/companies/${companyId}/users`);
       if (!response.ok) throw new Error('위수탁 업체 사용자 목록 조회 실패');
       
       const data = await response.json();
@@ -161,7 +161,7 @@ const ContractSend = () => {
   // 첨부파일 코드 목록 조회 함수 추가
   const fetchDocumentCodes = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/codes/groups/001003/codes/active');
+      const response = await fetch('https://sign.jebee.net/api/codes/groups/001003/codes/active');
       if (!response.ok) throw new Error('첨부파일 코드 목록 조회 실패');
       const data = await response.json();
       setDocuments(data);
@@ -181,7 +181,7 @@ const ContractSend = () => {
   // 템플릿 목록 조회
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/contract-pdf/templates');
+      const response = await fetch('https://sign.jebee.net/api/contract-pdf/templates');
       if (!response.ok) throw new Error('템플릿 목록 조회 실패');
       const data = await response.json();
       setTemplates(data);
@@ -206,7 +206,7 @@ const ContractSend = () => {
   // 위수탁 업체 목록 조회
   const fetchCompanies = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/companies?active=true');
+      const response = await fetch('https://sign.jebee.net/api/companies?active=true');
       if (!response.ok) throw new Error('위수탁 업체 목록 조회 실패');
       const data = await response.json();
       setCompanies(data);
@@ -420,7 +420,7 @@ const ContractSend = () => {
         .map(item => item.id);
       
       // 계약 생성 요청 - userId 필드 추가
-      const response = await fetch('http://localhost:8080/api/contracts', {
+      const response = await fetch('https://sign.jebee.net/api/contracts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

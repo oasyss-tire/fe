@@ -150,7 +150,7 @@ const UserMyPage = () => {
         // 인증 토큰 가져오기
         const token = sessionStorage.getItem('token');
         
-        const response = await fetch(`http://localhost:8080/api/users/${authUser.id}`, {
+        const response = await fetch(`https://sign.jebee.net/api/users/${authUser.id}`, {
           headers: {
             'Authorization': token ? `Bearer ${token}` : ''
           }
@@ -184,7 +184,7 @@ const UserMyPage = () => {
       // 인증 토큰 가져오기
       const token = sessionStorage.getItem('token');
       
-      const response = await fetch('http://localhost:8080/api/mypage/contracts', {
+      const response = await fetch('https://sign.jebee.net/api/mypage/contracts', {
         headers: {
           'Authorization': token ? `Bearer ${token}` : ''
         }
@@ -231,7 +231,7 @@ const UserMyPage = () => {
         }
 
         // 비밀번호 변경 API 호출
-        const passwordResponse = await fetch(`http://localhost:8080/api/users/${user.id}/password`, {
+        const passwordResponse = await fetch(`https://sign.jebee.net/api/users/${user.id}/password`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -264,7 +264,7 @@ const UserMyPage = () => {
         companyId: user.companyId ? parseInt(user.companyId) : null
       };
       
-      const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
+      const response = await fetch(`https://sign.jebee.net/api/users/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -288,7 +288,7 @@ const UserMyPage = () => {
         });
         
         // 업데이트된 사용자 정보 다시 불러오기
-        const updatedUserResponse = await fetch(`http://localhost:8080/api/users/${user.id}`, {
+        const updatedUserResponse = await fetch(`https://sign.jebee.net/api/users/${user.id}`, {
           headers: {
             'Authorization': token ? `Bearer ${token}` : ''
           }

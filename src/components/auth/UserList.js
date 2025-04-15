@@ -41,7 +41,7 @@ const UserList = () => {
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:8080/api/users');
+      const response = await fetch('https://sign.jebee.net/api/users');
       
       if (!response.ok) {
         throw new Error('사용자 데이터를 불러오는데 실패했습니다.');

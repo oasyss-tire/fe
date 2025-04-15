@@ -55,7 +55,7 @@ const ContractList = () => {
   // 계약 목록 조회
   const fetchContracts = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/contracts');
+      const response = await fetch('https://sign.jebee.net/api/contracts');
       if (!response.ok) throw new Error('계약 목록 조회 실패');
       const data = await response.json();
       console.log('Fetched contracts:', data); // 데이터 로그 확인
@@ -69,7 +69,7 @@ const ContractList = () => {
   // 상태 코드 그룹 조회
   const fetchStatusCodes = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/codes/groups/001002/codes');
+      const response = await fetch('https://sign.jebee.net/api/codes/groups/001002/codes');
       if (!response.ok) throw new Error('상태 코드 조회 실패');
       const data = await response.json();
       console.log('Fetched status codes:', data);

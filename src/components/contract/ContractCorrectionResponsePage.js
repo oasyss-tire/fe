@@ -89,7 +89,7 @@ const ContractCorrectionResponsePage = () => {
         console.log('사용 중인 토큰:', token); // 디버깅을 위한 로그 추가
         
         // 1단계: 토큰으로 기본 정보 조회 (Authorization 헤더 없이 쿼리 파라미터만 사용)
-        const response = await fetch(`http://localhost:8080/api/contracts/correction-request/info?token=${token}`, {
+        const response = await fetch(`https://sign.jebee.net/api/contracts/correction-request/info?token=${token}`, {
           method: 'GET'
         });
         
@@ -132,7 +132,7 @@ const ContractCorrectionResponsePage = () => {
   // 2단계: 재서명 필드 목록 조회
   const fetchCorrectionFields = async (participantId, currentToken) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/participants/${participantId}/correction-fields?token=${currentToken}`, {
+      const response = await fetch(`https://sign.jebee.net/api/participants/${participantId}/correction-fields?token=${currentToken}`, {
         method: 'GET'
       });
       
@@ -206,7 +206,7 @@ const ContractCorrectionResponsePage = () => {
     try {
       console.log(`PDF URL 로드: ID=${pdfId}, 토큰=${currentToken?.substring(0, 10)}...`);
       // 토큰을 URL 쿼리 파라미터로 전달
-      setPdfUrl(`http://localhost:8080/api/contract-pdf/view/${pdfId}?token=${currentToken || token}`);
+      setPdfUrl(`https://sign.jebee.net/api/contract-pdf/view/${pdfId}?token=${currentToken || token}`);
     } catch (err) {
       console.error('PDF URL 로딩 중 오류:', err);
       setError(err.message);
@@ -475,7 +475,7 @@ const ContractCorrectionResponsePage = () => {
       }
       
       // 5단계: 재서명 완료 처리
-      const completeResponse = await fetch(`http://localhost:8080/api/participants/${participant.id}/complete-corrections?token=${token}`, {
+      const completeResponse = await fetch(`https://sign.jebee.net/api/participants/${participant.id}/complete-corrections?token=${token}`, {
         method: 'POST'
       });
       
@@ -514,7 +514,7 @@ const ContractCorrectionResponsePage = () => {
       
       console.log(`필드 업데이트 요청: ID=${fieldId}, 타입=${isCheckboxField ? '체크박스' : '일반'}, 값=${JSON.stringify(value)}`);
       
-      const response = await fetch(`http://localhost:8080/api/participants/${participant.id}/correction-fields/${fieldId}?token=${token}`, {
+      const response = await fetch(`https://sign.jebee.net/api/participants/${participant.id}/correction-fields/${fieldId}?token=${token}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

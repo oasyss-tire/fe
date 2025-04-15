@@ -94,7 +94,7 @@ const FacilitiesList = () => {
   const fetchCompanies = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/companies', {
+      const response = await fetch('https://sign.jebee.net/api/companies', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -118,7 +118,7 @@ const FacilitiesList = () => {
   const fetchFacilities = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/facilities?size=1000', {
+      const response = await fetch('https://sign.jebee.net/api/facilities?size=1000', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -145,7 +145,7 @@ const FacilitiesList = () => {
   // 통계 데이터 조회
   const fetchStatistics = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/dashboard/statistics', {
+      const response = await fetch('https://sign.jebee.net/api/dashboard/statistics', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }

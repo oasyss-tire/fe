@@ -60,7 +60,7 @@ const CompanyList = () => {
       const token = sessionStorage.getItem('token');
       
       // 상태 필터 적용
-      let url = 'http://localhost:8080/api/companies';
+      let url = 'https://sign.jebee.net/api/companies';
       if (statusFilter === 'ACTIVE') {
         url += '?active=true';
       } else if (statusFilter === 'INACTIVE') {

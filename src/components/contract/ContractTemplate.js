@@ -61,7 +61,7 @@ const ContractTemplate = () => {
       
       // API 호출
       const queryString = params.toString() ? `?${params.toString()}` : '';
-      const response = await fetch(`http://localhost:8080/api/contract-pdf/templates${queryString}`);
+      const response = await fetch(`https://sign.jebee.net/api/contract-pdf/templates${queryString}`);
       
       if (!response.ok) throw new Error('템플릿 목록 조회 실패');
       const data = await response.json();
@@ -193,7 +193,7 @@ const ContractTemplate = () => {
 
   // PDF 다운로드
   const handleDownload = async (pdfId) => {
-    window.open(`http://localhost:8080/api/contract-pdf/download/${pdfId}`, '_blank');
+    window.open(`https://sign.jebee.net/api/contract-pdf/download/${pdfId}`, '_blank');
   };
 
   const handleMenuClick = (event, item) => {
@@ -209,7 +209,7 @@ const ContractTemplate = () => {
   // 템플릿 미리보기 처리
   const handleTemplatePreview = async (templateId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/contract-pdf/templates/${templateId}/preview`);
+      const response = await fetch(`https://sign.jebee.net/api/contract-pdf/templates/${templateId}/preview`);
       if (!response.ok) throw new Error('템플릿 미리보기 실패');
       
       // PDF 미리보기를 새 창에서 열기

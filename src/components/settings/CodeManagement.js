@@ -88,7 +88,7 @@ const CodeManagement = () => {
   const fetchGroups = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/codes/groups');
+      const response = await fetch('https://sign.jebee.net/api/codes/groups');
       if (!response.ok) {
         throw new Error('코드 그룹 데이터를 불러오는데 실패했습니다.');
       }
@@ -125,7 +125,7 @@ const CodeManagement = () => {
   const fetchCodesByGroup = async (groupId) => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/codes/groups/${groupId}/codes`);
+      const response = await fetch(`https://sign.jebee.net/api/codes/groups/${groupId}/codes`);
       if (!response.ok) {
         throw new Error('코드 데이터를 불러오는데 실패했습니다.');
       }
@@ -265,7 +265,7 @@ const CodeManagement = () => {
   const handleCreateGroup = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/codes/groups', {
+      const response = await fetch('https://sign.jebee.net/api/codes/groups', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -307,7 +307,7 @@ const CodeManagement = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/codes/codes', {
+      const response = await fetch('https://sign.jebee.net/api/codes/codes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -374,7 +374,7 @@ const CodeManagement = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/codes/codes/${selectedCode.codeId}`, {
+      const response = await fetch(`https://sign.jebee.net/api/codes/codes/${selectedCode.codeId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -445,7 +445,7 @@ const CodeManagement = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/codes/groups/${groupFormData.groupId}`, {
+      const response = await fetch(`https://sign.jebee.net/api/codes/groups/${groupFormData.groupId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -511,7 +511,7 @@ const CodeManagement = () => {
     
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/codes/codes/${itemToDelete.codeId}`, {
+      const response = await fetch(`https://sign.jebee.net/api/codes/codes/${itemToDelete.codeId}`, {
         method: 'DELETE'
       });
 
@@ -539,7 +539,7 @@ const CodeManagement = () => {
     
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/codes/groups/${itemToDelete.groupId}`, {
+      const response = await fetch(`https://sign.jebee.net/api/codes/groups/${itemToDelete.groupId}`, {
         method: 'DELETE'
       });
 

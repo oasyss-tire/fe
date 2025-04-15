@@ -176,7 +176,7 @@ const SignaturePdfViewer = () => {
       
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:8080/api/signature/verify-token?token=${token}`);
+        const response = await fetch(`https://sign.jebee.net/api/signature/verify-token?token=${token}`);
         
         if (response.ok) {
           const data = await response.json();
@@ -224,13 +224,13 @@ const SignaturePdfViewer = () => {
         setLoading(true);
         
         // 1. 계약 전체 정보 조회
-        const contractResponse = await fetch(`http://localhost:8080/api/contracts/${contractId}`);
+        const contractResponse = await fetch(`https://sign.jebee.net/api/contracts/${contractId}`);
         if (!contractResponse.ok) throw new Error('계약 정보 조회 실패');
         const contractData = await contractResponse.json();
         
         // 2. 참여자 정보 조회
         const participantResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}`
+          `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}`
         );
         if (!participantResponse.ok) throw new Error('참여자 정보 조회 실패');
         const participantData = await participantResponse.json();
@@ -306,7 +306,7 @@ const SignaturePdfViewer = () => {
   const fetchFields = async (pdfId) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${pdfId}`);
+      const response = await fetch(`https://sign.jebee.net/api/contract-pdf/fields/${pdfId}`);
       if (!response.ok) throw new Error('Failed to fetch fields');
       const data = await response.json();
       setFields(data);
@@ -401,7 +401,7 @@ const SignaturePdfViewer = () => {
       const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        `https://sign.jebee.net/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -431,7 +431,7 @@ const SignaturePdfViewer = () => {
       const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        `https://sign.jebee.net/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -466,7 +466,7 @@ const SignaturePdfViewer = () => {
       const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        `https://sign.jebee.net/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -497,7 +497,7 @@ const SignaturePdfViewer = () => {
       const newValue = field.value === 'true' ? 'false' : 'true';
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${field.fieldName}`,
+        `https://sign.jebee.net/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${field.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -647,7 +647,7 @@ const SignaturePdfViewer = () => {
       }
       
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/template-status`
+        `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/template-status`
       );
       
       if (!response.ok) throw new Error('템플릿 상태 조회 실패');
@@ -764,7 +764,7 @@ const SignaturePdfViewer = () => {
         
         // 서명된 PDF 생성 요청
         const response = await fetch(
-          `http://localhost:8080/api/contract-pdf/download-signed/${template.pdfId}`,
+          `https://sign.jebee.net/api/contract-pdf/download-signed/${template.pdfId}`,
           { 
             method: 'POST',
             headers: {
@@ -790,13 +790,13 @@ const SignaturePdfViewer = () => {
       if (token) {
         // 비회원 서명의 경우 - 장기 토큰 발급 API 사용
         finalizeResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/complete-signing`, 
+          `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/complete-signing`, 
           { method: 'POST' }
         );
       } else {
         // 로그인한 회원의 경우 - 기존 API 사용
         finalizeResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/sign`, 
+          `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/sign`, 
           { method: 'POST' }
         );
       }
@@ -861,7 +861,7 @@ const SignaturePdfViewer = () => {
       
       if (token) {
         // 토큰이 있는 경우 새로운 API 사용
-        response = await fetch(`http://localhost:8080/api/signature/verify-phone?contractId=${contractId}&participantId=${participantId}`, {
+        response = await fetch(`https://sign.jebee.net/api/signature/verify-phone?contractId=${contractId}&participantId=${participantId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -873,7 +873,7 @@ const SignaturePdfViewer = () => {
       } else {
         // 기존 방식 유지
         response = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/verify`, 
+          `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/verify`, 
           {
             method: 'POST',
             headers: {
@@ -916,7 +916,7 @@ const SignaturePdfViewer = () => {
         
         // 각 중간 계약서의 필드 정보를 가져옴
         try {
-          const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${intermediatePdfId}`);
+          const response = await fetch(`https://sign.jebee.net/api/contract-pdf/fields/${intermediatePdfId}`);
           if (response.ok) {
             const intermediateFields = await response.json();
             // 필드가 전부 비어있는지 확인
@@ -972,7 +972,7 @@ const SignaturePdfViewer = () => {
   // 첨부파일 정보 조회 함수
   const fetchParticipantDocuments = async (participantId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents`);
+      const response = await fetch(`https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/documents`);
       if (!response.ok) throw new Error('첨부파일 정보 조회 실패');
       const data = await response.json();
       setParticipantDocuments(data);
@@ -1027,7 +1027,7 @@ const SignaturePdfViewer = () => {
       
       // 백엔드 API 경로에 맞게 수정
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents/${doc.documentCodeId}`,
+        `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/documents/${doc.documentCodeId}`,
         {
           method: 'POST',
           body: formData
@@ -1060,7 +1060,7 @@ const SignaturePdfViewer = () => {
   const handleDocumentDownload = async (documentId, filename) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents/${documentId}/download`
+        `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/documents/${documentId}/download`
       );
       
       if (!response.ok) throw new Error('파일 다운로드 실패');
@@ -1158,7 +1158,7 @@ const SignaturePdfViewer = () => {
       setUploadError('');
       
       const response = await fetch(
-        `http://localhost:8080/api/contracts/documents/${documentId}/file`,
+        `https://sign.jebee.net/api/contracts/documents/${documentId}/file`,
         {
           method: 'DELETE'
         }
@@ -1246,7 +1246,7 @@ const SignaturePdfViewer = () => {
         </Typography>
         <Document
           file={currentTemplate?.pdfId ? 
-            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` : 
+            `https://sign.jebee.net/api/contract-pdf/view/${currentTemplate.pdfId}` : 
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}
@@ -1291,7 +1291,7 @@ const SignaturePdfViewer = () => {
       >
         <Document
           file={currentTemplate?.pdfId ? 
-            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` : 
+            `https://sign.jebee.net/api/contract-pdf/view/${currentTemplate.pdfId}` : 
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}

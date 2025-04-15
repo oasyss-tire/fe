@@ -77,7 +77,7 @@ const FacilityTransfer = () => {
   const fetchCompanies = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/companies', {
+      const response = await fetch('https://sign.jebee.net/api/companies', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -113,7 +113,7 @@ const FacilityTransfer = () => {
     
     try {
       console.log('회사ID로 시설물 조회:', companyId); // 디버깅용 로그
-      const response = await fetch(`http://localhost:8080/api/facilities?companyId=${companyId}`, {
+      const response = await fetch(`https://sign.jebee.net/api/facilities?companyId=${companyId}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -341,7 +341,7 @@ const FacilityTransfer = () => {
     try {
       // 이동 전에 시설물 상태 재확인
       const statusCheckPromises = transferItems.map(async item => {
-        const facilityResponse = await fetch(`http://localhost:8080/api/facilities/${item.facilityId}`, {
+        const facilityResponse = await fetch(`https://sign.jebee.net/api/facilities/${item.facilityId}`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -366,7 +366,7 @@ const FacilityTransfer = () => {
         
         // 이동 요청을 백엔드로 전송
         const promises = checkedItems.map(item => 
-          fetch('http://localhost:8080/api/facility-transactions/move', {
+          fetch('https://sign.jebee.net/api/facility-transactions/move', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -430,7 +430,7 @@ const FacilityTransfer = () => {
     try {
       // 폐기 요청을 백엔드로 전송
       const promises = disposalItems.map(item => 
-        fetch('http://localhost:8080/api/facility-transactions/dispose', {
+        fetch('https://sign.jebee.net/api/facility-transactions/dispose', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

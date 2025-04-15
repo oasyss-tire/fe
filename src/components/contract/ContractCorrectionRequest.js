@@ -65,7 +65,7 @@ const ContractCorrectionRequest = () => {
         setError(null);
 
         // 1. 계약 정보 조회
-        const contractResponse = await fetch(`http://localhost:8080/api/contracts/${contractId}`);
+        const contractResponse = await fetch(`https://sign.jebee.net/api/contracts/${contractId}`);
         if (!contractResponse.ok) {
           throw new Error('계약 정보를 불러오는데 실패했습니다.');
         }
@@ -73,7 +73,7 @@ const ContractCorrectionRequest = () => {
         setContract(contractData);
 
         // 2. 참여자 정보 조회
-        const participantResponse = await fetch(`http://localhost:8080/api/contracts/${contractId}/participants/${participantId}`);
+        const participantResponse = await fetch(`https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}`);
         if (!participantResponse.ok) {
           throw new Error('참여자 정보를 불러오는데 실패했습니다.');
         }
@@ -122,7 +122,7 @@ const ContractCorrectionRequest = () => {
   const fetchPdfUrl = async (pdfId) => {
     try {
       // 서명된 PDF 대신 원본 템플릿 PDF 사용 (SignaturePdfViewer.js와 동일하게)
-      setPdfUrl(`http://localhost:8080/api/contract-pdf/view/${pdfId}`);
+      setPdfUrl(`https://sign.jebee.net/api/contract-pdf/view/${pdfId}`);
     } catch (err) {
       console.error('PDF URL 로딩 중 오류:', err);
       setError(err.message);
@@ -133,7 +133,7 @@ const ContractCorrectionRequest = () => {
   const fetchFields = async (pdfId) => {
     try {
       // 필드 정보 조회 API 수정
-      const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${pdfId}`);
+      const response = await fetch(`https://sign.jebee.net/api/contract-pdf/fields/${pdfId}`);
       if (!response.ok) {
         throw new Error('필드 정보를 가져오는데 실패했습니다.');
       }
@@ -279,7 +279,7 @@ const ContractCorrectionRequest = () => {
 
       // 재서명 요청 API 호출
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/request-corrections`,
+        `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/request-corrections`,
         {
           method: 'POST',
           headers: {

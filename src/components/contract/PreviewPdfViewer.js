@@ -52,14 +52,14 @@ const PreviewPdfViewer = () => {
         setLoading(true);
         
         // 1. 계약 정보 조회
-        const contractResponse = await fetch(`http://localhost:8080/api/contracts/${contractId}`);
+        const contractResponse = await fetch(`https://sign.jebee.net/api/contracts/${contractId}`);
         if (!contractResponse.ok) throw new Error('계약 정보 조회 실패');
         const contractData = await contractResponse.json();
         setContract(contractData);
         
         // 2. 참여자 정보 조회
         const participantResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}`
+          `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}`
         );
         if (!participantResponse.ok) throw new Error('참여자 정보 조회 실패');
         const participantData = await participantResponse.json();
@@ -92,7 +92,7 @@ const PreviewPdfViewer = () => {
   // 필드 정보 가져오기
   const fetchFields = async (pdfId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${pdfId}`);
+      const response = await fetch(`https://sign.jebee.net/api/contract-pdf/fields/${pdfId}`);
       if (!response.ok) throw new Error('필드 정보 조회 실패');
       
       const fieldsData = await response.json();
@@ -366,7 +366,7 @@ const PreviewPdfViewer = () => {
         </Typography>
         <Document
           file={currentTemplate?.pdfId ?
-            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` :
+            `https://sign.jebee.net/api/contract-pdf/view/${currentTemplate.pdfId}` :
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}
@@ -411,7 +411,7 @@ const PreviewPdfViewer = () => {
       >
         <Document
           file={currentTemplate?.pdfId ?
-            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` :
+            `https://sign.jebee.net/api/contract-pdf/view/${currentTemplate.pdfId}` :
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}
