@@ -10,8 +10,10 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { usePdf } from '../../contexts/PdfContext';
 import PdfToolbar from './PdfToolbar';
-import { TextField, SignatureField, CheckboxField } from '../common/fields/PdfField';
+import { TextField, SignatureField, CheckboxField, ConfirmTextField } from '../common/fields/PdfField';
 import SaveTemplateModal from '../common/modals/SaveTemplateModal';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import ConfirmTextInputModal from '../common/fields/ConfirmTextInputModal';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -28,6 +30,7 @@ const PdfViewerPage = () => {
   const [textFields, setTextFields] = useState([]);
   const [signatureFields, setSignatureFields] = useState([]);
   const [checkboxFields, setCheckboxFields] = useState([]);
+  const [confirmTextFields, setConfirmTextFields] = useState([]);
   const [isPlacing, setIsPlacing] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -38,6 +41,8 @@ const PdfViewerPage = () => {
   const resizeStartPos = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const [pdfDimensions, setPdfDimensions] = useState({ width: 0, height: 0 });
   const [saveTemplateModalOpen, setSaveTemplateModalOpen] = useState(false);
+  const [activeConfirmFieldId, setActiveConfirmFieldId] = useState(null);
+  const [confirmTextModalOpen, setConfirmTextModalOpen] = useState(false);
   
   // A4 크기 상수 추가
   const PAGE_WIDTH = 595.28;  // A4 너비 (pt)
@@ -113,6 +118,7 @@ const PdfViewerPage = () => {
       setTextFields(convertedFields.filter(f => f.type === 'text'));
       setSignatureFields(convertedFields.filter(f => f.type === 'signature'));
       setCheckboxFields(convertedFields.filter(f => f.type === 'checkbox'));
+      setConfirmTextFields(convertedFields.filter(f => f.type === 'confirmText'));
     }
   };
 
@@ -123,33 +129,8 @@ const PdfViewerPage = () => {
     }
 
     setSelectedTool(newTool);
-    if (newTool === 'text' || newTool === 'signature' || newTool === 'checkbox') {
-      const visiblePageElement = findVisiblePage();
-      if (!visiblePageElement) return;
-
-      const pageNumber = parseInt(visiblePageElement.id.split('-')[1]);
-      const pageRect = visiblePageElement.getBoundingClientRect();
-      const scale = pdfScale || 1;
-      
-      const newField = {
-        id: `${newTool}-${Date.now()}`,
-        x: (pageRect.width / 2) - (75),
-        y: (pageRect.height / 3),
-        width: newTool === 'checkbox' ? 20 : newTool === 'signature' ? 100 : 150,
-        height: newTool === 'checkbox' ? 20 : newTool === 'signature' ? 60 : 30,
-        value: '',
-        page: pageNumber,
-        type: newTool
-      };
-
-      if (newTool === 'text') {
-        setTextFields(prev => [...prev, newField]);
-      } else if (newTool === 'signature') {
-        setSignatureFields(prev => [...prev, newField]);
-      } else {
-        setCheckboxFields(prev => [...prev, newField]);
-      }
-      setSelectedTool(null);
+    if (newTool === 'text' || newTool === 'signature' || newTool === 'checkbox' || newTool === 'confirmText') {
+      setIsPlacing(true);
     }
   };
 
@@ -202,19 +183,28 @@ const PdfViewerPage = () => {
     const relativeX = e.clientX - pageRect.left;
     const relativeY = e.clientY - pageRect.top;
     
+    // 필드 타입에 따라 다른 크기 설정
+    const width = selectedTool === 'checkbox' ? 20 * scale :
+                 selectedTool === 'signature' ? 100 * scale :
+                 selectedTool === 'confirmText' ? 250 * scale : 150 * scale;
+                 
+    const height = selectedTool === 'checkbox' ? 20 * scale :
+                  selectedTool === 'signature' ? 60 * scale :
+                  selectedTool === 'confirmText' ? 50 * scale : 30 * scale;
+    
     setMousePosition({
       x: e.clientX,
       y: e.clientY,
-      width: 150 * scale,
-      height: 30 * scale,
-      previewX: relativeX, // 미리보기용 상대 좌표 저장
+      width,
+      height,
+      previewX: relativeX,
       previewY: relativeY
     });
   };
 
-  // PDF 영역 클릭 시 텍스트 필드 추가
+  // PDF 영역 클릭 시 필드 추가
   const handlePdfClick = (e) => {
-    if (!isPlacing || selectedTool !== 'text') return;
+    if (!isPlacing || !selectedTool) return;
 
     const pageElement = e.target.closest('.react-pdf__Page');
     if (!pageElement) return;
@@ -229,18 +219,41 @@ const PdfViewerPage = () => {
     const relativeX = (e.clientX - pageRect.left) / scale;
     const relativeY = (e.clientY - pageRect.top) / scale;
 
-    const newTextField = {
-      id: `text-${Date.now()}`,
+    const newField = {
+      id: `${selectedTool}-${Date.now()}`,
       x: relativeX,
       y: relativeY,
-      width: 150 / scale,     // scale로 나눠서 보정
-      height: 30 / scale,     // scale로 나눠서 보정
+      width: selectedTool === 'checkbox' ? 20 / scale : 
+             selectedTool === 'signature' ? 100 / scale :
+             selectedTool === 'confirmText' ? 250 / scale : 150 / scale,
+      height: selectedTool === 'checkbox' ? 20 / scale : 
+              selectedTool === 'signature' ? 60 / scale : 
+              selectedTool === 'confirmText' ? 50 / scale : 30 / scale,
       value: '',
-      page: pageNumber
+      page: pageNumber,
+      type: selectedTool
     };
 
-    setTextFields(prev => [...prev, newTextField]);
+    if (selectedTool === 'text') {
+      setTextFields(prev => [...prev, newField]);
+    } else if (selectedTool === 'signature') {
+      setSignatureFields(prev => [...prev, newField]);
+    } else if (selectedTool === 'checkbox') {
+      setCheckboxFields(prev => [...prev, newField]);
+    } else if (selectedTool === 'confirmText') {
+      // confirmText 필드는 즉시 추가하고 빈 값으로 시작
+      const confirmField = {
+        ...newField,
+        confirmText: '', // 관리자가 입력할 빈 값
+        isEditMode: true // 관리자 모드 표시
+      };
+      
+      // 그냥 바로 필드 추가
+      setConfirmTextFields(prev => [...prev, confirmField]);
+    }
+
     setIsPlacing(false);
+    setSelectedTool(null);
   };
 
   // 드래그 시작
@@ -283,6 +296,13 @@ const PdfViewerPage = () => {
       return field;
     }));
 
+    setConfirmTextFields(prev => prev.map(field => {
+      if (field.id === dragTarget) {
+        return { ...field, x: field.x + dx, y: field.y + dy };
+      }
+      return field;
+    }));
+
     dragStartPos.current = { x: e.clientX, y: e.clientY };
   };
 
@@ -297,9 +317,10 @@ const PdfViewerPage = () => {
     e.preventDefault();
     e.stopPropagation();
     
-    // 텍스트 필드와 서명 필드 모두 검색
+    // 텍스트 필드와 서명 필드, confirmText 필드 검색
     const field = textFields.find(f => f.id === fieldId) || 
-                  signatureFields.find(f => f.id === fieldId);
+                  signatureFields.find(f => f.id === fieldId) ||
+                  confirmTextFields.find(f => f.id === fieldId);
     if (!field) return;
 
     setIsResizing(true);
@@ -320,19 +341,19 @@ const PdfViewerPage = () => {
     const dx = (e.clientX - resizeStartPos.current.x) / scale;
     const dy = (e.clientY - resizeStartPos.current.y) / scale;
 
-    // 텍스트 필드 리사이즈 - 최소 높이를 10px로 변경
+    // 텍스트 필드 리사이즈
     setTextFields(prev => prev.map(field => {
       if (field.id === resizeTarget) {
         return {
           ...field,
           width: Math.max(30, resizeStartPos.current.width + dx),
-          height: Math.max(10, resizeStartPos.current.height + dy) // 최소 높이 10px로 변경
+          height: Math.max(10, resizeStartPos.current.height + dy)
         };
       }
       return field;
     }));
 
-    // 서명 필드 리사이즈 - 정사각형 비율 유지
+    // 서명 필드 리사이즈
     setSignatureFields(prev => prev.map(field => {
       if (field.id === resizeTarget) {
         const size = Math.max(50, Math.max(
@@ -347,6 +368,18 @@ const PdfViewerPage = () => {
       }
       return field;
     }));
+
+    // 확인 텍스트 필드 리사이즈
+    setConfirmTextFields(prev => prev.map(field => {
+      if (field.id === resizeTarget) {
+        return {
+          ...field,
+          width: Math.max(100, resizeStartPos.current.width + dx),
+          height: Math.max(30, resizeStartPos.current.height + dy)
+        };
+      }
+      return field;
+    }));
   };
 
   // 리사이즈 종료
@@ -355,12 +388,13 @@ const PdfViewerPage = () => {
     setResizeTarget(null);
   };
 
-  // 텍스트 필드 삭제
+  // 필드 삭제
   const handleDeleteField = (e, fieldId) => {
     e.stopPropagation();
     setTextFields(prev => prev.filter(field => field.id !== fieldId));
     setSignatureFields(prev => prev.filter(field => field.id !== fieldId));
     setCheckboxFields(prev => prev.filter(field => field.id !== fieldId));
+    setConfirmTextFields(prev => prev.filter(field => field.id !== fieldId));
   };
 
   useEffect(() => {
@@ -400,10 +434,14 @@ const PdfViewerPage = () => {
       const { width: pageWidth, height: pageHeight } = pdfPage.getBoundingClientRect();
       const scale = pdfScale || 1;
       
+      // 저장 전 빈 confirmText 필드 필터링 (관리자가 텍스트를 입력하지 않은 필드는 저장 안 함)
+      const filteredConfirmTextFields = confirmTextFields.filter(field => field.confirmText?.trim() !== '');
+      
       const allFields = [
         ...textFields,
         ...signatureFields,
-        ...checkboxFields
+        ...checkboxFields,
+        ...filteredConfirmTextFields
       ].map(field => ({
         id: field.id,
         type: field.type,
@@ -412,7 +450,9 @@ const PdfViewerPage = () => {
         relativeY: field.y / pageHeight,
         relativeWidth: (field.width * scale) / pageWidth,
         relativeHeight: (field.height * scale) / pageHeight,
-        page: field.page || 1
+        page: field.page || 1,
+        // confirmText 필드 타입인 경우 confirmText 속성 추가
+        ...(field.type === 'confirmText' ? { confirmText: field.confirmText } : {})
       }));
 
       await saveFields(allFields);
@@ -461,6 +501,57 @@ const PdfViewerPage = () => {
       width: field.relativeWidth * pdfDimensions.width * pdfScale,
       height: field.relativeHeight * pdfDimensions.height * pdfScale
     }));
+  };
+
+  // 따라쓰기 모달 열기 함수
+  const handleOpenConfirmTextModal = (fieldId) => {
+    console.log('handleOpenConfirmTextModal 호출됨:', fieldId);
+    
+    // activeConfirmFieldId가 이미 설정되어 있더라도 새로운 필드 ID로 업데이트
+    setActiveConfirmFieldId(fieldId);
+    
+    // 해당 필드 찾기
+    const field = confirmTextFields.find(f => f.id === fieldId);
+    console.log('열려는 필드:', field);
+    
+    // 모달 열기
+    setConfirmTextModalOpen(true);
+  };
+
+  const handleCloseConfirmTextModal = () => {
+    console.log('모달 닫기');
+    setConfirmTextModalOpen(false);
+    setActiveConfirmFieldId(null);
+    
+    // 모달이 닫힐 때 빈 confirmText가 있는 필드는 삭제
+    setConfirmTextFields(prev => {
+      const filtered = prev.filter(field => field.confirmText?.trim() !== '');
+      console.log('필터링 후 남은 필드:', filtered.length);
+      return filtered;
+    });
+  };
+
+  // 따라쓰기 텍스트 업데이트 함수 수정
+  const handleConfirmTextInput = (fieldId, inputText) => {
+    console.log('텍스트 업데이트:', fieldId, inputText);
+    
+    // 관리자 모드에서는 confirmText를 업데이트, 사용자 모드에서는 value를 업데이트
+    setConfirmTextFields(prev => 
+      prev.map(field => {
+        if (field.id === fieldId) {
+          if (field.isEditMode) {
+            // 관리자 모드: confirmText 업데이트
+            console.log('관리자 모드로 업데이트:', inputText);
+            return { ...field, confirmText: inputText };
+          } else {
+            // 사용자 모드: value 업데이트
+            console.log('사용자 모드로 업데이트:', inputText);
+            return { ...field, value: inputText };
+          }
+        }
+        return field;
+      })
+    );
   };
 
   if (!pdfFile) {
@@ -529,25 +620,49 @@ const PdfViewerPage = () => {
           flexDirection: 'column',
           alignItems: 'center',
           position: 'relative',
-          cursor: isPlacing ? 'crosshair' : 'default'
+          cursor: isPlacing ? 
+            (selectedTool === 'text' ? 'text' : 
+             selectedTool === 'signature' ? 'cell' : 
+             selectedTool === 'checkbox' ? 'pointer' : 
+             selectedTool === 'confirmText' ? 'text' : 'default') 
+            : 'default'
         }}
       >
-        {/* 마우스 따라다니는 텍스트 필드 프리뷰 */}
+        {/* 마우스 따라다니는 필드 프리뷰 */}
         {isPlacing && mousePosition && (
           <Box
             sx={{
               position: 'fixed',
               left: mousePosition.x,
               top: mousePosition.y,
-              width: mousePosition.width,
-              height: mousePosition.height,
-              border: '1px dashed #1976d2',
-              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+              width: selectedTool === 'checkbox' ? '20px' : 
+                     selectedTool === 'signature' ? '100px' : 
+                     selectedTool === 'confirmText' ? '250px' : '150px',
+              height: selectedTool === 'checkbox' ? '20px' : 
+                      selectedTool === 'signature' ? '60px' : 
+                      selectedTool === 'confirmText' ? '50px' : '30px',
+              border: '1px dashed',
+              borderColor: selectedTool === 'signature' ? '#f44336' :
+                          selectedTool === 'confirmText' ? '#f57c00' : '#1976d2',
+              backgroundColor: selectedTool === 'signature' ? 'rgba(244, 67, 54, 0.1)' :
+                              selectedTool === 'confirmText' ? 'rgba(245, 124, 0, 0.1)' : 'rgba(25, 118, 210, 0.1)',
               pointerEvents: 'none',
               zIndex: 1000,
-              transform: 'translate(0, 0)' // 변환 제거
+              transform: 'translate(-50%, -50%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
-          />
+          >
+            {selectedTool === 'checkbox' && (
+              <CheckBoxOutlineBlankIcon sx={{ fontSize: '16px', color: 'rgba(25, 118, 210, 0.6)' }} />
+            )}
+            {selectedTool === 'confirmText' && (
+              <Typography variant="caption" sx={{ fontSize: '8px', color: 'rgba(245, 124, 0, 0.8)', p: 1 }}>
+                따라쓰기 필드
+              </Typography>
+            )}
+          </Box>
         )}
 
         <Typography variant="h6" sx={{ mb: 3, pl: 2 }}>
@@ -591,9 +706,9 @@ const PdfViewerPage = () => {
                     scale={pdfScale}
                     isDragging={isDragging}
                     dragTarget={dragTarget}
-                    onDragStart={handleDragStart}
-                    onResizeStart={handleResizeStart}
-                    onDelete={handleDeleteField}
+                    onDragStart={(e) => handleDragStart(e, field.id)}
+                    onResizeStart={(e) => handleResizeStart(e, field.id)}
+                    onDelete={(e) => handleDeleteField(e, field.id)}
                   />
                 ))}
 
@@ -607,9 +722,9 @@ const PdfViewerPage = () => {
                     scale={pdfScale}
                     isDragging={isDragging}
                     dragTarget={dragTarget}
-                    onDragStart={handleDragStart}
-                    onResizeStart={handleResizeStart}
-                    onDelete={handleDeleteField}
+                    onDragStart={(e) => handleDragStart(e, field.id)}
+                    onResizeStart={(e) => handleResizeStart(e, field.id)}
+                    onDelete={(e) => handleDeleteField(e, field.id)}
                   />
                 ))}
 
@@ -623,8 +738,29 @@ const PdfViewerPage = () => {
                     scale={pdfScale}
                     isDragging={isDragging}
                     dragTarget={dragTarget}
-                    onDragStart={handleDragStart}
-                    onDelete={handleDeleteField}
+                    onDragStart={(e) => handleDragStart(e, field.id)}
+                    onDelete={(e) => handleDeleteField(e, field.id)}
+                  />
+                ))}
+
+              {/* 확인 텍스트 필드 렌더링 */}
+              {confirmTextFields
+                .filter(field => field.page === index + 1)
+                .map(field => (
+                  <ConfirmTextField
+                    key={field.id}
+                    field={field}
+                    scale={pdfScale}
+                    isDragging={isDragging}
+                    dragTarget={dragTarget}
+                    onDragStart={(e) => handleDragStart(e, field.id)}
+                    onResizeStart={(e) => handleResizeStart(e, field.id)}
+                    onDelete={(e) => handleDeleteField(e, field.id)}
+                    onInputSave={(inputText) => handleConfirmTextInput(field.id, inputText)}
+                    onFieldClick={() => {
+                      console.log('onFieldClick 호출됨:', field.id);
+                      handleOpenConfirmTextModal(field.id);
+                    }}
                   />
                 ))}
             </Box>
@@ -677,6 +813,25 @@ const PdfViewerPage = () => {
         open={saveTemplateModalOpen}
         onClose={() => setSaveTemplateModalOpen(false)}
         onSave={handleSaveTemplate}
+      />
+      
+      {/* 따라쓰기 입력 모달 */}
+      <ConfirmTextInputModal
+        open={confirmTextModalOpen}
+        onClose={handleCloseConfirmTextModal}
+        onSave={(inputText) => {
+          console.log('onSave 호출됨:', inputText);
+          if (activeConfirmFieldId) {
+            handleConfirmTextInput(activeConfirmFieldId, inputText);
+          }
+        }}
+        onUpdate={(originalText) => {
+          console.log('onUpdate 호출됨:', originalText);
+          if (activeConfirmFieldId) {
+            handleConfirmTextInput(activeConfirmFieldId, originalText);
+          }
+        }}
+        field={confirmTextFields.find(field => field.id === activeConfirmFieldId)}
       />
     </Box>
   );

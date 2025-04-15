@@ -14,6 +14,9 @@ import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
+// 새로운 ConfirmTextInputModal 컴포넌트 추가 (나중에 구현)
+import ConfirmTextInputModal from '../common/fields/ConfirmTextInputModal';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -131,6 +134,9 @@ const SignaturePdfViewer = () => {
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // 확인 텍스트 필드를 위한 상태 추가
+  const [confirmTextModalOpen, setConfirmTextModalOpen] = useState(false);
+  
   // 실제 사용할 계약ID와 참여자ID 상태 추가
   const [contractId, setContractId] = useState(urlContractId);
   const [participantId, setParticipantId] = useState(urlParticipantId);
@@ -140,6 +146,10 @@ const SignaturePdfViewer = () => {
   const [currentTemplateIndex, setCurrentTemplateIndex] = useState(0);
   const [completedTemplates, setCompletedTemplates] = useState([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  // 템플릿별 완료율 상태 추가
+  const [templateCompletionRates, setTemplateCompletionRates] = useState({});
+  // 템플릿별 완료율 계산 완료 여부
+  const [completionRatesCalculated, setCompletionRatesCalculated] = useState(false);
 
   // 첨부파일 관련 상태 추가
   const [participantDocuments, setParticipantDocuments] = useState([]);
@@ -255,6 +265,38 @@ const SignaturePdfViewer = () => {
     }
   }, [participant]);
 
+  // 필드와 참여자 정보가 변경될 때마다 템플릿별 완료율 계산
+  useEffect(() => {
+    // 필드 정보와 참여자 정보가 있는 경우에만 계산
+    if (fields.length > 0 && participant?.templatePdfs) {
+      const rates = {};
+      
+      // 각 템플릿별 완료율 계산
+      participant.templatePdfs.forEach((template, index) => {
+        // 해당 템플릿의 PDF ID 가져오기
+        const pdfId = template.pdfId;
+        
+        // 해당 PDF의 필드만 필터링
+        const templateFields = fields.filter(field => field.pdfId === pdfId);
+        
+        // 완료된 필드 수 계산
+        const completedFields = templateFields.filter(field => field.value !== null && field.value !== '');
+        
+        // 완료율 계산 (필드가 없는 경우 100%)
+        const rate = templateFields.length > 0 
+          ? Math.round((completedFields.length / templateFields.length) * 100) 
+          : 100;
+        
+        // 완료율 저장
+        rates[index] = rate;
+      });
+      
+      // 상태 업데이트
+      setTemplateCompletionRates(rates);
+      setCompletionRatesCalculated(true);
+    }
+  }, [fields, participant?.templatePdfs]);
+
   // pdfId에서 원본 ID 추출
   const getOriginalPdfId = (pdfId) => {
     return pdfId.replace('_with_fields.pdf', '.pdf');
@@ -289,7 +331,8 @@ const SignaturePdfViewer = () => {
           width: `${field.relativeWidth * 100}%`,
           height: `${field.relativeHeight * 100}%`,
           border: '1px dashed',
-          borderColor: field.type === 'signature' ? 'error.main' : 'primary.main',
+          borderColor: field.type === 'signature' ? 'error.main' : 
+                       field.type === 'confirmText' ? 'warning.main' : 'primary.main',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -312,6 +355,16 @@ const SignaturePdfViewer = () => {
         {field.value && field.type === 'text' && (
           <Typography variant="body2">{field.value}</Typography>
         )}
+        {field.value && field.type === 'confirmText' && (
+          <Typography variant="body2" sx={{ color: 'text.primary', fontStyle: 'italic' }}>
+            {field.value}
+          </Typography>
+        )}
+        {!field.value && field.type === 'confirmText' && field.confirmText && (
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '8px', p: 1, textAlign: 'center' }}>
+            "{field.confirmText.substring(0, 15)}..." 입력 필요
+          </Typography>
+        )}
       </Box>
     );
   };
@@ -329,6 +382,10 @@ const SignaturePdfViewer = () => {
         break;
       case 'checkbox':
         handleCheckboxChange(field);
+        break;
+      case 'confirmText':
+        setSelectedField(field);
+        setConfirmTextModalOpen(true);
         break;
       default:
         break;
@@ -391,6 +448,42 @@ const SignaturePdfViewer = () => {
       
     } catch (error) {
       console.error('Error saving signature:', error);
+    }
+  };
+
+  // 확인 텍스트 저장 핸들러
+  const handleConfirmTextSave = async (text) => {
+    try {
+      if (!participant?.templatePdfs || !selectedField) return;
+      
+      // 입력된 텍스트가 원본 확인 텍스트와 일치하는지 검증
+      if (text !== selectedField.confirmText) {
+        alert('입력한 텍스트가 원본 텍스트와 일치하지 않습니다. 다시 입력해주세요.');
+        return;
+      }
+      
+      const currentTemplate = participant.templatePdfs[currentTemplateIndex];
+      const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
+      
+      const response = await fetch(
+        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'confirmText',
+            value: text
+          })
+        }
+      );
+      
+      if (!response.ok) throw new Error('Failed to save confirm text');
+      await fetchFields(currentTemplate.pdfId);
+      setConfirmTextModalOpen(false);
+      setSelectedField(null);
+      
+    } catch (error) {
+      console.error('Error saving confirm text:', error);
     }
   };
 
@@ -466,13 +559,59 @@ const SignaturePdfViewer = () => {
     setCurrentPage(pageNumber);
   };
 
+  // 현재 PDF의 모든 필드가 작성되었는지 확인하는 함수 추가
+  const areAllFieldsCompleted = (pdfId) => {
+    if (!fields || fields.length === 0) {
+      console.log(`areAllFieldsCompleted: fields 없음 (${pdfId})`);
+      return false;
+    }
+    
+    // 현재 PDF의 필드만 필터링
+    const currentFields = fields.filter(field => field.pdfId === pdfId);
+    console.log(`areAllFieldsCompleted: pdfId=${pdfId}, 필드 수=${currentFields.length}`);
+    
+    if (currentFields.length === 0) {
+      console.log(`areAllFieldsCompleted: 해당 PDF의 필드 없음 (${pdfId})`);
+      return false;
+    }
+    
+    // 모든 필드에 값이 입력되었는지 확인
+    const result = currentFields.every(field => field.value !== null && field.value !== '');
+    console.log(`areAllFieldsCompleted 결과: ${result} (${pdfId})`);
+    return result;
+  };
+  
+  // 현재 PDF의 작성되지 않은 필드 수 반환
+  const getEmptyFieldsCount = (pdfId) => {
+    if (!fields || fields.length === 0) return 0;
+    
+    // 현재 PDF의 필드만 필터링
+    const currentFields = fields.filter(field => field.pdfId === pdfId);
+    
+    // 값이 입력되지 않은 필드 개수 반환
+    return currentFields.filter(field => field.value === null || field.value === '').length;
+  };
+
   // 다음 템플릿으로 이동
   const handleNextTemplate = async () => {
     if (!participant?.templatePdfs) return;
     
     if (currentTemplateIndex < participant.templatePdfs.length - 1) {
+      // 현재 템플릿의 모든 필드가 작성되었는지 확인
+      const currentPdfId = participant.templatePdfs[currentTemplateIndex].pdfId;
+      const allFieldsCompleted = areAllFieldsCompleted(currentPdfId);
+      
+      // 모든 필드가 작성되지 않았다면 경고 표시
+      if (!allFieldsCompleted) {
+        const emptyFieldsCount = getEmptyFieldsCount(currentPdfId);
+        alert(`현재 계약서에 작성되지 않은 필드가 ${emptyFieldsCount}개 있습니다.\n모든 필드를 작성한 후 다음 계약서로 이동해주세요.`);
+        return;
+      }
+      
       // 다음 템플릿으로 이동
       const nextIndex = currentTemplateIndex + 1;
+      console.log('다음 템플릿으로 이동:', nextIndex);
+      console.log('다음 템플릿 정보:', participant.templatePdfs[nextIndex]);
       setCurrentTemplateIndex(nextIndex);
       
       // 다음 템플릿의 필드 정보 가져오기
@@ -558,6 +697,23 @@ const SignaturePdfViewer = () => {
     return allUploaded;
   };
 
+  // 모든 PDF의 모든 필드가 작성되었는지 확인하는 함수 추가
+  const areAllPdfsFieldsCompleted = () => {
+    if (!participant?.templatePdfs) return false;
+    
+    // 템플릿 완료율이 계산되지 않은 경우 원래 로직 사용
+    if (!completionRatesCalculated) {
+      return participant.templatePdfs.every(template => 
+        areAllFieldsCompleted(template.pdfId)
+      );
+    }
+    
+    // 모든 템플릿의 완료율이 100%인지 확인
+    return participant.templatePdfs.every((_, index) => 
+      templateCompletionRates[index] === 100
+    );
+  };
+  
   // 서명 완료 확인 다이얼로그 열기
   const handleConfirmComplete = () => {
     // 필수 첨부파일 업로드 확인
@@ -567,6 +723,18 @@ const SignaturePdfViewer = () => {
     // 필수 첨부파일이 업로드되지 않은 경우 경고
     if (!requiredUploaded) {
       alert('모든 필수 첨부파일을 업로드해야 서명을 완료할 수 있습니다.');
+      return;
+    }
+    
+    // 모든 PDF의 모든 필드가 작성되었는지 확인
+    const allFieldsCompleted = areAllPdfsFieldsCompleted();
+    if (!allFieldsCompleted) {
+      // 작성되지 않은 PDF 목록 생성
+      const incompleteTemplates = participant.templatePdfs
+        .filter(template => !areAllFieldsCompleted(template.pdfId))
+        .map(template => template.templateName);
+      
+      alert(`모든 계약서의 필드를 작성해야 서명을 완료할 수 있습니다.`);
       return;
     }
     
@@ -735,6 +903,57 @@ const SignaturePdfViewer = () => {
   // 클릭하여 템플릿 변경 시 필드도 함께 업데이트하는 함수 추가
   const handleTemplateChange = async (index) => {
     if (!participant?.templatePdfs || index === currentTemplateIndex) return;
+    
+    // 건너뛰기 시도 체크 (2개 이상 이동 시 중간 계약서들 검사)
+    if (index > currentTemplateIndex + 1) {
+      // 디버깅 위한 로그 추가
+      console.log(`handleTemplateChange: 건너뛰기 시도 (${currentTemplateIndex} → ${index})`);
+      
+      // 먼저 중간 계약서들의 필드 정보 로드
+      for (let i = currentTemplateIndex + 1; i < index; i++) {
+        const intermediatePdfId = participant.templatePdfs[i].pdfId;
+        console.log(`중간 계약서 체크: index=${i}, pdfId=${intermediatePdfId}`);
+        
+        // 각 중간 계약서의 필드 정보를 가져옴
+        try {
+          const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${intermediatePdfId}`);
+          if (response.ok) {
+            const intermediateFields = await response.json();
+            // 필드가 전부 비어있는지 확인
+            const emptyFields = intermediateFields.filter(f => f.value === null || f.value === '');
+            console.log(`중간 계약서(${i}): 전체 필드=${intermediateFields.length}, 빈 필드=${emptyFields.length}`);
+            
+            if (emptyFields.length > 0) {
+              // 작성되지 않은 필드가 있음
+              alert(`계약서는 순서대로 작성해야 합니다.\n${i+1}번째 계약서(${participant.templatePdfs[i].templateName})에 작성되지 않은 필드가 있습니다.`);
+              return;
+            }
+          } else {
+            console.error(`중간 계약서(${i}) 필드 조회 실패`);
+            alert('계약서 정보를 확인하는 중 오류가 발생했습니다.');
+            return;
+          }
+        } catch (error) {
+          console.error(`중간 계약서(${i}) 필드 조회 오류:`, error);
+          alert('계약서 정보를 확인하는 중 오류가 발생했습니다.');
+          return;
+        }
+      }
+    }
+    
+    // 다음 계약서로 이동하는 경우(현재 위치보다 더 큰 인덱스로 이동)
+    if (index > currentTemplateIndex) {
+      // 현재 템플릿의 모든 필드가 작성되었는지 확인
+      const currentPdfId = participant.templatePdfs[currentTemplateIndex].pdfId;
+      const allFieldsCompleted = areAllFieldsCompleted(currentPdfId);
+      
+      // 모든 필드가 작성되지 않았다면 경고 표시
+      if (!allFieldsCompleted) {
+        const emptyFieldsCount = getEmptyFieldsCount(currentPdfId);
+        alert(`현재 계약서에 작성되지 않은 필드가 ${emptyFieldsCount}개 있습니다.\n모든 필드를 작성한 후 다음 계약서로 이동해주세요.`);
+        return;
+      }
+    }
     
     setLoading(true);
     setCurrentTemplateIndex(index);
@@ -1199,13 +1418,254 @@ const SignaturePdfViewer = () => {
                       visibility: index === currentTemplateIndex || completedTemplates.includes(index) ? 'visible' : 'hidden'
                     }}
                   >
-                    {completedTemplates.includes(index) ? '완료' : 
-                     index === currentTemplateIndex ? '작성 중' : ''}
+                    {(() => {
+                      // 완료된 템플릿인 경우
+                      if (completedTemplates.includes(index)) {
+                        return '완료';
+                      }
+                      
+                      // 현재 작업 중인 템플릿인 경우
+                      if (index === currentTemplateIndex) {
+                        // 완료율 계산이 안 된 경우 기본값으로 '작성 중' 표시
+                        if (!completionRatesCalculated) {
+                          return '작성 중';
+                        }
+                        
+                        // 미리 계산된 완료율 사용
+                        const completionRate = templateCompletionRates[index] || 0;
+                        
+                        // 완료율이 100%면 '완료'로 표시, 아니면 '작성 중'으로 표시
+                        return completionRate === 100 
+                          ? '완료' 
+                          : '작성 중';
+                      }
+                      
+                      return '';
+                    })()}
                   </Box>
                 </Box>
               ))}
             </Box>
           </Box>
+          
+          {/* 입력 필드 현황 섹션 추가 */}
+          {participant?.templatePdfs && currentTemplateIndex >= 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                입력 필드 현황
+                {participant.templatePdfs[currentTemplateIndex] && (
+                  <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                    (현재: {participant.templatePdfs[currentTemplateIndex].templateName})
+                  </Typography>
+                )}
+              </Typography>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                mt: 2,
+                border: '1px solid #E0E0E0',
+                borderRadius: 1,
+                p: 1.5
+              }}>
+                {/* 필드 통계 정보 */}
+                {(() => {
+                  // 현재 템플릿의 PDF ID 가져오기
+                  const currentPdfId = participant.templatePdfs[currentTemplateIndex]?.pdfId;
+                  
+                  // 현재 PDF의 필드만 필터링
+                  const currentFields = fields.filter(field => field.pdfId === currentPdfId);
+                  
+                  // 완료된 필드와 미완료 필드 구분
+                  const completedFields = currentFields.filter(field => field.value !== null && field.value !== '');
+                  const emptyFields = currentFields.filter(field => field.value === null || field.value === '');
+                  
+                  // 페이지별 미완료 필드 그룹화
+                  const emptyFieldsByPage = {};
+                  emptyFields.forEach(field => {
+                    if (!emptyFieldsByPage[field.page]) {
+                      emptyFieldsByPage[field.page] = [];
+                    }
+                    emptyFieldsByPage[field.page].push(field);
+                  });
+                  
+                  // 필드 유형별 통계
+                  const signatureFields = currentFields.filter(field => field.type === 'signature');
+                  const textFields = currentFields.filter(field => field.type === 'text');
+                  const checkboxFields = currentFields.filter(field => field.type === 'checkbox');
+                  const confirmTextFields = currentFields.filter(field => field.type === 'confirmText');
+                  
+                  // 각 유형별 미완료 필드 수
+                  const emptySignatureFields = signatureFields.filter(field => !field.value);
+                  const emptyTextFields = textFields.filter(field => !field.value);
+                  const emptyCheckboxFields = checkboxFields.filter(field => !field.value);
+                  const emptyConfirmTextFields = confirmTextFields.filter(field => !field.value);
+                  
+                  return (
+                    <>
+                      {/* 전체 진행상황 */}
+                      <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            전체 진행률
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: emptyFields.length === 0 ? '#4CAF50' : '#FF9800' }}>
+                            {completedFields.length}/{currentFields.length} 항목
+                          </Typography>
+                        </Box>
+                        <Box sx={{ width: '100%', height: 6, bgcolor: '#F0F0F0', borderRadius: 3, overflow: 'hidden' }}>
+                          <Box 
+                            sx={{ 
+                              height: '100%', 
+                              width: `${currentFields.length > 0 ? (completedFields.length / currentFields.length) * 100 : 0}%`,
+                              bgcolor: emptyFields.length === 0 ? '#4CAF50' : '#FF9800',
+                              borderRadius: 3
+                            }} 
+                          />
+                        </Box>
+                      </Box>
+                      
+                      {/* 필드 유형별 상태 */}
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>필드 유형별 상태</Typography>
+                        
+                        {signatureFields.length > 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: '#666' }}>
+                              서명 필드
+                            </Typography>
+                            <Typography variant="body2" sx={{ 
+                              color: emptySignatureFields.length === 0 ? '#4CAF50' : '#FF9800'
+                            }}>
+                              {signatureFields.length - emptySignatureFields.length}/{signatureFields.length}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {textFields.length > 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: '#666' }}>
+                              텍스트 필드
+                            </Typography>
+                            <Typography variant="body2" sx={{ 
+                              color: emptyTextFields.length === 0 ? '#4CAF50' : '#FF9800'
+                            }}>
+                              {textFields.length - emptyTextFields.length}/{textFields.length}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {checkboxFields.length > 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: '#666' }}>
+                              체크박스 필드
+                            </Typography>
+                            <Typography variant="body2" sx={{ 
+                              color: emptyCheckboxFields.length === 0 ? '#4CAF50' : '#FF9800'
+                            }}>
+                              {checkboxFields.length - emptyCheckboxFields.length}/{checkboxFields.length}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {confirmTextFields.length > 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: '#666' }}>
+                              따라쓰기 필드
+                            </Typography>
+                            <Typography variant="body2" sx={{ 
+                              color: emptyConfirmTextFields.length === 0 ? '#4CAF50' : '#FF9800'
+                            }}>
+                              {confirmTextFields.length - emptyConfirmTextFields.length}/{confirmTextFields.length}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                      
+                      {/* 페이지별 미작성 필드 */}
+                      {emptyFields.length > 0 && (
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500, mb: 1, color: '#FF9800' }}>
+                            작성이 필요한 페이지
+                          </Typography>
+                          
+                          {Object.entries(emptyFieldsByPage).map(([page, fields]) => (
+                            <Box 
+                              key={page}
+                              sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                py: 0.5,
+                                pl: 1,
+                                pr: 0.5,
+                                mb: 0.5,
+                                borderRadius: 1,
+                                bgcolor: '#FFF3E0',
+                                cursor: 'pointer',
+                                '&:hover': { bgcolor: '#FFE0B2' }
+                              }}
+                              onClick={() => {
+                                // 해당 페이지로 스크롤
+                                const pageElement = document.getElementById(`page-${page}`);
+                                if (pageElement) {
+                                  pageElement.scrollIntoView({ behavior: 'smooth' });
+                                  setCurrentPage(Number(page));
+                                }
+                              }}
+                            >
+                              <Typography variant="body2" sx={{ color: '#E65100' }}>
+                                {page}페이지
+                              </Typography>
+                              <Chip 
+                                label={`${fields.length}개 필드`} 
+                                size="small"
+                                sx={{ 
+                                  fontSize: '0.7rem',
+                                  height: '20px',
+                                  bgcolor: '#FFFFFF',
+                                  color: '#FF9800'
+                                }}
+                              />
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                      
+                      {/* 모든 필드가 작성된 경우 */}
+                      {emptyFields.length === 0 && (
+                        <Box sx={{ 
+                          p: 1.5, 
+                          bgcolor: '#E8F5E9', 
+                          borderRadius: 1,
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}>
+                          <Box 
+                            sx={{ 
+                              width: 20, 
+                              height: 20, 
+                              borderRadius: '50%', 
+                              bgcolor: '#4CAF50',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mr: 1
+                            }}
+                          >
+                            <CheckIcon sx={{ color: 'white', fontSize: '0.8rem' }} />
+                          </Box>
+                          <Typography variant="body2" sx={{ color: '#2E7D32' }}>
+                            모든 필드가 작성 완료되었습니다.
+                          </Typography>
+                        </Box>
+                      )}
+                    </>
+                  );
+                })()}
+              </Box>
+            </Box>
+          )}
           
           {/* 첨부파일 섹션 추가 */}
           {participantDocuments.length > 0 && (
@@ -1421,14 +1881,39 @@ const SignaturePdfViewer = () => {
               sx={{
                 py: 0.5,
                 px: 1,
-                borderColor: '#1976d2',
-                color: '#1976d2',
+                borderColor: participant?.templatePdfs && currentTemplateIndex < participant.templatePdfs.length - 1 && 
+                              areAllFieldsCompleted(participant.templatePdfs[currentTemplateIndex].pdfId) ? 
+                              '#1976d2' : '#bdbdbd',
+                color: participant?.templatePdfs && currentTemplateIndex < participant.templatePdfs.length - 1 && 
+                       areAllFieldsCompleted(participant.templatePdfs[currentTemplateIndex].pdfId) ? 
+                       '#1976d2' : '#9e9e9e',
                 borderRadius: '8px',
                 fontSize: '0.75rem',
                 width: '45%',
-                minWidth: 'auto'
+                minWidth: 'auto',
+                position: 'relative'
               }}
             >
+              {participant?.templatePdfs && currentTemplateIndex < participant.templatePdfs.length - 1 && 
+               !areAllFieldsCompleted(participant.templatePdfs[currentTemplateIndex].pdfId) ? (
+                <Box sx={{
+                  position: 'absolute',
+                  top: -5,
+                  right: -5,
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  bgcolor: '#f44336',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}>
+                  !
+                </Box>
+              ) : null}
               다음 계약서
             </Button>
           </Box>
@@ -1439,29 +1924,24 @@ const SignaturePdfViewer = () => {
             onClick={handleConfirmComplete}
             disabled={
               loading || 
-              (participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length) ||
-              !areRequiredDocumentsUploaded() // 필수 첨부파일 업로드 여부 확인
+              (participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length)
             }
             startIcon={<SaveIcon />}
             fullWidth
             sx={{
               px: 4,
               py: 1,
-              backgroundColor: areRequiredDocumentsUploaded() ? '#1976d2' : '#9e9e9e',
+              backgroundColor: loading ? '#9e9e9e' : '#1976d2',
               '&:hover': {
-                backgroundColor: areRequiredDocumentsUploaded() ? '#1565c0' : '#757575',
+                backgroundColor: loading ? '#757575' : '#1565c0',
               },
               borderRadius: '8px',
               fontSize: '1rem',
               mb: 1.5
             }}
           >
-            {!areRequiredDocumentsUploaded() ? 
-              '필수 첨부파일을 업로드해야 합니다' :
-              participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length ? 
-                '모든 서명 완료' : 
-                loading ? '처리중...' : '모든 계약서 서명 완료'
-            }
+            {participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length ? 
+              '서명 완료됨' : loading ? '처리중...' : '서명 완료'}
           </Button>
         </Box>
       </Box>
@@ -1662,6 +2142,17 @@ const SignaturePdfViewer = () => {
           setSelectedField(null);
         }}
         initialValue={selectedField?.value || ''}
+      />
+
+      {/* 확인 텍스트 모달 추가 */}
+      <ConfirmTextInputModal
+        open={confirmTextModalOpen}
+        onClose={() => {
+          setConfirmTextModalOpen(false);
+          setSelectedField(null);
+        }}
+        onSave={handleConfirmTextSave}
+        field={selectedField}
       />
 
       {/* 확인 다이얼로그 유지 */}

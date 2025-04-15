@@ -588,7 +588,7 @@ const ContractSend = () => {
               size="small"
               options={companies}
               loading={companies.length === 0}
-              getOptionLabel={(option) => option.storeName || ''}
+              getOptionLabel={(option) => option.companyName || ''}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               value={companies.find(company => company.id === contractInfo.companyId) || null}
               onChange={(event, newValue) => {
@@ -597,7 +597,7 @@ const ContractSend = () => {
               renderInput={(params) => (
                 <TextField 
                   {...params} 
-                  label="계약 위수탁 업체" 
+                  label="수탁 업체" 
                   required
                   InputLabelProps={{ required: true }}
                   InputProps={{
@@ -616,9 +616,9 @@ const ContractSend = () => {
               renderOption={(props, option) => (
                 <li {...props}>
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body2">{option.storeName}</Typography>
+                    <Typography variant="body2">{option.companyName}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {option.businessNumber} {option.companyName ? `| ${option.companyName}` : ''}
+                      {option.businessNumber} {option.storeName ? `| ${option.storeName}` : ''}
                     </Typography>
                     {option.startDate && option.endDate && (
                       <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
