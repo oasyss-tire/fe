@@ -6,7 +6,7 @@ export const sendContractEmail = async (contractId, participants) => {
     
     for (const participant of emailParticipants) {
       // 새로운 API 호출 방식으로 변경
-      const emailResponse = await fetch('https://sign.jebee.net/api/email/send-signature-request', {
+      const emailResponse = await fetch('http://localhost:8080/api/email/send-signature-request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

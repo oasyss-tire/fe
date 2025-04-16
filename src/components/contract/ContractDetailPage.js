@@ -99,7 +99,7 @@ const ContractDetailPage = () => {
     const fetchContractDetail = async () => {
       try {
         const response = await fetch(
-          `https://sign.jebee.net/api/contracts/${id}`
+          `http://localhost:8080/api/contracts/${id}`
         );
         if (!response.ok) throw new Error("계약 조회 실패");
         const data = await response.json();
@@ -143,7 +143,7 @@ const ContractDetailPage = () => {
     try {
       setDocLoading(true);
       const response = await fetch(
-        `https://sign.jebee.net/api/contracts/${contractId}/documents`
+        `http://localhost:8080/api/contracts/${contractId}/documents`
       );
       if (!response.ok) throw new Error("첨부파일 조회 실패");
       const data = await response.json();
@@ -160,7 +160,7 @@ const ContractDetailPage = () => {
   const handleDocumentDownload = async (documentId, fileName) => {
     try {
       const response = await fetch(
-        `https://sign.jebee.net/api/contracts/documents/${documentId}/download`
+        `http://localhost:8080/api/contracts/documents/${documentId}/download`
       );
       if (!response.ok) {
         throw new Error("문서 다운로드 실패");
@@ -186,7 +186,7 @@ const ContractDetailPage = () => {
   const handleDocumentPreview = async (documentId, fileName) => {
     try {
       // 미리보기 URL 생성
-      const previewUrl = `https://sign.jebee.net/api/contracts/documents/${documentId}/preview`;
+      const previewUrl = `http://localhost:8080/api/contracts/documents/${documentId}/preview`;
 
       // 새 창에서 미리보기 열기
       window.open(previewUrl, "_blank", "noopener,noreferrer");
@@ -323,7 +323,7 @@ const ContractDetailPage = () => {
       formData.append("file", file);
 
       const response = await fetch(
-        `https://sign.jebee.net/api/contracts/${contract.id}/participants/${participant.id}/documents/${doc.documentCodeId}`,
+        `http://localhost:8080/api/contracts/${contract.id}/participants/${participant.id}/documents/${doc.documentCodeId}`,
         {
           method: "POST",
           body: formData,
@@ -423,7 +423,7 @@ const ContractDetailPage = () => {
     try {
       setResignApproveLoading(true);
 
-      const url = `https://sign.jebee.net/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve-resign`;
+      const url = `http://localhost:8080/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve-resign`;
       const response = await fetch(
         `${url}?approver=${encodeURIComponent(approver)}`,
         {
@@ -451,7 +451,7 @@ const ContractDetailPage = () => {
       const fetchContractDetail = async () => {
         try {
           const response = await fetch(
-            `https://sign.jebee.net/api/contracts/${id}`
+            `http://localhost:8080/api/contracts/${id}`
           );
           if (!response.ok) throw new Error("계약 조회 실패");
           const data = await response.json();
@@ -476,7 +476,7 @@ const ContractDetailPage = () => {
 
     try {
       setApproveLoading(true);
-      const url = `https://sign.jebee.net/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve`;
+      const url = `http://localhost:8080/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve`;
       const queryParams = approveComment
         ? `?comment=${encodeURIComponent(approveComment)}`
         : "";
@@ -500,7 +500,7 @@ const ContractDetailPage = () => {
       const fetchContractDetail = async () => {
         try {
           const response = await fetch(
-            `https://sign.jebee.net/api/contracts/${id}`
+            `http://localhost:8080/api/contracts/${id}`
           );
           if (!response.ok) throw new Error("계약 조회 실패");
           const data = await response.json();
@@ -528,7 +528,7 @@ const ContractDetailPage = () => {
 
     try {
       setRejectLoading(true);
-      const url = `https://sign.jebee.net/api/contracts/${contract.id}/participants/${selectedParticipant.id}/reject`;
+      const url = `http://localhost:8080/api/contracts/${contract.id}/participants/${selectedParticipant.id}/reject`;
       const queryParams = `?reason=${encodeURIComponent(rejectReason)}`;
 
       const response = await fetch(`${url}${queryParams}`, {
@@ -550,7 +550,7 @@ const ContractDetailPage = () => {
       const fetchContractDetail = async () => {
         try {
           const response = await fetch(
-            `https://sign.jebee.net/api/contracts/${id}`
+            `http://localhost:8080/api/contracts/${id}`
           );
           if (!response.ok) throw new Error("계약 조회 실패");
           const data = await response.json();
@@ -573,7 +573,7 @@ const ContractDetailPage = () => {
   const handleDownloadSignedPdf = async (pdfId) => {
     try {
       const response = await fetch(
-        `https://sign.jebee.net/api/contract-pdf/download-signed-pdf/${pdfId}`,
+        `http://localhost:8080/api/contract-pdf/download-signed-pdf/${pdfId}`,
         { method: "GET" }
       );
 
@@ -611,7 +611,7 @@ const ContractDetailPage = () => {
         await new Promise((resolve) => setTimeout(resolve, 300)); // 다운로드 간격 설정
 
         const downloadResponse = await fetch(
-          `https://sign.jebee.net${pdfInfo.downloadUrl}`,
+          `http://localhost:8080${pdfInfo.downloadUrl}`,
           { method: "GET" }
         );
 
@@ -799,7 +799,7 @@ const ContractDetailPage = () => {
       // 비밀번호 API 호출
       const token = sessionStorage.getItem('token');
       const response = await fetch(
-        `https://sign.jebee.net/api/contract-pdf/password/${encodeURIComponent(pdfId)}?token=${encodeURIComponent(token)}`,
+        `http://localhost:8080/api/contract-pdf/password/${encodeURIComponent(pdfId)}?token=${encodeURIComponent(token)}`,
         {
           method: 'GET',
           headers: {
@@ -861,7 +861,7 @@ const ContractDetailPage = () => {
     try {
       // 서명된 모든 PDF 목록 조회
       const response = await fetch(
-        `https://sign.jebee.net/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
+        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
         { 
           method: "GET",
           headers: {

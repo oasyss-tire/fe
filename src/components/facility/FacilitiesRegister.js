@@ -74,7 +74,7 @@ const FacilitiesRegister = () => {
     const fetchCodes = async () => {
       try {
         // 제조사 코드 조회
-        const brandResponse = await fetch('https://sign.jebee.net/api/codes/groups/002008/codes/active', {
+        const brandResponse = await fetch('http://localhost:8080/api/codes/groups/002008/codes/active', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -85,7 +85,7 @@ const FacilitiesRegister = () => {
         }
 
         // 시설물 유형 코드 조회
-        const facilityTypeResponse = await fetch('https://sign.jebee.net/api/codes/groups/002001/codes/active', {
+        const facilityTypeResponse = await fetch('http://localhost:8080/api/codes/groups/002001/codes/active', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -96,7 +96,7 @@ const FacilitiesRegister = () => {
         }
 
         // 설치 유형 코드 조회
-        const installationTypeResponse = await fetch('https://sign.jebee.net/api/codes/groups/002002/codes/active', {
+        const installationTypeResponse = await fetch('http://localhost:8080/api/codes/groups/002002/codes/active', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -107,7 +107,7 @@ const FacilitiesRegister = () => {
         }
 
         // 상태 코드 조회
-        const statusResponse = await fetch('https://sign.jebee.net/api/codes/groups/002003/codes/active', {
+        const statusResponse = await fetch('http://localhost:8080/api/codes/groups/002003/codes/active', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -126,7 +126,7 @@ const FacilitiesRegister = () => {
         }
         
         // 감가상각 방법 코드 조회
-        const depreciationMethodResponse = await fetch('https://sign.jebee.net/api/codes/groups/002004/codes/active', {
+        const depreciationMethodResponse = await fetch('http://localhost:8080/api/codes/groups/002004/codes/active', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -148,7 +148,7 @@ const FacilitiesRegister = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await fetch('https://sign.jebee.net/api/companies', {
+        const response = await fetch('http://localhost:8080/api/companies', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -363,7 +363,7 @@ const FacilitiesRegister = () => {
       };
       
       // 1. 시설물 등록
-      const facilityResponse = await fetch('https://sign.jebee.net/api/facilities', {
+      const facilityResponse = await fetch('http://localhost:8080/api/facilities', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -388,7 +388,7 @@ const FacilitiesRegister = () => {
           imageFormData.append('imageTypeCode', imageData.imageTypeCode);
           imageFormData.append('uploadBy', sessionStorage.getItem('userId') || '');
 
-          return fetch(`https://sign.jebee.net/api/facility-images/facility/${facilityId}`, {
+          return fetch(`http://localhost:8080/api/facility-images/facility/${facilityId}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${sessionStorage.getItem('token')}`

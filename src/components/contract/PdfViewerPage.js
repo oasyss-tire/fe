@@ -466,7 +466,7 @@ const PdfViewerPage = () => {
 
   const handleSaveTemplate = async ({ templateName, description }) => {
     try {
-      const response = await fetch(`https://sign.jebee.net/api/contract-pdf/save-template/${pdfId}`, {
+      const response = await fetch(`http://localhost:8080/api/contract-pdf/save-template/${pdfId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

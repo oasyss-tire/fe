@@ -65,7 +65,7 @@ const ServiceRequestCreate = () => {
     const fetchCodes = async () => {
       try {
         // AS 유형 코드 조회
-        const serviceTypeResponse = await fetch('https://sign.jebee.net/api/codes/groups/002006/codes/active', {
+        const serviceTypeResponse = await fetch('http://localhost:8080/api/codes/groups/002006/codes/active', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -76,7 +76,7 @@ const ServiceRequestCreate = () => {
         }
         
         // 우선순위 코드 조회
-        const priorityResponse = await fetch('https://sign.jebee.net/api/codes/groups/002007/codes/active', {
+        const priorityResponse = await fetch('http://localhost:8080/api/codes/groups/002007/codes/active', {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -105,7 +105,7 @@ const ServiceRequestCreate = () => {
   const fetchFacilityById = async (id) => {
     setLoading(true);
     try {
-      const response = await fetch(`https://sign.jebee.net/api/facilities/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/facilities/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -144,7 +144,7 @@ const ServiceRequestCreate = () => {
     if (!keyword || keyword.length < 2) return;
     
     try {
-      const response = await fetch(`https://sign.jebee.net/api/facilities/search?keyword=${encodeURIComponent(keyword)}&size=10`, {
+      const response = await fetch(`http://localhost:8080/api/facilities/search?keyword=${encodeURIComponent(keyword)}&size=10`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -238,7 +238,7 @@ const ServiceRequestCreate = () => {
         description: formData.description || null
       };
       
-      const response = await fetch('https://sign.jebee.net/api/service-requests', {
+      const response = await fetch('http://localhost:8080/api/service-requests', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,

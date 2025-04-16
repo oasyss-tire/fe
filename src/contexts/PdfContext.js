@@ -29,7 +29,7 @@ export const PdfProvider = ({ children }) => {
 
       console.log('Saving fields request:', requestData);
 
-      const response = await fetch('https://sign.jebee.net/api/contract-pdf/fields', {
+      const response = await fetch('http://localhost:8080/api/contract-pdf/fields', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ export const PdfProvider = ({ children }) => {
 
   const loadSavedFields = async (pdfId) => {
     try {
-      const response = await fetch(`https://sign.jebee.net/api/contract-pdf/fields/${pdfId}`);
+      const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${pdfId}`);
       if (!response.ok) {
         throw new Error('필드 로드에 실패했습니다.');
       }
@@ -67,7 +67,7 @@ export const PdfProvider = ({ children }) => {
     formData.append('file', file);
 
     try {
-      const response = await fetch('https://sign.jebee.net/api/contract-pdf/upload', {
+      const response = await fetch('http://localhost:8080/api/contract-pdf/upload', {
         method: 'POST',
         body: formData
       });

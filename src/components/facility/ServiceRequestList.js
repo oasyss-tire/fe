@@ -96,7 +96,7 @@ const ServiceRequestList = () => {
   const fetchCodes = async () => {
     try {
       // AS 유형 코드 조회
-      const serviceTypeResponse = await fetch('https://sign.jebee.net/api/codes/groups/003001/codes/active', {
+      const serviceTypeResponse = await fetch('http://localhost:8080/api/codes/groups/003001/codes/active', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -107,7 +107,7 @@ const ServiceRequestList = () => {
       }
       
       // 우선순위 코드 조회
-      const priorityResponse = await fetch('https://sign.jebee.net/api/codes/groups/003002/codes/active', {
+      const priorityResponse = await fetch('http://localhost:8080/api/codes/groups/003002/codes/active', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -118,7 +118,7 @@ const ServiceRequestList = () => {
       }
       
       // 상태 코드 조회
-      const statusResponse = await fetch('https://sign.jebee.net/api/codes/groups/003003/codes/active', {
+      const statusResponse = await fetch('http://localhost:8080/api/codes/groups/003003/codes/active', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -138,7 +138,7 @@ const ServiceRequestList = () => {
     setLoading(true);
     try {
       // 검색 파라미터 구성
-      let url = `https://sign.jebee.net/api/service-requests/paged?page=${page}&size=10`;
+      let url = `http://localhost:8080/api/service-requests/paged?page=${page}&size=10`;
       
       if (selectedStatusCode) {
         url += `&statusCode=${selectedStatusCode}`;
@@ -296,7 +296,7 @@ const ServiceRequestList = () => {
   // AS 요청 상세 조회
   const fetchRequestDetail = async (id) => {
     try {
-      const response = await fetch(`https://sign.jebee.net/api/service-requests/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/service-requests/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -334,7 +334,7 @@ const ServiceRequestList = () => {
       // 날짜와 시간을 결합하여 ISO 형식의 문자열로 변환 (분과 초는 00으로 고정)
       const formattedDateTime = `${expectedCompletionDate}T${expectedCompletionHour}:00:00`;
       
-      const response = await fetch(`https://sign.jebee.net/api/service-requests/${currentRequestId}/receive`, {
+      const response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/receive`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -386,7 +386,7 @@ const ServiceRequestList = () => {
   // AS 요청 완료 제출
   const submitCompletion = async () => {
     try {
-      const response = await fetch(`https://sign.jebee.net/api/service-requests/${currentRequestId}/complete`, {
+      const response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/complete`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,

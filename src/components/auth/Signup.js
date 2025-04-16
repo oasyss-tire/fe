@@ -49,7 +49,7 @@ const Signup = () => {
   const fetchCompanies = async () => {
     setIsLoadingCompanies(true);
     try {
-      const response = await fetch('https://sign.jebee.net/api/companies');
+      const response = await fetch('http://localhost:8080/api/companies');
       if (!response.ok) {
         throw new Error('회사 목록을 불러오는데 실패했습니다.');
       }
@@ -82,7 +82,7 @@ const Signup = () => {
     
     try {
       setIsLoading(true);
-      const response = await fetch(`https://sign.jebee.net/api/auth/check-username?userId=${userId}`);
+      const response = await fetch(`http://localhost:8080/api/auth/check-username?userId=${userId}`);
       
       if (response.status === 409) {
         setErrors(prev => ({
@@ -334,7 +334,7 @@ const Signup = () => {
     setApiError('');
     
     try {
-      const response = await fetch('https://sign.jebee.net/api/auth/signup', {
+      const response = await fetch('http://localhost:8080/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

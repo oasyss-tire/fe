@@ -61,7 +61,7 @@ const CompanyDetail = () => {
     
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch(`https://sign.jebee.net/api/companies/${companyId}`, {
+      const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -259,7 +259,7 @@ const CompanyDetail = () => {
         setIsLoading(true);
         const token = sessionStorage.getItem('token');
         
-        const response = await fetch(`https://sign.jebee.net/api/companies/${companyId}/images/${apiImageType}`, {
+        const response = await fetch(`http://localhost:8080/api/companies/${companyId}/images/${apiImageType}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -348,7 +348,7 @@ const CompanyDetail = () => {
         if (imageFiles.fullImage) formDataObj.append('fullImage', imageFiles.fullImage);
         
         // 회사 정보와 이미지 함께 수정 API 호출
-        const response = await fetch(`https://sign.jebee.net/api/companies/${companyId}/with-images`, {
+        const response = await fetch(`http://localhost:8080/api/companies/${companyId}/with-images`, {
           method: 'PUT',
           headers: {
             'Authorization': token ? `Bearer ${token}` : ''
@@ -365,7 +365,7 @@ const CompanyDetail = () => {
         
       } else {
         // 이미지 없이 회사 정보만 수정 API 호출
-        const response = await fetch(`https://sign.jebee.net/api/companies/${companyId}`, {
+        const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -985,7 +985,7 @@ const CompanyDetail = () => {
                         <Box sx={{ position: 'relative' }}>
                           <Box
                             component="img"
-                            src={imagePreview.frontImage || `https://sign.jebee.net/api/companies/images/${company.imageInfo.frontImage}`}
+                            src={imagePreview.frontImage || `http://localhost:8080/api/companies/images/${company.imageInfo.frontImage}`}
                             alt="전면 이미지"
                             sx={{
                               width: '100%',
@@ -1062,7 +1062,7 @@ const CompanyDetail = () => {
                     company?.imageInfo?.frontImage ? (
                       <Box
                         component="img"
-                        src={`https://sign.jebee.net/api/companies/images/${company.imageInfo.frontImage}`}
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.frontImage}`}
                         alt="전면 이미지"
                         sx={{
                           width: '100%',
@@ -1096,7 +1096,7 @@ const CompanyDetail = () => {
                         <Box sx={{ position: 'relative' }}>
                           <Box
                             component="img"
-                            src={imagePreview.backImage || `https://sign.jebee.net/api/companies/images/${company.imageInfo.backImage}`}
+                            src={imagePreview.backImage || `http://localhost:8080/api/companies/images/${company.imageInfo.backImage}`}
                             alt="후면 이미지"
                             sx={{
                               width: '100%',
@@ -1173,7 +1173,7 @@ const CompanyDetail = () => {
                     company?.imageInfo?.backImage ? (
                       <Box
                         component="img"
-                        src={`https://sign.jebee.net/api/companies/images/${company.imageInfo.backImage}`}
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.backImage}`}
                         alt="후면 이미지"
                         sx={{
                           width: '100%',
@@ -1207,7 +1207,7 @@ const CompanyDetail = () => {
                         <Box sx={{ position: 'relative' }}>
                           <Box
                             component="img"
-                            src={imagePreview.leftSideImage || `https://sign.jebee.net/api/companies/images/${company.imageInfo.leftSideImage}`}
+                            src={imagePreview.leftSideImage || `http://localhost:8080/api/companies/images/${company.imageInfo.leftSideImage}`}
                             alt="좌측면 이미지"
                             sx={{
                               width: '100%',
@@ -1284,7 +1284,7 @@ const CompanyDetail = () => {
                     company?.imageInfo?.leftSideImage ? (
                       <Box
                         component="img"
-                        src={`https://sign.jebee.net/api/companies/images/${company.imageInfo.leftSideImage}`}
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.leftSideImage}`}
                         alt="좌측면 이미지"
                         sx={{
                           width: '100%',
@@ -1318,7 +1318,7 @@ const CompanyDetail = () => {
                         <Box sx={{ position: 'relative' }}>
                           <Box
                             component="img"
-                            src={imagePreview.rightSideImage || `https://sign.jebee.net/api/companies/images/${company.imageInfo.rightSideImage}`}
+                            src={imagePreview.rightSideImage || `http://localhost:8080/api/companies/images/${company.imageInfo.rightSideImage}`}
                             alt="우측면 이미지"
                             sx={{
                               width: '100%',
@@ -1395,7 +1395,7 @@ const CompanyDetail = () => {
                     company?.imageInfo?.rightSideImage ? (
                       <Box
                         component="img"
-                        src={`https://sign.jebee.net/api/companies/images/${company.imageInfo.rightSideImage}`}
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.rightSideImage}`}
                         alt="우측면 이미지"
                         sx={{
                           width: '100%',
@@ -1429,7 +1429,7 @@ const CompanyDetail = () => {
                         <Box sx={{ position: 'relative' }}>
                           <Box
                             component="img"
-                            src={imagePreview.fullImage || `https://sign.jebee.net/api/companies/images/${company.imageInfo.fullImage}`}
+                            src={imagePreview.fullImage || `http://localhost:8080/api/companies/images/${company.imageInfo.fullImage}`}
                             alt="전체 이미지"
                             sx={{
                               width: '100%',
@@ -1506,7 +1506,7 @@ const CompanyDetail = () => {
                     company?.imageInfo?.fullImage ? (
                       <Box
                         component="img"
-                        src={`https://sign.jebee.net/api/companies/images/${company.imageInfo.fullImage}`}
+                        src={`http://localhost:8080/api/companies/images/${company.imageInfo.fullImage}`}
                         alt="전체 이미지"
                         sx={{
                           width: '100%',

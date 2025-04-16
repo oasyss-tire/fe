@@ -64,7 +64,7 @@ const ContractPdfUploader = () => {
     formData.append('file', selectedFile);
 
     try {
-      const response = await fetch('https://sign.jebee.net/api/contract-pdf/upload', {
+      const response = await fetch('http://localhost:8080/api/contract-pdf/upload', {
         method: 'POST',
         body: formData
       });

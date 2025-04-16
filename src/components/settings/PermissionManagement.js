@@ -114,7 +114,7 @@ const PermissionManagement = () => {
     setLoading(true);
     try {
       // 실제 API 호출
-      // const response = await fetch('https://sign.jebee.net/api/permissions');
+      // const response = await fetch('http://localhost:8080/api/permissions');
       // if (!response.ok) {
       //   throw new Error('권한 데이터를 불러오는데 실패했습니다.');
       // }
@@ -138,7 +138,7 @@ const PermissionManagement = () => {
     setSaving(true);
     try {
       // 실제 API 호출
-      // const response = await fetch('https://sign.jebee.net/api/permissions', {
+      // const response = await fetch('http://localhost:8080/api/permissions', {
       //   method: 'POST',
       //   headers: {
       //     'Content-Type': 'application/json',

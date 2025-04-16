@@ -62,7 +62,7 @@ const ContractSignedPage = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `https://sign.jebee.net/api/signature/signed-contract?token=${token}`
+          `http://localhost:8080/api/signature/signed-contract?token=${token}`
         );
 
         if (!response.ok) {
@@ -128,7 +128,7 @@ const ContractSignedPage = () => {
   const fetchSignedPdfs = async (participantId) => {
     try {
       const response = await fetch(
-        `https://sign.jebee.net/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
+        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
         { method: "GET" }
       );
 
@@ -164,7 +164,7 @@ const ContractSignedPage = () => {
       
       // URL에 토큰을 쿼리 파라미터로 추가
       const response = await fetch(
-        `https://sign.jebee.net/api/contract-pdf/password/${firstPdfId}/send-email?token=${token}`,
+        `http://localhost:8080/api/contract-pdf/password/${firstPdfId}/send-email?token=${token}`,
         {
           method: 'POST',
           headers: {
@@ -250,7 +250,7 @@ const ContractSignedPage = () => {
 
       // 재서명 요청 API 호출
       const response = await fetch(
-        `https://sign.jebee.net/api/contracts/${contractId}/participants/${participantId}/request-resign`,
+        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/request-resign`,
         {
           method: "POST",
           headers: {
@@ -297,7 +297,7 @@ const ContractSignedPage = () => {
 
       // ContractDetailPage.js와 일치하도록 API 경로 수정
       window.open(
-        `https://sign.jebee.net/api/contract-pdf/download-signed-pdf/${pdfId}`,
+        `http://localhost:8080/api/contract-pdf/download-signed-pdf/${pdfId}`,
         "_blank"
       );
     } catch (error) {
@@ -322,7 +322,7 @@ const ContractSignedPage = () => {
 
       // 서명된 모든 PDF 목록 조회
       const response = await fetch(
-        `https://sign.jebee.net/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
+        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
         { method: "GET" }
       );
 
@@ -343,7 +343,7 @@ const ContractSignedPage = () => {
         await new Promise((resolve) => setTimeout(resolve, 300)); // 다운로드 간격 설정
 
         const downloadResponse = await fetch(
-          `https://sign.jebee.net${pdfInfo.downloadUrl}`,
+          `http://localhost:8080${pdfInfo.downloadUrl}`,
           { method: "GET" }
         );
 

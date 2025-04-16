@@ -116,7 +116,7 @@ const FacilitiesDetail = () => {
       setLoading(true);
       try {
         // 실제 API 호출
-        const response = await fetch(`https://sign.jebee.net/api/facilities/${id}`, {
+        const response = await fetch(`http://localhost:8080/api/facilities/${id}`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -160,7 +160,7 @@ const FacilitiesDetail = () => {
   const fetchServiceRequests = async () => {
     try {
       // 시설물에 대한 수리 이력 목록 가져오기
-      const serviceResponse = await fetch(`https://sign.jebee.net/api/service-requests/facility/${id}`, {
+      const serviceResponse = await fetch(`http://localhost:8080/api/service-requests/facility/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -183,7 +183,7 @@ const FacilitiesDetail = () => {
   // 이미지 로드 함수
   const fetchFacilityImages = async () => {
     try {
-      const imageResponse = await fetch(`https://sign.jebee.net/api/facility-images/facility/${id}`, {
+      const imageResponse = await fetch(`http://localhost:8080/api/facility-images/facility/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -267,7 +267,7 @@ const FacilitiesDetail = () => {
   const confirmProcessDepreciation = async () => {
     setDepreciationLoading(true);
     try {
-      const response = await fetch(`https://sign.jebee.net/api/depreciations/facility/${id}/process`, {
+      const response = await fetch(`http://localhost:8080/api/depreciations/facility/${id}/process`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -283,7 +283,7 @@ const FacilitiesDetail = () => {
       console.log('감가상각 처리 결과:', result);
       
       // 시설물 정보 새로고침 (현재 가치가 업데이트되었을 것임)
-      const updatedFacilityResponse = await fetch(`https://sign.jebee.net/api/facilities/${id}`, {
+      const updatedFacilityResponse = await fetch(`http://localhost:8080/api/facilities/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }

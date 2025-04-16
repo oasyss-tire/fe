@@ -49,7 +49,7 @@ const Sidebar = () => {
     const fetchPermissions = async () => {
       try {
         // 실제 API 호출
-        // const response = await fetch('https://sign.jebee.net/api/permissions');
+        // const response = await fetch('http://localhost:8080/api/permissions');
         // if (response.ok) {
         //   const data = await response.json();
         //   setPermissions(data);

@@ -399,7 +399,7 @@ const CompanyCreate = () => {
         }
         
         // 이미지를 포함한 회사 생성 요청
-        response = await fetch('https://sign.jebee.net/api/companies', {
+        response = await fetch('http://localhost:8080/api/companies', {
           method: 'POST',
           headers: {
             'Authorization': token ? `Bearer ${token}` : ''
@@ -408,7 +408,7 @@ const CompanyCreate = () => {
         });
       } else {
         // 이미지 없이 회사 데이터만 전송
-        response = await fetch('https://sign.jebee.net/api/companies', {
+        response = await fetch('http://localhost:8080/api/companies', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

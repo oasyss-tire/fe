@@ -140,7 +140,7 @@ const FacilityHistoryPage = () => {
   const fetchCodes = async () => {
     try {
       // 시설물 타입 코드 로드
-      const facilityTypeResponse = await fetch('https://sign.jebee.net/api/codes/groups/002001/codes', {
+      const facilityTypeResponse = await fetch('http://localhost:8080/api/codes/groups/002001/codes', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -155,7 +155,7 @@ const FacilityHistoryPage = () => {
       }
       
       // 상태 코드 로드
-      const statusResponse = await fetch('https://sign.jebee.net/api/codes/groups/002003/codes', {
+      const statusResponse = await fetch('http://localhost:8080/api/codes/groups/002003/codes', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -170,7 +170,7 @@ const FacilityHistoryPage = () => {
       }
       
       // 트랜잭션 타입 코드 로드
-      const transactionTypeResponse = await fetch('https://sign.jebee.net/api/codes/groups/002011/codes', {
+      const transactionTypeResponse = await fetch('http://localhost:8080/api/codes/groups/002011/codes', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -196,7 +196,7 @@ const FacilityHistoryPage = () => {
       const startDateStr = format(startDate, 'yyyy-MM-dd');
       const endDateStr = format(endDate, 'yyyy-MM-dd');
       
-      const url = new URL('https://sign.jebee.net/api/facility-transactions');
+      const url = new URL('http://localhost:8080/api/facility-transactions');
       
       // 날짜 범위 추가
       url.searchParams.append('startDate', startDateStr);
@@ -279,7 +279,7 @@ const FacilityHistoryPage = () => {
       const startDateStr = format(startDate, 'yyyy-MM-dd');
       const endDateStr = format(endDate, 'yyyy-MM-dd');
       
-      const url = new URL('https://sign.jebee.net/api/vouchers/all');
+      const url = new URL('http://localhost:8080/api/vouchers/all');
       
       // 날짜 범위 추가
       url.searchParams.append('startDate', startDateStr);
@@ -328,7 +328,7 @@ const FacilityHistoryPage = () => {
       const startDateStr = format(startDate, 'yyyy-MM-dd');
       const endDateStr = format(endDate, 'yyyy-MM-dd');
       
-      const url = new URL('https://sign.jebee.net/api/depreciations');
+      const url = new URL('http://localhost:8080/api/depreciations');
       
       // 날짜 범위 추가
       url.searchParams.append('startDate', startDateStr);

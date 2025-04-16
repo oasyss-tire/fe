@@ -10,7 +10,7 @@ export const sendContractSMS = async (contractId, participants, contractInfo) =>
       try {
         // 1. 먼저 토큰 발급 API 호출
         console.log('토큰 발급 요청 - 참여자 ID:', participant.id);
-        const tokenResponse = await fetch('https://sign.jebee.net/api/kakao-alert/generate-token', {
+        const tokenResponse = await fetch('http://localhost:8080/api/kakao-alert/generate-token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ export const sendContractSMS = async (contractId, participants, contractInfo) =>
         console.log('알림톡 요청 데이터:', kakaoAlertData);
         
         // 6. 알림톡 API 호출
-        const response = await fetch('https://sign.jebee.net/api/kakao-alert/contract-signature', {
+        const response = await fetch('http://localhost:8080/api/kakao-alert/contract-signature', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
