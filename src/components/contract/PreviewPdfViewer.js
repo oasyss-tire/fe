@@ -189,12 +189,13 @@ const PreviewPdfViewer = () => {
           height: `${field.relativeHeight * 100}%`,
           border: '1px solid',
           borderColor: field.type === 'signature' ? '#FF5722' : 
-                       field.type === 'checkbox' ? '#4CAF50' : '#1976d2',
+                       field.type === 'checkbox' ? '#4CAF50' : 
+                       field.type === 'confirmText' ? '#f57c00' : '#1976d2',
           borderRadius: '2px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: field.type === 'confirmText' ? 'rgba(245, 124, 0, 0.05)' : 'rgba(255, 255, 255, 0.1)',
           pointerEvents: 'none' // 읽기 전용으로 설정
         }}
       >
@@ -222,6 +223,71 @@ const PreviewPdfViewer = () => {
             color: '#4CAF50'
           }}>
             ✓
+          </Box>
+        )}
+        {field.type === 'confirmText' && (
+          <Box sx={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px',
+            position: 'relative'
+          }}>
+            {/* 서명 문구 텍스트 */}
+            {field.value ? (
+              <Typography variant="body2" sx={{ 
+                fontSize: '14px',
+                color: '#e65100', 
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 6,
+                WebkitBoxOrient: 'vertical',
+                textAlign: 'center',
+                width: '100%',
+                height: '100%',
+                fontWeight: 'bold',
+                padding: '2px 4px'
+              }}>
+                {field.value}
+              </Typography>
+            ) : (
+              <>
+                {/* 헤더 레이블 */}
+                <Typography variant="caption" sx={{ 
+                  fontSize: '11px', 
+                  color: '#f57c00', 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  right: 0, 
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                  py: 0.2,
+                  height: '18px',
+                  lineHeight: '18px',
+                  zIndex: 1
+                }}>
+                  서명문구
+                </Typography>
+                
+                {/* 안내 메시지 */}
+                <Typography variant="body2" sx={{ 
+                  fontSize: '10px',
+                  color: '#999', 
+                  fontStyle: 'italic',
+                  textAlign: 'center'
+                }}>
+                  입력되지 않음
+                </Typography>
+              </>
+            )}
+            
+
           </Box>
         )}
       </Box>

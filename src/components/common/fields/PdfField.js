@@ -189,34 +189,27 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
   
   const [isEditing, setIsEditing] = useState(false);
   const [inputText, setInputText] = useState('');
+  const [hasInput, setHasInput] = useState(false); // 사용자 입력 여부 추적
   const inputRef = useRef(null);
   
+  // 디버깅을 위한 상태 체크
+  useEffect(() => {
+    console.log('ConfirmTextField 마운트/업데이트:', { 
+      id: field.id, 
+      confirmText: field.confirmText ? field.confirmText.substring(0, 20) + '...' : null,
+      isEditMode: field.isEditMode,
+      inputText: inputText ? inputText.substring(0, 20) + '...' : null,
+      hasInput
+    });
+  }, [field, inputText, hasInput]);
+  
+  // 필드 데이터에서 초기값 설정
   useEffect(() => {
     if (field?.confirmText) {
       setInputText(field.confirmText);
+      setHasInput(true);
     }
   }, [field]);
-
-  const handleInputChange = (e) => {
-    setInputText(e.target.value);
-  };
-
-  const handleInputComplete = () => {
-    console.log('handleInputComplete 호출됨:', { 
-      isEditing, 
-      fieldId: field?.id, 
-      isEditMode: field?.isEditMode,
-      inputText
-    });
-    
-    if (isEditing) {
-      if (field?.isEditMode && onInputSave) {
-        console.log('onInputSave 호출됨');
-        onInputSave(inputText);
-      }
-      setIsEditing(false);
-    }
-  };
   
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -225,15 +218,27 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
     }
   };
   
+  const handleInputChange = (e) => {
+    const newText = e.target.value;
+    setInputText(newText);
+    setHasInput(newText.trim() !== ''); // 입력 여부 업데이트
+  };
+  
+  const handleInputComplete = () => {
+    if (isEditing) {
+      if (field?.isEditMode && onInputSave) {
+        onInputSave(inputText);
+      }
+      setIsEditing(false);
+    }
+  };
+  
   const handleClick = (e) => {
     e.stopPropagation();
-    console.log('ConfirmTextField 클릭됨:', field?.id);
     
     if (isDragging) return;
     
-    // 직접 편집 모드일 때
     if (field?.isEditMode) {
-      console.log('직접 편집 모드로 전환');
       setIsEditing(true);
       setTimeout(() => {
         inputRef.current?.focus();
@@ -241,13 +246,12 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
       return;
     }
     
-    // 모달 열기 (관리자 모드가 아닐 때)
     if (onFieldClick) {
-      console.log('onFieldClick 호출됨');
       onFieldClick();
     }
   };
-
+  
+  // 필드 배경색과 테두리 스타일 설정
   const fieldBgStyle = field?.isEditMode 
     ? 'rgba(245, 124, 0, 0.05)'
     : 'rgba(245, 124, 0, 0.08)';
@@ -255,7 +259,8 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
   const borderStyle = field?.isEditMode 
     ? '1px dashed #f57c00'
     : '2px dashed #f57c00';
-    
+  
+  // 기본 레이아웃 구성
   return (
     <Box
       sx={{
@@ -292,6 +297,7 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
       }}
       onClick={handleClick}
     >
+      {/* 필드 내부 콘텐츠 */}
       <div style={{ 
         width: '100%', 
         height: '100%', 
@@ -303,7 +309,8 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
         alignItems: 'center',
         padding: '4px'
       }}>
-        {isEditing && field?.isEditMode ? (
+        {/* 편집 모드 입력 필드 */}
+        {isEditing && field?.isEditMode && (
           <MuiTextField
             inputRef={inputRef}
             variant="standard"
@@ -313,13 +320,13 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
             onChange={handleInputChange}
             onBlur={handleInputComplete}
             onKeyDown={handleKeyDown}
-            placeholder="이 영역에 따라써야 할 텍스트를 입력하세요"
+            placeholder="이 영역에 서명문구를 입력하세요"
             autoFocus
             InputProps={{
               disableUnderline: true,
               style: {
-                fontSize: '9px',
-                padding: '0px',
+                fontSize: '12px',
+                padding: '2px',
                 color: '#e65100',
                 fontWeight: 'normal',
                 textAlign: 'center',
@@ -337,10 +344,35 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
               }
             }}
           />
-        ) : (
+        )}
+        
+        {/* 서명문구 있고 편집 중이 아닐 때 - 입력한 텍스트만 표시 */}
+        {!isEditing && hasInput && (
+          <Typography variant="body2" sx={{ 
+            fontSize: '14px',
+            color: '#e65100', 
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 6,
+            WebkitBoxOrient: 'vertical',
+            textAlign: 'center',
+            width: '100%',
+            height: '100%',
+            py: 0.5,
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}>
+            {inputText}
+          </Typography>
+        )}
+        
+        {/* 서명문구 없거나 아직 입력 안 했을 때 - 헤더와 안내 메시지 표시 */}
+        {!isEditing && !hasInput && (
           <>
+            {/* 헤더 레이블 */}
             <Typography variant="caption" sx={{ 
-              fontSize: '10px', 
+              fontSize: '11px', 
               color: '#f57c00', 
               position: 'absolute', 
               top: 0, 
@@ -348,65 +380,49 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
               right: 0, 
               textAlign: 'center',
               fontWeight: 'bold',
-              backgroundColor: 'rgba(255, 255, 255, 0.7)',
-              py: 0.1
+              backgroundColor: 'rgba(255, 255, 255, 0.4)',
+              py: 0.2,
+              height: '18px',
+              lineHeight: '18px',
+              zIndex: 1
             }}>
-              {field?.isEditMode ? '따라쓰기 영역' : '따라쓰기'}
+              {field?.isEditMode ? '서명문구 영역' : '서명문구'}
             </Typography>
             
-            {field?.confirmText && (
-              <Typography variant="body2" sx={{ 
-                fontSize: '9px', 
-                color: '#e65100', 
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: field?.isEditMode ? 20 : 2,
-                WebkitBoxOrient: 'vertical',
-                textAlign: 'center',
-                width: '100%',
-                mt: field?.isEditMode ? 0.5 : 1,
-                mb: 0.5,
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}>
-                {field?.confirmText}
-              </Typography>
-            )}
-            
-            {(!field?.confirmText || field?.isEditMode) && (
-              <Typography variant="body2" sx={{ 
-                fontSize: '8px', 
-                color: '#999', 
-                fontStyle: 'italic',
-                textAlign: 'center',
-                position: 'absolute',
-                bottom: 2,
-                left: 0,
-                right: 0
-              }}>
-                {field?.isEditMode ? '클릭하여 원본 텍스트 입력' : '클릭하여 입력하세요'}
-              </Typography>
-            )}
-            
-            {!field?.isEditMode && field?.value && (
-              <Typography variant="body2" sx={{ 
-                fontSize: '8px', 
-                color: '#4CAF50', 
-                fontStyle: 'normal',
-                textAlign: 'center',
-                position: 'absolute',
-                bottom: 2,
-                left: 0,
-                right: 0
-              }}>
-                ✓ 입력 완료
-              </Typography>
-            )}
+            {/* 하단 안내 메시지 */}
+            <Typography variant="body2" sx={{ 
+              fontSize: '10px',
+              color: '#999', 
+              fontStyle: 'italic',
+              textAlign: 'center',
+              position: 'absolute',
+              bottom: 2,
+              left: 0,
+              right: 0
+            }}>
+              {field?.isEditMode ? '클릭하여 서명문구 입력' : '클릭하여 입력하세요'}
+            </Typography>
           </>
+        )}
+        
+        {/* 입력 완료 표시 */}
+        {!isEditing && !field?.isEditMode && field?.value && (
+          <Typography variant="body2" sx={{ 
+            fontSize: '10px',
+            color: '#4CAF50', 
+            fontStyle: 'normal',
+            textAlign: 'center',
+            position: 'absolute',
+            bottom: 2,
+            left: 0,
+            right: 0
+          }}>
+            ✓ 입력 완료
+          </Typography>
         )}
       </div>
       
+      {/* 삭제/리사이즈 버튼 */}
       {!isEditing && (
         <>
           <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>

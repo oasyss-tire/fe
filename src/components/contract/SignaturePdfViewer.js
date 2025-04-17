@@ -360,11 +360,6 @@ const SignaturePdfViewer = () => {
             {field.value}
           </Typography>
         )}
-        {!field.value && field.type === 'confirmText' && field.confirmText && (
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '8px', p: 1, textAlign: 'center' }}>
-            "{field.confirmText.substring(0, 15)}..." 입력 필요
-          </Typography>
-        )}
       </Box>
     );
   };
@@ -1571,7 +1566,7 @@ const SignaturePdfViewer = () => {
                         {confirmTextFields.length > 0 && (
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                             <Typography variant="body2" sx={{ color: '#666' }}>
-                              따라쓰기 필드
+                              서명 문구 필드
                             </Typography>
                             <Typography variant="body2" sx={{ 
                               color: emptyConfirmTextFields.length === 0 ? '#4CAF50' : '#FF9800'

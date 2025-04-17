@@ -659,7 +659,7 @@ const PdfViewerPage = () => {
             )}
             {selectedTool === 'confirmText' && (
               <Typography variant="caption" sx={{ fontSize: '8px', color: 'rgba(245, 124, 0, 0.8)', p: 1 }}>
-                따라쓰기 필드
+                서명문구 필드
               </Typography>
             )}
           </Box>

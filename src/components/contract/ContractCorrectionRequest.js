@@ -147,6 +147,12 @@ const ContractCorrectionRequest = () => {
 
   // 필드 선택 처리
   const handleFieldSelection = (fieldId) => {
+    // confirmText 타입 필드는 선택 불가
+    const field = fields.find(f => f.id === fieldId);
+    if (field && field.type === 'confirmText') {
+      return;
+    }
+    
     setSelectedFields(prev => {
       const newSelectedFields = prev.includes(fieldId)
         ? prev.filter(id => id !== fieldId)
@@ -364,6 +370,38 @@ const ContractCorrectionRequest = () => {
                 objectFit: 'contain' 
               }} 
             />
+          ) : field.type === 'confirmText' ? (
+            <Box sx={{ 
+              width: '100%', 
+              height: '100%', 
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              position: 'relative'
+            }}>
+              {field.value ? (
+                <Typography variant="body2" sx={{ 
+                  fontSize: '14px',
+                  color: '#e65100', 
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  textAlign: 'center',
+                  width: '100%',
+                  height: '100%',
+                  fontWeight: 'bold',
+                  padding: '2px 4px'
+                }}>
+                  {field.value}
+                </Typography>
+              ) : (
+                <Typography variant="body2">입력값 없음</Typography>
+              )}
+            </Box>
           ) : (
             field.value ? field.value : "입력값 없음"
           )}
@@ -563,6 +601,38 @@ const ContractCorrectionRequest = () => {
                             objectFit: 'contain' 
                           }} 
                         />
+                      ) : field.type === 'confirmText' ? (
+                        <Box sx={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px',
+                          position: 'relative'
+                        }}>
+                          {field.value ? (
+                            <Typography variant="body2" sx={{ 
+                              fontSize: '14px',
+                              color: '#e65100', 
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                              textAlign: 'center',
+                              width: '100%',
+                              height: '100%',
+                              fontWeight: 'bold',
+                              padding: '2px 4px'
+                            }}>
+                              {field.value}
+                            </Typography>
+                          ) : (
+                            <Typography variant="body2">입력값 없음</Typography>
+                          )}
+                        </Box>
                       ) : (
                         field.value ? field.value : "입력값 없음"
                       )}
@@ -702,10 +772,11 @@ const ContractCorrectionRequest = () => {
                           <Checkbox
                             checked={selectedFields.includes(field.id)}
                             onChange={() => handleFieldSelection(field.id)}
+                            disabled={field.type === 'confirmText'} 
                             sx={{ 
-                              color: '#3182F6',
+                              color: field.type === 'confirmText' ? '#9e9e9e' : '#3182F6',
                               '&.Mui-checked': {
-                                color: '#3182F6',
+                                color: field.type === 'confirmText' ? '#9e9e9e' : '#3182F6',
                               },
                             }}
                           />
@@ -736,6 +807,21 @@ const ContractCorrectionRequest = () => {
                                     }} 
                                   />
                                 </Box>
+                              ) : field.type === 'confirmText' ? (
+                                <Box sx={{ 
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-start',
+                                }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {field.value || "입력값 없음"}
+                                  </Typography>
+                                  {field.value && (
+                                    <Typography variant="caption" sx={{ color: '#4CAF50' }}>
+                                      ✓ 서명문구 인증 완료
+                                    </Typography>
+                                  )}
+                                </Box>
                               ) : (
                                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                   {field.value || "입력값 없음"}
@@ -745,7 +831,8 @@ const ContractCorrectionRequest = () => {
                             <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
                               {field.fieldName && field.fieldName.startsWith('signature') ? '서명 필드' : 
                                field.fieldName && field.fieldName.startsWith('text') ? '텍스트 필드' : 
-                               field.fieldName && field.fieldName.startsWith('checkbox') ? '체크박스 필드' : '필드'}
+                               field.fieldName && field.fieldName.startsWith('checkbox') ? '체크박스 필드' : 
+                               field.type === 'confirmText' ? '서명문구 필드 (재서명 요청 불가)' : '필드'}
                             </Typography>
                           </Box>
                         }

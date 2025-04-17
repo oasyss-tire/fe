@@ -12,6 +12,7 @@ import TextFieldsIcon from '@mui/icons-material/TextFields';
 import DrawIcon from '@mui/icons-material/Draw';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import ArticleIcon from '@mui/icons-material/Article';
 
 const PdfToolbar = ({ selectedTool, onToolChange }) => {
   const [tabValue, setTabValue] = React.useState(0); // 0: 관리자, 1: 서명자
@@ -112,8 +113,8 @@ const PdfToolbar = ({ selectedTool, onToolChange }) => {
               }
             }}  
           >
-            <FormatQuoteIcon sx={{ color: '#f57c00' }} />
-            <Typography>따라쓰기</Typography>
+            <FormatQuoteIcon />
+            <Typography>서명문구</Typography>
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
@@ -124,7 +125,7 @@ const PdfToolbar = ({ selectedTool, onToolChange }) => {
             {selectedTool === 'text' && '텍스트를 입력할 위치를 PDF 문서에서 클릭하세요.'}
             {selectedTool === 'signature' && '서명/도장을 넣을 위치를 PDF 문서에서 클릭하세요.'}
             {selectedTool === 'checkbox' && '체크박스를 넣을 위치를 PDF 문서에서 클릭하세요.'}
-            {selectedTool === 'confirmText' && '따라쓰기 필드를 넣을 위치를 PDF 문서에서 클릭하세요.'}
+            {selectedTool === 'confirmText' && '서명문구 필드를 넣을 위치를 PDF 문서에서 클릭하세요.'}
           </Typography>
         )}
       </Box>
