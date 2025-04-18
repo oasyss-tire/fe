@@ -85,11 +85,37 @@ const fieldStyles = {
   }
 };
 
-export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete }) => {
+export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete, onFieldClick }) => {
   if (!field) {
     console.error('TextField: field prop is undefined');
     return null;
   }
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    // 필드에 description이 있으면 설정
+    if (field.description) {
+      setInputText(field.description);
+    }
+  }, [field]);
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    
+    if (isDragging) return;
+    
+    if (onFieldClick) {
+      onFieldClick(field.id);
+    }
+  };
+
+  // 필드에 설명이 있는지 여부 확인
+  const hasDescription = field.description && field.description.trim() !== '';
+  // 필드에 형식이 있는지 여부 확인
+  const hasFormat = field.formatCodeId && field.formatCodeId.trim() !== '';
   
   return (
     <Box
@@ -100,7 +126,7 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
         width: `${field.width}px`,
         height: `${field.height}px`,
         transform: `scale(${scale || 1})`,
-        cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'grab',
+        cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'pointer',
         '& .delete-button': {
           ...fieldStyles.deleteButton
         },
@@ -109,8 +135,77 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
         }
       }}
       onMouseDown={(e) => onDragStart(e, field.id)}
+      onClick={handleClick}
     >
-      <span className="text-label" style={fieldStyles.label}>텍스트</span>
+      {/* 필드 내부 콘텐츠 */}
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '4px'
+      }}>
+        {/* 설명이 있는 경우 - 상단에 레이블로 표시 */}
+        {hasDescription && (
+          <>
+            {/* 헤더 레이블 */}
+            <Typography variant="caption" sx={{ 
+              fontSize: '11px', 
+              color: '#1976d2', 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              textAlign: 'center',
+              fontWeight: 'bold',
+              backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              py: 0.2,
+              height: '18px',
+              lineHeight: '18px',
+              zIndex: 1
+            }}>
+              {field.description}
+            </Typography>
+            
+          </>
+        )}
+        
+        {/* 형식이 있는 경우 - 하단에 형식 정보 표시 */}
+        {hasFormat && (
+          <Typography variant="caption" sx={{ 
+            fontSize: '9px', 
+            color: '#0277bd', 
+            position: 'absolute', 
+            bottom: 0, 
+            left: 0, 
+            right: 0, 
+            textAlign: 'center',
+            fontStyle: 'italic',
+            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            py: 0.1,
+            height: '14px',
+            lineHeight: '14px'
+          }}>
+            <span style={{ fontSize: '6px', marginRight: '3px' }}>⚙️</span>
+            {field.formatName || field.formatCodeId}
+          </Typography>
+        )}
+        
+        {/* 설명이 없는 경우 - 기본 텍스트 표시 */}
+        {!hasDescription && !hasFormat && (
+          <span className="text-label" style={fieldStyles.label}>텍스트</span>
+        )}
+        
+        {/* 설명이 없지만 형식은 있는 경우 */}
+        {!hasDescription && hasFormat && (
+          <span className="text-label" style={{...fieldStyles.label, marginBottom: '14px'}}>텍스트</span>
+        )}
+      </div>
+      
       <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>
       <div className="resize-handle" onMouseDown={(e) => onResizeStart(e, field.id)} style={fieldStyles.resizeHandle} />
     </Box>

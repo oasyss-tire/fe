@@ -14,6 +14,7 @@ import { TextField, SignatureField, CheckboxField, ConfirmTextField } from '../c
 import SaveTemplateModal from '../common/modals/SaveTemplateModal';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import ConfirmTextInputModal from '../common/fields/ConfirmTextInputModal';
+import TextDescriptionModal from '../common/fields/TextDescriptionModal';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -43,6 +44,8 @@ const PdfViewerPage = () => {
   const [saveTemplateModalOpen, setSaveTemplateModalOpen] = useState(false);
   const [activeConfirmFieldId, setActiveConfirmFieldId] = useState(null);
   const [confirmTextModalOpen, setConfirmTextModalOpen] = useState(false);
+  const [textDescriptionModalOpen, setTextDescriptionModalOpen] = useState(false);
+  const [activeTextFieldId, setActiveTextFieldId] = useState(null);
   
   // A4 크기 상수 추가
   const PAGE_WIDTH = 595.28;  // A4 너비 (pt)
@@ -236,6 +239,8 @@ const PdfViewerPage = () => {
 
     if (selectedTool === 'text') {
       setTextFields(prev => [...prev, newField]);
+      setActiveTextFieldId(newField.id);
+      setTextDescriptionModalOpen(true);
     } else if (selectedTool === 'signature') {
       setSignatureFields(prev => [...prev, newField]);
     } else if (selectedTool === 'checkbox') {
@@ -451,9 +456,17 @@ const PdfViewerPage = () => {
         relativeWidth: (field.width * scale) / pageWidth,
         relativeHeight: (field.height * scale) / pageHeight,
         page: field.page || 1,
+        value: field.value || '',
         // confirmText 필드 타입인 경우 confirmText 속성 추가
-        ...(field.type === 'confirmText' ? { confirmText: field.confirmText } : {})
+        ...(field.type === 'confirmText' ? { confirmText: field.confirmText } : {}),
+        // description 속성이 있으면 추가
+        ...(field.description ? { description: field.description } : {}),
+        // formatCodeId 속성이 있으면 추가
+        ...(field.formatCodeId ? { formatCodeId: field.formatCodeId } : {})
       }));
+
+      // 디버깅용 로그
+      console.log('저장할 필드 목록:', allFields);
 
       await saveFields(allFields);
       setSaveTemplateModalOpen(true);
@@ -552,6 +565,63 @@ const PdfViewerPage = () => {
         return field;
       })
     );
+  };
+
+  // 텍스트 필드 클릭 처리 함수 추가
+  const handleTextFieldClick = (fieldId) => {
+    console.log('텍스트 필드 클릭됨:', fieldId);
+    setActiveTextFieldId(fieldId);
+    setTextDescriptionModalOpen(true);
+  };
+
+  // 텍스트 필드 설명 저장 함수 수정
+  const handleTextDescriptionSave = (description, formatCodeId) => {
+    console.log('텍스트 필드 설명 저장:', activeTextFieldId, description, formatCodeId);
+    
+    // 형식 이름을 가져오기 위한 API 호출
+    const fetchFormatName = async (codeId) => {
+      if (!codeId) return null;
+      
+      try {
+        // 이미 선택한 형식 옵션 목록에서 해당 코드ID의 이름을 찾기
+        const response = await fetch('http://localhost:8080/api/codes/field-formats');
+        if (!response.ok) return null;
+        
+        const formats = await response.json();
+        const format = formats.find(f => f.codeId === codeId);
+        return format ? format.codeName : null;
+      } catch (error) {
+        console.error('형식 이름 조회 중 오류:', error);
+        return null;
+      }
+    };
+    
+    // 텍스트 필드 업데이트
+    const updateTextField = async () => {
+      // 형식 ID가 있는 경우 형식 이름 조회
+      let formatName = null;
+      if (formatCodeId) {
+        formatName = await fetchFormatName(formatCodeId);
+      }
+      
+      setTextFields(prev => 
+        prev.map(field => {
+          if (field.id === activeTextFieldId) {
+            return { 
+              ...field, 
+              description,
+              formatCodeId,
+              formatName
+            };
+          }
+          return field;
+        })
+      );
+    };
+    
+    updateTextField();
+    setTextDescriptionModalOpen(false);
+    setActiveTextFieldId(null);
   };
 
   if (!pdfFile) {
@@ -709,6 +779,7 @@ const PdfViewerPage = () => {
                     onDragStart={(e) => handleDragStart(e, field.id)}
                     onResizeStart={(e) => handleResizeStart(e, field.id)}
                     onDelete={(e) => handleDeleteField(e, field.id)}
+                    onFieldClick={handleTextFieldClick}
                   />
                 ))}
 
@@ -832,6 +903,17 @@ const PdfViewerPage = () => {
           }
         }}
         field={confirmTextFields.find(field => field.id === activeConfirmFieldId)}
+      />
+      
+      {/* 텍스트 필드 설명 입력 모달 */}
+      <TextDescriptionModal
+        open={textDescriptionModalOpen}
+        onClose={() => {
+          setTextDescriptionModalOpen(false);
+          setActiveTextFieldId(null);
+        }}
+        onSave={handleTextDescriptionSave}
+        field={textFields.find(field => field.id === activeTextFieldId)}
       />
     </Box>
   );

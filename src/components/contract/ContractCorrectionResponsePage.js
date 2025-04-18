@@ -300,10 +300,83 @@ const ContractCorrectionResponsePage = () => {
     
     console.log(`필드 값 변경: ID=${fieldId}, 타입=${isCheckboxField ? '체크박스' : '일반'}, 값=${JSON.stringify(value)}`);
     
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
+    // 텍스트 필드인 경우 formatCodeId에 따라 포맷팅 적용
+    if (!isCheckboxField && field) {
+      const formattedValue = formatInputValue(value, field.formatCodeId);
+      
+      setFieldValues(prev => ({
+        ...prev,
+        [fieldId]: formattedValue
+      }));
+    } else {
+      // 체크박스나 서명 필드는 그대로 값 저장
+      setFieldValues(prev => ({
+        ...prev,
+        [fieldId]: value
+      }));
+    }
+  };
+  
+  // 입력 형식에 따른 포맷팅 함수 추가
+  const formatInputValue = (value, formatCodeId) => {
+    if (!formatCodeId || !value) return value;
+    
+    // 숫자만 추출
+    const numbersOnly = value.replace(/\D/g, '');
+    
+    // 핸드폰 번호 포맷 (010-1234-5678)
+    if (formatCodeId === '001004_0001') {
+      if (numbersOnly.length <= 3) {
+        return numbersOnly;
+      } else if (numbersOnly.length <= 7) {
+        return `${numbersOnly.slice(0, 3)}-${numbersOnly.slice(3)}`;
+      } else {
+        return `${numbersOnly.slice(0, 3)}-${numbersOnly.slice(3, 7)}-${numbersOnly.slice(7, 11)}`;
+      }
+    }
+    
+    // 주민등록번호 포맷 (123456-1234567)
+    if (formatCodeId === '001004_0002') {
+      if (numbersOnly.length <= 6) {
+        return numbersOnly;
+      } else {
+        return `${numbersOnly.slice(0, 6)}-${numbersOnly.slice(6, 13)}`;
+      }
+    }
+    
+    // 금액 형식 (1,000,000)
+    if (formatCodeId === '001004_0003') {
+      // 숫자가 없으면 빈 문자열 반환
+      if (numbersOnly.length === 0) return '';
+      
+      // 1000단위로 콤마 추가
+      return Number(numbersOnly).toLocaleString('ko-KR');
+    }
+    
+    // 다른 형식 코드에 대한 처리가 없으면 원래 값 반환
+    return value;
+  };
+  
+  // 형식에 따른 입력 길이 제한
+  const getMaxLength = (formatCodeId) => {
+    if (formatCodeId === '001004_0001') return 13; // 010-1234-5678
+    if (formatCodeId === '001004_0002') return 14; // 123456-1234567
+    if (formatCodeId === '001004_0003') return 20; // 최대 19자리 숫자 + 콤마
+    return undefined; // 제한 없음
+  };
+  
+  // 형식 안내 메시지
+  const getFormatGuideText = (formatCodeId) => {
+    if (formatCodeId === '001004_0001') {
+      return '핸드폰 번호 형식 (예: 010-1234-5678)';
+    }
+    if (formatCodeId === '001004_0002') {
+      return '주민등록번호 형식 (예: 123456-1234567)';
+    }
+    if (formatCodeId === '001004_0003') {
+      return '금액 형식 (예: 1,000,000)';
+    }
+    return null;
   };
   
   // 서명 모드 시작
@@ -886,6 +959,9 @@ const ContractCorrectionResponsePage = () => {
                                     height: '100%'
                                   }
                                 }}
+                                inputProps={{
+                                  maxLength: getMaxLength(field.formatCodeId)
+                                }}
                                 sx={{
                                   height: '100%',
                                   '& input': {
@@ -1099,14 +1175,25 @@ const ContractCorrectionResponsePage = () => {
                             />
                           </Box>
                         ) : (
-                          <TextField
-                            value={fieldValues[field.id] || ''}
-                            onChange={(e) => handleFieldValueChange(field.id, e.target.value)}
-                            fullWidth
-                            size="small"
-                            placeholder="값을 입력하세요"
-                            sx={{ mb: 1 }}
-                          />
+                          <>
+                            <TextField
+                              value={fieldValues[field.id] || ''}
+                              onChange={(e) => handleFieldValueChange(field.id, e.target.value)}
+                              fullWidth
+                              size="small"
+                              placeholder="값을 입력하세요"
+                              inputProps={{
+                                maxLength: getMaxLength(field.formatCodeId)
+                              }}
+                              sx={{ mb: 1 }}
+                            />
+                            {field.formatCodeId && getFormatGuideText(field.formatCodeId) && (
+                              <Typography variant="caption" sx={{ display: 'block', mb: 1, color: '#0277bd', fontSize: '0.75rem' }}>
+                                <span style={{ fontSize: '0.7rem', marginRight: '4px' }}>ℹ️</span>
+                                {getFormatGuideText(field.formatCodeId)}
+                              </Typography>
+                            )}
+                          </>
                         )}
                         
                         {hasValue && (

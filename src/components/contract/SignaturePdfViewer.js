@@ -2137,6 +2137,7 @@ const SignaturePdfViewer = () => {
           setSelectedField(null);
         }}
         initialValue={selectedField?.value || ''}
+        field={selectedField}
       />
 
       {/* 확인 텍스트 모달 추가 */}

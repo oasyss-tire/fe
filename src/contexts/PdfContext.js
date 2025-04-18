@@ -23,7 +23,9 @@ export const PdfProvider = ({ children }) => {
           relativeHeight: field.relativeHeight,
           page: field.page,
           value: field.value,
-          confirmText: field.confirmText
+          confirmText: field.confirmText,
+          description: field.description,
+          formatCodeId: field.formatCodeId
         }))
       };
 
