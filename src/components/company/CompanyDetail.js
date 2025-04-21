@@ -90,9 +90,12 @@ const CompanyDetail = () => {
         active: data.active,
         startDate: data.startDate || null,
         endDate: data.endDate || null,
+        insuranceStartDate: data.insuranceStartDate || null,
+        insuranceEndDate: data.insuranceEndDate || null,
         managerName: data.managerName || '',
         email: data.email || '',
         phoneNumber: data.phoneNumber || '',
+        storeTelNumber: data.storeTelNumber || '',
         address: data.address || '',
         businessType: data.businessType || '',
         businessCategory: data.businessCategory || ''
@@ -140,26 +143,70 @@ const CompanyDetail = () => {
     }
     
     // 전화번호 자동 하이픈 추가
-    if (name === 'phoneNumber') {
+    if (name === 'phoneNumber' || name === 'storeTelNumber') {
       // 숫자만 추출
       const numbers = value.replace(/[^0-9]/g, '');
       
-      // 11자리 이하로 제한
-      if (numbers.length <= 11) {
-        // 하이픈 추가 (3-4-4 형식)
-        let formattedValue = '';
-        if (numbers.length <= 3) {
-          formattedValue = numbers;
-        } else if (numbers.length <= 7) {
-          formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3)}`;
-        } else {
-          formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3, 7)}-${numbers.substring(7)}`;
+      if (name === 'phoneNumber') {
+        // 11자리 이하로 제한
+        if (numbers.length <= 11) {
+          // 하이픈 추가 (3-4-4 형식)
+          let formattedValue = '';
+          if (numbers.length <= 3) {
+            formattedValue = numbers;
+          } else if (numbers.length <= 7) {
+            formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3)}`;
+          } else {
+            formattedValue = `${numbers.substring(0, 3)}-${numbers.substring(3, 7)}-${numbers.substring(7)}`;
+          }
+          
+          setFormData(prev => ({
+            ...prev,
+            [name]: formattedValue
+          }));
         }
-        
-        setFormData(prev => ({
-          ...prev,
-          [name]: formattedValue
-        }));
+      } else if (name === 'storeTelNumber') {
+        // 매장 전화번호 포맷팅 (다양한 지역번호 형식 지원)
+        if (numbers.length <= 11) {
+          let formattedValue = '';
+          
+          // 지역번호 형식에 따라 다르게 처리
+          if (numbers.length <= 2) {
+            formattedValue = numbers;
+          } else if (numbers.length === 10) { // 02-XXXX-XXXX (서울)
+            if (numbers.startsWith('02')) {
+              formattedValue = `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(6, 10)}`;
+            } else { // XXXX-XXX-XXXX (일반적인 경우)
+              formattedValue = `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6, 10)}`;
+            }
+          } else if (numbers.length === 11) { // XXX-XXXX-XXXX
+            formattedValue = `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+          } else if (numbers.length >= 8 && numbers.length <= 9) { // XX-XXX-XXXX 또는 XXX-XXX-XXX
+            if (numbers.startsWith('02')) { // 서울 지역번호
+              formattedValue = `${numbers.slice(0, 2)}-${numbers.slice(2, 5)}-${numbers.slice(5)}`;
+            } else { // 나머지 지역번호
+              formattedValue = `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+            }
+          } else {
+            // 기타 형식은 일정 단위로 끊어서 표시
+            if (numbers.length <= 4) {
+              formattedValue = numbers;
+            } else if (numbers.length <= 8) {
+              formattedValue = `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
+            } else {
+              // 첫 번째 부분을 지역번호로 가정하고 나머지를 적절히 분배
+              const areaCodeLength = numbers.startsWith('02') ? 2 : 3;
+              const middleLength = Math.min(4, Math.floor((numbers.length - areaCodeLength) / 2));
+              
+              formattedValue = `${numbers.slice(0, areaCodeLength)}-${numbers.slice(areaCodeLength, areaCodeLength + middleLength)}-${numbers.slice(areaCodeLength + middleLength)}`;
+            }
+          }
+
+          setFormData(prev => ({
+            ...prev,
+            [name]: formattedValue
+          }));
+        }
       }
       return;
     }
@@ -210,6 +257,12 @@ const CompanyDetail = () => {
     
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = '이메일 형식이 올바르지 않습니다.';
+    }
+    
+    // 보험 기간 유효성 검사 - 시작일이 종료일보다 이후인 경우
+    if (formData.insuranceStartDate && formData.insuranceEndDate &&
+        new Date(formData.insuranceStartDate) > new Date(formData.insuranceEndDate)) {
+      errors.insuranceEndDate = '보증증권 종료일은 시작일 이후로 설정해주세요.';
     }
     
     setFormErrors(errors);
@@ -327,7 +380,9 @@ const CompanyDetail = () => {
       const formattedData = {
         ...formData,
         startDate: formData.startDate ? new Date(formData.startDate).toISOString().split('T')[0] : null,
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString().split('T')[0] : null
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString().split('T')[0] : null,
+        insuranceStartDate: formData.insuranceStartDate ? new Date(formData.insuranceStartDate).toISOString().split('T')[0] : null,
+        insuranceEndDate: formData.insuranceEndDate ? new Date(formData.insuranceEndDate).toISOString().split('T')[0] : null
       };
       
       // 이미지 파일이 있는지 확인
@@ -434,9 +489,12 @@ const CompanyDetail = () => {
         active: company.active,
         startDate: company.startDate || null,
         endDate: company.endDate || null,
+        insuranceStartDate: company.insuranceStartDate || null,
+        insuranceEndDate: company.insuranceEndDate || null,
         managerName: company.managerName || '',
         email: company.email || '',
         phoneNumber: company.phoneNumber || '',
+        storeTelNumber: company.storeTelNumber || '',
         address: company.address || '',
         businessType: company.businessType || '',
         businessCategory: company.businessCategory || ''
@@ -802,6 +860,50 @@ const CompanyDetail = () => {
                     </>
                   )}
                 </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <DatePicker
+                      label="하자보증증권 보험시작일자"
+                      value={formData.insuranceStartDate ? new Date(formData.insuranceStartDate) : null}
+                      onChange={(date) => handleDateChange('insuranceStartDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small",
+                          error: !!formErrors.insuranceStartDate,
+                          helperText: formErrors.insuranceStartDate
+                        }
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">보험시작일자</Typography>
+                      <Typography variant="body1">{company?.insuranceStartDate || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <DatePicker
+                      label="하자보증증권 보험종료일자"
+                      value={formData.insuranceEndDate ? new Date(formData.insuranceEndDate) : null}
+                      onChange={(date) => handleDateChange('insuranceEndDate', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small",
+                          error: !!formErrors.insuranceEndDate,
+                          helperText: formErrors.insuranceEndDate
+                        }
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">보험종료일자</Typography>
+                      <Typography variant="body1">{company?.insuranceEndDate || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
                 {isEditing && (
                   <Grid item xs={12} md={4}>
                     <FormControl fullWidth size="small">
@@ -889,6 +991,27 @@ const CompanyDetail = () => {
                     <>
                       <Typography variant="body2" color="text.secondary">전화번호</Typography>
                       <Typography variant="body1">{company?.phoneNumber || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <TextField
+                      label="매장 전화번호"
+                      name="storeTelNumber"
+                      value={formData.storeTelNumber}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                      placeholder="02-1234-5678"
+                      inputProps={{
+                        maxLength: 13
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">매장 전화번호</Typography>
+                      <Typography variant="body1">{company?.storeTelNumber || '-'}</Typography>
                     </>
                   )}
                 </Grid>

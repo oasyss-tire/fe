@@ -55,14 +55,46 @@ const ContractList = () => {
   // 계약 목록 조회
   const fetchContracts = async () => {
     try {
+      setLoading(true);
       const response = await fetch('http://localhost:8080/api/contracts');
       if (!response.ok) throw new Error('계약 목록 조회 실패');
       const data = await response.json();
-      console.log('Fetched contracts:', data); // 데이터 로그 확인
-      setContracts(data);
-      setFilteredContracts(data); // 초기 필터링 결과는 전체 목록
+      console.log('Fetched contracts:', data);
+      
+      // 계약 데이터에 회사 정보 추가
+      const contractsWithCompanyDetails = await Promise.all(data.map(async (contract) => {
+        // 위수탁 업체 정보가 있는 경우만 추가 정보 조회
+        if (contract.companyId) {
+          try {
+            const companyResponse = await fetch(`http://localhost:8080/api/companies/${contract.companyId}`);
+            if (companyResponse.ok) {
+              const companyData = await companyResponse.json();
+              return {
+                ...contract,
+                storeTelNumber: companyData.storeTelNumber || '-',
+                insuranceStartDate: companyData.insuranceStartDate ? formatDate(companyData.insuranceStartDate, true) : '-',
+                insuranceEndDate: companyData.insuranceEndDate ? formatDate(companyData.insuranceEndDate, true) : '-'
+              };
+            }
+          } catch (error) {
+            console.error(`회사 정보 조회 중 오류 (ID: ${contract.companyId}):`, error);
+          }
+        }
+        // 조회 실패 시 빈 값으로 설정
+        return {
+          ...contract,
+          storeTelNumber: '-',
+          insuranceStartDate: '-',
+          insuranceEndDate: '-'
+        };
+      }));
+      
+      setContracts(contractsWithCompanyDetails);
+      setFilteredContracts(contractsWithCompanyDetails);
     } catch (error) {
       console.error('계약 목록 조회 중 오류:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -215,10 +247,24 @@ const ContractList = () => {
   };
 
   // 날짜 포맷 함수
-  const formatDate = (dateString) => {
+  const formatDate = (dateString, dateOnly = false) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return `${date.getFullYear()-2000}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      
+      // 날짜만 표시 (YYYY-MM-DD)
+      if (dateOnly) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      }
+      
+      // 날짜와 시간 모두 표시 (YY-MM-DD HH:MM)
+      return `${date.getFullYear()-2000}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    } catch (error) {
+      console.error('날짜 포맷 오류:', error, dateString);
+      return '';
+    }
   };
 
   // 계약 상세 페이지로 이동
@@ -332,7 +378,7 @@ const ContractList = () => {
             검색어
           </Typography>
           <TextField
-            placeholder="계약번호, 계약 제목 또는 위수탁 업체명"
+            placeholder="계약번호, 계약 제목 또는 수탁사업체명"
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -421,7 +467,7 @@ const ContractList = () => {
         {/* 구분 필터 */}
         <Box>
           <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-            위수탁 업체명
+            수탁 사업자명
           </Typography>
           <FormControl 
             size="small" 
@@ -505,7 +551,7 @@ const ContractList = () => {
         {/* 목록 헤더 */}
         <Box sx={{ 
           display: 'grid',
-          gridTemplateColumns: '200px 1.5fr 140px 160px 120px 50px',
+          gridTemplateColumns: '180px 1.3fr 120px 150px 150px 150px 150px 50px',
           p: 2,
           borderBottom: '1px solid #EEEEEE',
           backgroundColor: '#F8F9FA'
@@ -513,8 +559,10 @@ const ContractList = () => {
           <Typography variant="subtitle2" sx={{ color: '#666' }}>계약번호</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>계약명</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>계약상태</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>위수탁 업체명</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#666' }}>작성일</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>수탁사업자명</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>매장 전화번호</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>보험시작일</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#666' }}>보험종료일</Typography>
           <Typography variant="subtitle2" sx={{ color: '#666' }}>관리</Typography>
         </Box>
 
@@ -530,7 +578,7 @@ const ContractList = () => {
               key={contract.id}
               sx={{ 
                 display: 'grid',
-                gridTemplateColumns: '200px 1.5fr 140px 160px 120px 50px',
+                gridTemplateColumns: '180px 1.3fr 120px 150px 150px 150px 150px 50px',
                 p: 2,
                 borderBottom: '1px solid #EEEEEE',
                 '&:hover': { backgroundColor: '#F8F9FA' }
@@ -553,7 +601,7 @@ const ContractList = () => {
                 >
                   <Typography className="contract-title">{contract.title}</Typography>
                   <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5 }}>
-                    {contract.participants.map(p => p.name).join(', ')}
+                    {contract.participants?.map(p => p.name).join(', ')}
                   </Typography>
                 </Box>
               </Box>
@@ -564,7 +612,13 @@ const ContractList = () => {
                 {contract.companyName || '-'}
               </Typography>
               <Typography sx={{ display: 'flex', alignItems: 'center' }}>
-                {formatDate(contract.createdAt)}
+                {contract.storeTelNumber || '-'}
+              </Typography>
+              <Typography sx={{ display: 'flex', alignItems: 'center' }}>
+                {contract.insuranceStartDate || '-'}
+              </Typography>
+              <Typography sx={{ display: 'flex', alignItems: 'center' }}>
+                {contract.insuranceEndDate || '-'}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <IconButton size="small" onClick={(e) => handleMenuClick(e, contract.id)}>

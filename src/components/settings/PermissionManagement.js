@@ -35,173 +35,246 @@ const PermissionManagement = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [selectedRole, setSelectedRole] = useState('USER');
+  const [roles, setRoles] = useState([]);
+  const [allMenus, setAllMenus] = useState([]);
+  const [menuCategories, setMenuCategories] = useState([]);
 
-  // 메뉴 카테고리와 항목들
-  const menuCategories = [
-    {
-      id: 'contract',
-      name: '계약',
-      items: [
-        { id: 'home', name: '홈' },
-        { id: 'contract_management', name: '계약 관리' },
-        { id: 'contract_template', name: '계약서 템플릿' },
-        { id: 'contract_upload', name: '계약서 등록' },
-        { id: 'contract_create', name: '계약 생성' },
-      ]
-    },
-    {
-      id: 'facility',
-      name: '시설물',
-      items: [
-        { id: 'facility_list', name: '시설물 리스트' },
-        { id: 'facility_register', name: '시설물 등록' },
-        { id: 'facility_service', name: 'A/S 관리' },
-        { id: 'facility_dashboard', name: '시설물 대시보드' },
-      ]
-    },
-    {
-      id: 'community',
-      name: '커뮤니티',
-      items: [
-        { id: 'board', name: '게시판' },
-        { id: 'notice', name: '공지사항' },
-        { id: 'file', name: '자료실' },
-        { id: 'chat', name: '채팅' },
-      ]
-    },
-    {
-      id: 'admin',
-      name: '관리',
-      items: [
-        { id: 'company', name: '위수탁 업체 관리' },
-        { id: 'user', name: '사용자 관리' },
-        { id: 'settings', name: '설정' },
-      ]
-    }
-  ];
-
-  // 역할 리스트
-  const roles = [
-    { id: 'ADMIN', name: '관리자' },
-    { id: 'MANAGER', name: '위수탁업체 담당자' },
-    { id: 'USER', name: '위수탁업체 사용자' }
-  ];
-
-  // 권한 초기화 - 서버에서 데이터를 받아오기 전까지의 기본값
-  const defaultPermissions = {
-    ADMIN: {
-      contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } },
-      facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_dashboard: true } },
-      community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
-      admin: { all: true, items: { company: true, user: true, settings: true } }
-    },
-    MANAGER: {
-      contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } },
-      facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_dashboard: true } },
-      community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
-      admin: { all: false, items: { company: false, user: false, settings: false } }
-    },
-    USER: {
-      contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } }, 
-      facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_dashboard: true } },
-      community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
-      admin: { all: false, items: { company: false, user: false, settings: false } }
-    }
-  };
-
-  // 서버에서 권한 데이터 가져오기
-  const fetchPermissions = async () => {
+  // 서버에서 모든 메뉴 목록 가져오기
+  const fetchAllMenus = async () => {
     setLoading(true);
     try {
-      // 실제 API 호출
-      // const response = await fetch('http://localhost:8080/api/permissions');
-      // if (!response.ok) {
-      //   throw new Error('권한 데이터를 불러오는데 실패했습니다.');
-      // }
-      // const data = await response.json();
-      // setPermissions(data);
+      const response = await fetch('http://localhost:8080/api/menu-permissions/all-menus', {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
 
-      // API가 아직 없으므로 기본값 사용
-      setPermissions(defaultPermissions);
+      if (!response.ok) {
+        throw new Error('메뉴 목록을 불러오는데 실패했습니다.');
+      }
+
+      const menus = await response.json();
+      setAllMenus(menus);
+
+      // 메뉴 카테고리별로 그룹화
+      const categories = {};
+      menus.forEach(menu => {
+        if (!categories[menu.category]) {
+          categories[menu.category] = {
+            id: menu.category.toLowerCase().replace(/\s+/g, '_'),
+            name: menu.category,
+            items: []
+          };
+        }
+        
+        categories[menu.category].items.push({
+          id: menu.id,
+          name: menu.name,
+          path: menu.path,
+          icon: menu.icon
+        });
+      });
+
+      // 정렬된 카테고리 배열로 변환
+      const categoriesArray = Object.values(categories).sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
+      
+      // 원하는 카테고리 순서로 재정렬
+      const categoryOrder = {
+        '계약 메뉴': 1,
+        '시설물 메뉴': 2,
+        '커뮤니티 메뉴': 3,
+        '관리 메뉴': 4
+      };
+      
+      // 순서에 따라 재정렬
+      categoriesArray.sort((a, b) => {
+        const orderA = categoryOrder[a.name] || 999;
+        const orderB = categoryOrder[b.name] || 999;
+        return orderA - orderB;
+      });
+      
+      setMenuCategories(categoriesArray);
       setError(null);
     } catch (err) {
-      console.error('Error fetching permissions:', err);
-      setError('권한 데이터를 불러오는데 문제가 발생했습니다.');
-      setPermissions(defaultPermissions); // 에러 시 기본값 사용
+      console.error('Error fetching menus:', err);
+      setError('메뉴 목록을 불러오는데 문제가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 서버에 권한 데이터 저장하기
-  const savePermissions = async () => {
+  // 서버에서 역할 목록 가져오기
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/menu-permissions/roles', {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('역할 목록을 불러오는데 실패했습니다.');
+      }
+
+      const rolesList = await response.json();
+      setRoles(rolesList.map(role => ({ 
+        id: role, 
+        name: getRoleName(role)
+      })));
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+      setError('역할 목록을 불러오는데 문제가 발생했습니다.');
+    }
+  };
+
+  // 역할명 반환 함수
+  const getRoleName = (roleId) => {
+    switch (roleId) {
+      case 'ADMIN': return '관리자';
+      case 'MANAGER': return '위수탁업체 담당자';
+      case 'USER': return '위수탁업체 사용자';
+      default: return roleId;
+    }
+  };
+
+  // 특정 역할의 메뉴 권한 가져오기
+  const fetchRolePermissions = async (roleId) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/menu-permissions/role/${roleId}`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`${getRoleName(roleId)} 역할의 권한을 불러오는데 실패했습니다.`);
+      }
+
+      const data = await response.json();
+      setPermissions(data);
+      setError(null);
+    } catch (err) {
+      console.error(`Error fetching permissions for role ${roleId}:`, err);
+      setError(`${getRoleName(roleId)} 역할의 권한을 불러오는데 문제가 발생했습니다.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 역할의 메뉴 권한 저장하기
+  const saveRolePermissions = async () => {
     setSaving(true);
     try {
-      // 실제 API 호출
-      // const response = await fetch('http://localhost:8080/api/permissions', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(permissions)
-      // });
+      const response = await fetch(`http://localhost:8080/api/menu-permissions/role/${selectedRole}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify(permissions)
+      });
       
-      // if (!response.ok) {
-      //   throw new Error('권한 설정을 저장하는데 실패했습니다.');
-      // }
+      if (!response.ok) {
+        throw new Error('권한 설정을 저장하는데 실패했습니다.');
+      }
       
-      // 현재는 API가 없으므로 저장 성공 메시지만 표시
-      setSuccess('권한 설정이 저장되었습니다.');
+      const result = await response.json();
+      setSuccess('권한 설정이 성공적으로 저장되었습니다.');
       setError(null);
       
-      // 3초 후 성공 메시지 숨기기
-      setTimeout(() => {
-        setSuccess(null);
-      }, 3000);
+      // alert 알림으로 변경
+      alert('권한 설정이 성공적으로 저장되었습니다.');
     } catch (err) {
       console.error('Error saving permissions:', err);
       setError('권한 설정을 저장하는데 문제가 발생했습니다.');
+      alert('권한 설정을 저장하는데 문제가 발생했습니다.');
     } finally {
       setSaving(false);
     }
   };
 
-  // 권한 모두 선택/해제 핸들러
-  const handleToggleAll = (category) => {
+  // 특정 카테고리의 모든 메뉴 권한 한번에 변경
+  const handleToggleCategory = (category) => {
+    if (!permissions) return;
+    
+    const categoryMenus = allMenus.filter(menu => menu.category === category.name);
+    const categoryMenuIds = categoryMenus.map(menu => menu.id);
+    
+    // 현재 카테고리 내 메뉴들의 권한 상태 확인
+    const allChecked = categoryMenuIds.every(menuId => permissions[menuId] === true);
+    
+    // 반대 상태로 모두 변경
+    const newValue = !allChecked;
     const updatedPermissions = { ...permissions };
-    const currentValue = !updatedPermissions[selectedRole][category].all;
     
-    updatedPermissions[selectedRole][category].all = currentValue;
-    
-    // 하위 항목들도 모두 같은 값으로 변경
-    Object.keys(updatedPermissions[selectedRole][category].items).forEach(item => {
-      updatedPermissions[selectedRole][category].items[item] = currentValue;
+    categoryMenuIds.forEach(menuId => {
+      updatedPermissions[menuId] = newValue;
     });
     
     setPermissions(updatedPermissions);
   };
 
-  // 개별 권한 선택/해제 핸들러
-  const handleToggleItem = (category, item) => {
-    const updatedPermissions = { ...permissions };
-    updatedPermissions[selectedRole][category].items[item] = !updatedPermissions[selectedRole][category].items[item];
+  // 개별 메뉴 권한 변경
+  const handleToggleMenu = (menuId) => {
+    if (!permissions) return;
     
-    // 모든 항목이 선택되었는지 확인하여 'all' 값 업데이트
-    const allChecked = Object.values(updatedPermissions[selectedRole][category].items).every(v => v === true);
-    updatedPermissions[selectedRole][category].all = allChecked;
+    const updatedPermissions = { ...permissions };
+    updatedPermissions[menuId] = !updatedPermissions[menuId];
     
     setPermissions(updatedPermissions);
   };
 
   // 역할 변경 핸들러
   const handleRoleChange = (event) => {
-    setSelectedRole(event.target.value);
+    const newRole = event.target.value;
+    setSelectedRole(newRole);
+    fetchRolePermissions(newRole);
   };
 
-  // 컴포넌트 마운트 시 권한 데이터 가져오기
+  // 코드 ID에서 카테고리 추출 (예: 008001001_0001 -> 계약)
+  const getCategoryFromMenuId = (menuId) => {
+    const prefix = menuId.split('_')[0];
+    if (prefix.startsWith('008001001')) return '계약';
+    if (prefix.startsWith('008001002')) return '시설물';
+    if (prefix.startsWith('008001003')) return '관리';
+    if (prefix.startsWith('008001004')) return '커뮤니티';
+    return '기타';
+  };
+
+  // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
-    fetchPermissions();
+    const loadInitialData = async () => {
+      await fetchRoles();
+      await fetchAllMenus();
+      // 초기 선택된 역할의 권한 정보 로드
+      if (selectedRole) {
+        await fetchRolePermissions(selectedRole);
+      }
+    };
+
+    loadInitialData();
   }, []);
+
+  // 카테고리 내 모든 메뉴가 선택되었는지 확인
+  const isCategoryFullyChecked = (category) => {
+    if (!permissions || !allMenus) return false;
+    
+    const categoryMenus = allMenus.filter(menu => menu.category === category.name);
+    return categoryMenus.every(menu => permissions[menu.id] === true);
+  };
+
+  // 카테고리 내 일부 메뉴가 선택되었는지 확인
+  const isCategoryPartiallyChecked = (category) => {
+    if (!permissions || !allMenus) return false;
+    
+    const categoryMenus = allMenus.filter(menu => menu.category === category.name);
+    const checkedCount = categoryMenus.filter(menu => permissions[menu.id] === true).length;
+    
+    return checkedCount > 0 && checkedCount < categoryMenus.length;
+  };
 
   return (
     <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
@@ -234,6 +307,7 @@ const PermissionManagement = () => {
             value={selectedRole}
             label="역할"
             onChange={handleRoleChange}
+            disabled={loading || saving}
           >
             {roles.map((role) => (
               <MenuItem key={role.id} value={role.id}>
@@ -257,101 +331,128 @@ const PermissionManagement = () => {
         </Alert>
       )}
 
-      {/* 권한 테이블 */}
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <>
-          <TableContainer component={Paper} sx={{ 
-            borderRadius: 2,
-            boxShadow: 'none',
-            border: '1px solid #EEEEEE',
-            mb: 2
-          }}>
+      {/* 관리자 권한 안내 메시지 */}
+      {selectedRole === 'ADMIN' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          관리자 권한은 모든 메뉴에 접근 가능하며, 권한을 수정할 수 없습니다.
+        </Alert>
+      )}
+
+      {/* 권한 설정 테이블 */}
+      <Paper sx={{ 
+        borderRadius: 2,
+        boxShadow: 'none',
+        border: '1px solid #EEEEEE',
+        overflow: 'hidden'
+      }}>
+        {loading ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <CircularProgress size={40} />
+            <Typography variant="body2" sx={{ mt: 2, color: '#666' }}>
+              권한 정보를 불러오는 중...
+            </Typography>
+          </Box>
+        ) : (
+          <TableContainer>
             <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#F8F8FE' }}>
-                  <TableCell width="20%">메뉴 카테고리</TableCell>
-                  <TableCell width="20%">전체 선택</TableCell>
-                  <TableCell>메뉴 항목</TableCell>
+              <TableHead sx={{ bgcolor: '#F8F9FA' }}>
+                <TableRow>
+                  <TableCell sx={{ width: '30%', fontWeight: 600 }}>
+                    메뉴 카테고리
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    접근 권한
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {menuCategories.map((category) => (
-                  <React.Fragment key={category.id}>
-                    <TableRow sx={{ '& > *': { borderBottom: 'unset' } }}>
-                      <TableCell sx={{ fontWeight: 'bold' }}>
-                        {category.name}
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox
-                          checked={permissions[selectedRole]?.[category.id]?.all || false}
-                          onChange={() => handleToggleAll(category.id)}
-                          color="primary"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {category.items.map((item) => (
-                            <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', mr: 2, mb: 1 }}>
-                              <Checkbox
-                                checked={permissions[selectedRole]?.[category.id]?.items?.[item.id] || false}
-                                onChange={() => handleToggleItem(category.id, item.id)}
-                                color="primary"
-                                size="small"
+                {menuCategories.map((category) => {
+                  const categoryMenus = allMenus.filter(menu => menu.category === category.name);
+                  
+                  return (
+                    <React.Fragment key={category.id}>
+                      <TableRow sx={{ bgcolor: '#F8F9FA' }}>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Checkbox 
+                              checked={isCategoryFullyChecked(category)}
+                              indeterminate={isCategoryPartiallyChecked(category)}
+                              onChange={() => handleToggleCategory(category)}
+                              disabled={saving || selectedRole === 'ADMIN'}
+                            />
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              {category.name}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {selectedRole === 'ADMIN' ? '모든 권한 허용 (수정 불가)' : 
+                              isCategoryFullyChecked(category) 
+                                ? '모든 권한 허용' 
+                                : isCategoryPartiallyChecked(category) 
+                                  ? '일부 권한 허용' 
+                                  : '권한 없음'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                      
+                      {/* 각 메뉴 항목 */}
+                      {categoryMenus.map((menu) => (
+                        <TableRow key={menu.id} sx={{ '&:hover': { bgcolor: '#F8F9FA' } }}>
+                          <TableCell sx={{ pl: 5 }}>
+                            <Typography variant="body2">{menu.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {menu.path}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Checkbox 
+                                checked={selectedRole === 'ADMIN' ? true : permissions[menu.id] === true}
+                                onChange={() => handleToggleMenu(menu.id)}
+                                disabled={saving || selectedRole === 'ADMIN'}
                               />
-                              <Typography variant="body2">{item.name}</Typography>
+                              <Typography variant="body2">
+                                {selectedRole === 'ADMIN' ? '접근 허용 (수정 불가)' : 
+                                  permissions[menu.id] === true ? '접근 허용' : '접근 불가'}
+                              </Typography>
                             </Box>
-                          ))}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                ))}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
-
-          {/* 저장 버튼 */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={savePermissions}
-              disabled={saving}
-              sx={{ 
-                px: 4,
-                backgroundColor: '#3182F6',
-                '&:hover': {
-                  backgroundColor: '#1B64DA'
-                }
-              }}
-            >
-              {saving ? '저장 중...' : '저장'}
-            </Button>
-          </Box>
-        </>
-      )}
-
-      {/* 안내 메시지 */}
-      <Paper sx={{ mt: 3, p: 3, borderRadius: 2, boxShadow: 'none', border: '1px solid #EEEEEE' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-          권한 관리 안내
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>
-          • 각 사용자 역할별로 접근 가능한 메뉴를 설정할 수 있습니다.
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>
-          • 메뉴 카테고리의 전체 선택을 체크하면 해당 카테고리의 모든 메뉴에 접근 권한이 부여됩니다.
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>
-          • 권한 변경 후 반드시 저장 버튼을 클릭해야 변경사항이 적용됩니다.
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#666', mb: 1 }}>
-          • 변경된 권한은 사용자가 다시 로그인할 때 적용됩니다.
-        </Typography>
+        )}
+        
+        {/* 저장 버튼 */}
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #EEEEEE' }}>
+          <Button 
+            variant="contained" 
+            onClick={saveRolePermissions}
+            disabled={loading || saving || selectedRole === 'ADMIN'}
+            sx={{ position: 'relative' }}
+          >
+            {saving ? (
+              <>
+                <CircularProgress
+                  size={24}
+                  sx={{
+                    color: 'white',
+                    position: 'absolute',
+                    left: '50%',
+                    marginLeft: '-12px'
+                  }}
+                />
+                저장중...
+              </>
+            ) : '변경사항 저장'}
+          </Button>
+        </Box>
       </Paper>
     </Box>
   );

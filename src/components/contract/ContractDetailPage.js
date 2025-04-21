@@ -123,8 +123,45 @@ const ContractDetailPage = () => {
             );
           });
         }
+        
+        // 계약에 연결된 회사 정보가 있는 경우 회사 상세 정보 조회
+        let contractWithCompanyDetails = { ...data };
+        
+        if (data.companyId) {
+          try {
+            const companyResponse = await fetch(
+              `http://localhost:8080/api/companies/${data.companyId}`
+            );
+            
+            if (companyResponse.ok) {
+              const companyData = await companyResponse.json();
+              // 회사 정보를 계약 객체에 통합
+              contractWithCompanyDetails = {
+                ...data,
+                storeTelNumber: companyData.storeTelNumber || '-',
+                insuranceStartDate: companyData.insuranceStartDate 
+                  ? new Date(companyData.insuranceStartDate).toLocaleDateString("ko-KR", { 
+                      year: 'numeric', 
+                      month: '2-digit', 
+                      day: '2-digit' 
+                    }) 
+                  : '-',
+                insuranceEndDate: companyData.insuranceEndDate 
+                  ? new Date(companyData.insuranceEndDate).toLocaleDateString("ko-KR", { 
+                      year: 'numeric', 
+                      month: '2-digit', 
+                      day: '2-digit' 
+                    }) 
+                  : '-'
+              };
+              console.log("회사 정보 통합 완료:", contractWithCompanyDetails);
+            }
+          } catch (error) {
+            console.error(`회사 정보 조회 중 오류 (ID: ${data.companyId}):`, error);
+          }
+        }
 
-        setContract(data);
+        setContract(contractWithCompanyDetails);
 
         // 계약 조회 후 문서 정보도 함께 조회
         fetchContractDocuments(id);
@@ -686,23 +723,23 @@ const ContractDetailPage = () => {
 
     // 참여자 상태 코드에 따른 색상 설정
     switch (statusCodeId) {
-      case "008001_0001": // 승인 대기
+      case "007001_0001": // 승인 대기
         color = "#FF9800";
         bgColor = "#FFF3E0";
         break;
-      case "008001_0002": // 승인 완료
+      case "007001_0002": // 승인 완료
         color = "#4CAF50";
         bgColor = "#E8F5E9";
         break;
-      case "008001_0003": // 서명 대기
+      case "007001_0003": // 서명 대기
         color = "#666666";
         bgColor = "#F5F5F5";
         break;
-      case "008001_0004": // 서명 중
+      case "007001_0004": // 서명 중
         color = "#2196F3";
         bgColor = "#E3F2FD";
         break;
-      case "008001_0005": // 승인 거부
+      case "007001_0005": // 승인 거부
         color = "#F44336";
         bgColor = "#FFEBEE";
         break;
@@ -715,12 +752,12 @@ const ContractDetailPage = () => {
 
   // 참여자가 승인 대기 상태인지 확인
   const isParticipantWaitingApproval = (participant) => {
-    return participant.statusCodeId === "008001_0001"; // 승인 대기 상태 확인
+    return participant.statusCodeId === "007001_0001"; // 승인 대기 상태 확인
   };
 
   // 참여자가 재서명 요청 상태인지 확인
   const isParticipantRequestingResign = (participant) => {
-    return participant.statusCodeId === "008001_0006"; // 재서명 요청 상태 확인
+    return participant.statusCodeId === "007001_0006"; // 재서명 요청 상태 확인
   };
 
   // 서명된 PDF 미리보기 핸들러
@@ -938,17 +975,40 @@ const ContractDetailPage = () => {
                 border: "1px solid #EEEEEE",
               }}
             >
-              <Box sx={{ display: "grid", rowGap: 3 }}>
-                <Box sx={{ display: "grid", gridTemplateColumns: "120px 1fr" }}>
-                  <Typography sx={{ color: "#666" }}>계약번호</Typography>
+              <Box sx={{ 
+                display: "grid", 
+                gridTemplateColumns: { 
+                  xs: "1fr", 
+                  md: "repeat(2, 1fr)" 
+                },
+                columnGap: 4,
+                rowGap: 3 
+              }}>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>계약번호</Typography>
                   <Typography>{contract.contractNumber || '-'}</Typography>
                 </Box>
-                <Box sx={{ display: "grid", gridTemplateColumns: "120px 1fr" }}>
-                  <Typography sx={{ color: "#666" }}>제목</Typography>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>제목</Typography>
                   <Typography>{contract.title}</Typography>
                 </Box>
-                <Box sx={{ display: "grid", gridTemplateColumns: "120px 1fr" }}>
-                  <Typography sx={{ color: "#666" }}>작성일</Typography>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>작성일</Typography>
                   <Typography>
                     {new Date(contract.createdAt).toLocaleDateString("ko-KR", {
                       year: "2-digit",
@@ -960,8 +1020,13 @@ const ContractDetailPage = () => {
                     })}
                   </Typography>
                 </Box>
-                <Box sx={{ display: "grid", gridTemplateColumns: "120px 1fr" }}>
-                  <Typography sx={{ color: "#666" }}>계약 상태</Typography>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>계약 상태</Typography>
                   <Box
                     sx={{
                       backgroundColor: getStatusColor(contract).bgColor,
@@ -981,7 +1046,46 @@ const ContractDetailPage = () => {
                         : "서명 전")}
                   </Box>
                 </Box>
-                <Box>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>수탁사업자명</Typography>
+                  <Typography>{contract.companyName || '-'}</Typography>
+                </Box>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>매장 전화번호</Typography>
+                  <Typography>{contract.storeTelNumber || '-'}</Typography>
+                </Box>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>보험시작일</Typography>
+                  <Typography>{contract.insuranceStartDate || '-'}</Typography>
+                </Box>
+                <Box sx={{ 
+                  display: "grid", 
+                  gridTemplateColumns: { xs: "1fr", sm: "120px 1fr" },
+                  gap: 1,
+                  alignItems: "center"
+                }}>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>보험종료일</Typography>
+                  <Typography>{contract.insuranceEndDate || '-'}</Typography>
+                </Box>
+                <Box sx={{ 
+                  gridColumn: { xs: "1", md: "1 / span 2" },
+                  mt: 1.5
+                }}>
                   <Box
                     sx={{
                       display: "flex",
@@ -989,8 +1093,8 @@ const ContractDetailPage = () => {
                       mb: 1,
                     }}
                   >
-                    <Typography sx={{ color: "#666" }}>서명 진행률</Typography>
-                    <Typography sx={{ color: "#1976d2" }}>
+                    <Typography sx={{ color: "#666", fontWeight: 500 }}>서명 진행률</Typography>
+                    <Typography sx={{ color: "#1976d2", fontWeight: 600 }}>
                       {contract.participants.filter((p) => p.signed).length} /{" "}
                       {contract.participants.length}명 ({contract.progressRate}
                       %)
@@ -1236,7 +1340,7 @@ const ContractDetailPage = () => {
                     </Box>
                   </Box>
 
-                  {/* 문서/관리 섹션 */}
+                  {/* 계약서 섹션 */}
                   <Box
                     sx={{
                       ml: 0,
@@ -1266,10 +1370,10 @@ const ContractDetailPage = () => {
                         sx={{
                           fontWeight: 600,
                           color: "#505050",
-                          fontSize: "0.8rem",
+                          fontSize: "1rem",
                         }}
                       >
-                        문서/관리
+                        계약서
                         {participant.templatePdfs &&
                           participant.templatePdfs.length > 0 && (
                             <Typography
@@ -1278,7 +1382,7 @@ const ContractDetailPage = () => {
                                 ml: 0.5,
                                 color: "#505050",
                                 fontWeight: 600,
-                                fontSize: "0.8rem",
+                                fontSize: "1rem",
                               }}
                             >
                               ({participant.templatePdfs.length}개)
@@ -1289,7 +1393,7 @@ const ContractDetailPage = () => {
                       {/* 통합 관리 버튼 영역 */}
                       <Box sx={{ display: "flex", gap: 1 }}>
                         {participant.statusName === "재서명 진행중" ||
-                        participant.statusCodeId === "008001_0007" ? (
+                        participant.statusCodeId === "007001_0007" ? (
                           <Typography
                             sx={{ color: "#666", fontSize: "0.75rem" }}
                           >
@@ -1306,7 +1410,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#3182F6",
                                 color: "#3182F6",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#1565C0",
@@ -1325,7 +1429,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#3182F6",
                                 color: "#3182F6",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#1565C0",
@@ -1346,7 +1450,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#3182F6",
                                 color: "#3182F6",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#1565C0",
@@ -1365,7 +1469,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#3182F6",
                                 color: "#3182F6",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#1565C0",
@@ -1387,7 +1491,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#3182F6",
                                 color: "#3182F6",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#1565C0",
@@ -1406,7 +1510,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#4CAF50",
                                 color: "#4CAF50",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#388E3C",
@@ -1419,9 +1523,9 @@ const ContractDetailPage = () => {
                           </>
                         ) : (participant.statusCodeId &&
                             [
-                              "008001_0001",
-                              "008001_0002",
-                              "008001_0005",
+                              "007001_0001",
+                              "007001_0002",
+                              "007001_0005",
                             ].includes(participant.statusCodeId)) ||
                           participant.signed ? (
                           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -1437,7 +1541,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#3182F6",
                                 color: "#3182F6",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#1565C0",
@@ -1474,7 +1578,7 @@ const ContractDetailPage = () => {
                               sx={{
                                 borderColor: "#3182F6",
                                 color: "#3182F6",
-                                fontSize: "0.7rem",
+                                fontSize: "0.8rem",
                                 height: "24px",
                                 "&:hover": {
                                   borderColor: "#388E3C",
@@ -1494,7 +1598,7 @@ const ContractDetailPage = () => {
                             sx={{
                               borderColor: "#3182F6",
                               color: "#3182F6",
-                              fontSize: "0.7rem",
+                              fontSize: "0.8rem",
                               height: "24px",
                               "&:hover": {
                                 borderColor: "#1565C0",
@@ -1541,7 +1645,7 @@ const ContractDetailPage = () => {
                                   sx={{
                                     color: "#333",
                                     fontWeight: 500,
-                                    fontSize: "0.8rem",
+                                    fontSize: "0.9rem",
                                   }}
                                 >
                                   {pdf.templateName}
@@ -1578,7 +1682,7 @@ const ContractDetailPage = () => {
                             pl: 0,
                             fontWeight: 600,
                             color: "#505050",
-                            fontSize: "0.8rem",
+                            fontSize: "1rem",
                           }}
                         >
                           필수 첨부파일 목록 (
@@ -1620,7 +1724,7 @@ const ContractDetailPage = () => {
                                       sx={{
                                         color: "#333",
                                         fontWeight: 500,
-                                        fontSize: "0.8rem",
+                                        fontSize: "0.9rem",
                                       }}
                                     >
                                       {doc.documentCodeName}
@@ -1660,7 +1764,7 @@ const ContractDetailPage = () => {
                                         sx={{
                                           borderColor: "#3182F6",
                                           color: "#3182F6",
-                                          fontSize: "0.7rem",
+                                          fontSize: "0.8rem",
                                           height: "24px",
                                           "&:hover": {
                                             borderColor: "#1565C0",
@@ -1683,7 +1787,7 @@ const ContractDetailPage = () => {
                                         sx={{
                                           borderColor: "#3182F6",
                                           color: "#3182F6",
-                                          fontSize: "0.7rem",
+                                          fontSize: "0.8rem",
                                           height: "24px",
                                           "&:hover": {
                                             borderColor: "#1565C0",
@@ -1712,7 +1816,7 @@ const ContractDetailPage = () => {
                                           color: doc.required
                                             ? "#FF9800"
                                             : "#666",
-                                          fontSize: "0.7rem",
+                                          fontSize: "0.8rem",
                                           height: "20px",
                                           mr: 1,
                                         }}
@@ -1735,7 +1839,7 @@ const ContractDetailPage = () => {
                                         sx={{
                                           borderColor: "#3182F6",
                                           color: "#3182F6",
-                                          fontSize: "0.7rem",
+                                          fontSize: "0.8rem",
                                           height: "24px",
                                           "&:hover": {
                                             borderColor: "#1565C0",
@@ -2391,7 +2495,7 @@ const ContractDetailPage = () => {
                         backgroundColor: "#4CAF50",
                         color: "white",
                         borderRadius: "4px",
-                        fontSize: "0.7rem",
+                        fontSize: "0.8rem",
                       }}
                     >
                       복사됨

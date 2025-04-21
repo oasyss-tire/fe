@@ -381,12 +381,12 @@ const ContractSignedPage = () => {
 
     // 상태 코드 ID와 이름 매핑
     const STATUS_MAPPING = {
-      "008001_0001": "승인 대기",
-      "008001_0002": "승인 완료",
-      "008001_0003": "서명 대기",
-      "008001_0004": "서명 중",
-      "008001_0005": "승인 거부",
-      "008001_0006": "재서명 요청",
+      "007001_0001": "승인 대기",
+      "007001_0002": "승인 완료",
+      "007001_0003": "서명 대기",
+      "007001_0004": "서명 중",
+      "007001_0005": "승인 거부",
+      "007001_0006": "재서명 요청",
     };
 
     // 다양한 데이터 구조에 대응
@@ -399,9 +399,9 @@ const ContractSignedPage = () => {
 
     // 상태 이름을 통한 확인 (상태 코드가 없는 경우)
     const matchByName =
-      (statusToCheck === "008001_0003" &&
+      (statusToCheck === "007001_0003" &&
         contractInfo.participant.statusName === "서명 대기") ||
-      (statusToCheck === "008001_0006" &&
+      (statusToCheck === "007001_0006" &&
         contractInfo.participant.statusName === "재서명 요청");
 
     // 백엔드로부터 받은 상태 정보 로그
@@ -635,10 +635,10 @@ const ContractSignedPage = () => {
           variant="h5"
           sx={{
             fontWeight: 600,
-            color: isParticipantStatus("008001_0003") ? "#FF9800" : "#3A3A3A",
+            color: isParticipantStatus("007001_0003") ? "#FF9800" : "#3A3A3A",
           }}
         >
-          {isParticipantStatus("008001_0003")
+          {isParticipantStatus("007001_0003")
             ? "재서명 필요"
             : "계약서 서명 완료"}
         </Typography>
@@ -652,12 +652,12 @@ const ContractSignedPage = () => {
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {isParticipantStatus("008001_0003")
+              {isParticipantStatus("007001_0003")
                 ? `${participant.name}님, 재서명이 필요합니다.`
                 : `${participant.name}님, 계약서 확인 페이지입니다.`}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {isParticipantStatus("008001_0003")
+              {isParticipantStatus("007001_0003")
                 ? "관리자가 재서명 요청을 승인했습니다. 새로운 서명 링크를 확인하여 다시 서명해주세요."
                 : "아래에서 계약 정보를 확인하고 필요한 문서를 다운로드할 수 있습니다."}
             </Typography>
@@ -685,12 +685,12 @@ const ContractSignedPage = () => {
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" sx={{ mb: 1, color: "#666" }}>
-              {isParticipantStatus("008001_0003")
+              {isParticipantStatus("007001_0003")
                 ? "재서명 승인 시간"
                 : "서명 시간"}
             </Typography>
             <Typography variant="body1">
-              {isParticipantStatus("008001_0003")
+              {isParticipantStatus("007001_0003")
                 ? participant.resignApprovedAt
                   ? formatDate(participant.resignApprovedAt)
                   : "-"
@@ -703,11 +703,11 @@ const ContractSignedPage = () => {
             </Typography>
             <Chip
               label={participant.statusName || "서명 완료"}
-              color={isParticipantStatus("008001_0003") ? "warning" : "primary"}
+              color={isParticipantStatus("007001_0003") ? "warning" : "primary"}
               size="small"
               sx={{
                 fontWeight: 500,
-                backgroundColor: isParticipantStatus("008001_0003")
+                backgroundColor: isParticipantStatus("007001_0003")
                   ? "#FF9800"
                   : "#3182F6",
                 color: "white",
@@ -717,7 +717,7 @@ const ContractSignedPage = () => {
         </Grid>
 
         <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
-          {isParticipantStatus("008001_0003") ? (
+          {isParticipantStatus("007001_0003") ? (
             // 서명 대기 상태일 때는 서명하기 안내 버튼 표시
             <Button
               variant="contained"
@@ -745,7 +745,7 @@ const ContractSignedPage = () => {
               variant="outlined"
               startIcon={<HistoryIcon />}
               onClick={handleOpenResignDialog}
-              disabled={isParticipantStatus("008001_0006")}
+              disabled={isParticipantStatus("007001_0006")}
               sx={{
                 borderColor: "#E0E0E0",
                 color: "#333333",
@@ -763,7 +763,7 @@ const ContractSignedPage = () => {
                 height: "32px",
               }}
             >
-              {isParticipantStatus("008001_0006")
+              {isParticipantStatus("007001_0006")
                 ? "재서명 요청 중"
                 : "재서명 요청"}
             </Button>
@@ -795,7 +795,7 @@ const ContractSignedPage = () => {
               </Typography>
 
               {/* 서명 대기 상태가 아닐 때만 다운로드 버튼 표시 */}
-              {!isParticipantStatus("008001_0003") ? (
+              {!isParticipantStatus("007001_0003") ? (
                 <>
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                     <Button

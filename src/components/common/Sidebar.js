@@ -40,66 +40,102 @@ const Sidebar = () => {
   const location = useLocation();
   const { logout, user } = useAuth();
   const [permissions, setPermissions] = useState(null);
+  const [menusByCategory, setMenusByCategory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // 사용자 역할 가져오기
   const userRole = user?.role || 'USER';
 
-  // 권한 데이터 가져오기
+  // 사용자의 접근 가능한 메뉴 목록 가져오기
   useEffect(() => {
-    const fetchPermissions = async () => {
+    const fetchUserMenus = async () => {
+      setLoading(true);
       try {
-        // 실제 API 호출
-        // const response = await fetch('http://localhost:8080/api/permissions');
-        // if (response.ok) {
-        //   const data = await response.json();
-        //   setPermissions(data);
-        // }
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+          setLoading(false);
+          return;
+        }
 
-        // API가 없으므로 기본 권한 설정 사용
-        const defaultPermissions = {
-          ADMIN: {
-            contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } },
-            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_history: true, facility_transfer: true } },
-            community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
-            admin: { all: true, items: { company: true, user: true, settings: true } }
-          },
-          MANAGER: {
-            contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } },
-            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_history: true, facility_transfer: true } },
-            community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
-            admin: { all: false, items: { company: false, user: false, settings: false } }
-          },
-          USER: {
-            contract: { all: true, items: { home: true, contract_management: true, contract_template: true, contract_upload: true, contract_create: true } }, 
-            facility: { all: true, items: { facility_list: true, facility_register: true, facility_service: true, facility_history: true, facility_transfer: true  } },
-            community: { all: true, items: { board: true, notice: true, file: true, chat: true } },
-            admin: { all: false, items: { company: false, user: false, settings: false } }
+        const response = await fetch('http://localhost:8080/api/menu-permissions/user-menus', {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        };
+        });
+
+        if (!response.ok) {
+          throw new Error('사용자 메뉴를 불러오는데 실패했습니다.');
+        }
+
+        const menus = await response.json();
         
-        setPermissions(defaultPermissions);
+        // 메뉴를 카테고리별로 그룹화
+        const categories = {};
+        
+        menus.forEach(menu => {
+          if (!categories[menu.category]) {
+            categories[menu.category] = {
+              category: menu.category,
+              categoryId: menu.category.toLowerCase().replace(/\s+/g, '_'),
+              items: []
+            };
+          }
+          
+          categories[menu.category].items.push({
+            text: menu.name,
+            icon: getMenuIcon(menu.icon),
+            path: menu.path,
+            id: menu.id
+          });
+        });
+        
+        // 카테고리 배열로 변환
+        const categoriesArray = Object.values(categories);
+        setMenusByCategory(categoriesArray);
+        setLoading(false);
       } catch (error) {
-        console.error('권한 정보를 불러오는데 실패했습니다:', error);
+        console.error('메뉴 정보를 불러오는데 실패했습니다:', error);
+        // 오류 발생 시 기본 메뉴 사용
+        setMenusByCategory(menuItems);
+        setLoading(false);
       }
     };
 
-    fetchPermissions();
-  }, []);
+    fetchUserMenus();
+  }, [user]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // 메뉴 접근 권한 확인
-  const checkMenuPermission = (category, item) => {
-    if (!permissions || !permissions[userRole]) {
-      return true; // 권한 정보가 로드되지 않았으면 기본적으로 표시
-    }
+  // 메뉴 아이콘 매핑
+  const getMenuIcon = (iconName) => {
+    const icons = {
+      'HomeIcon': <HomeIcon />,
+      'DescriptionIcon': <DescriptionIcon />,
+      'BusinessCenterIcon': <BusinessCenterIcon />,
+      'EditIcon': <EditIcon />,
+      'SendIcon': <SendIcon />,
+      'ListAltIcon': <ListAltIcon />,
+      'EngineeringIcon': <EngineeringIcon />,
+      'BuildIcon': <BuildIcon />,
+      'SwapHorizIcon': <SwapHorizIcon />,
+      'DashboardIcon': <DashboardIcon />,
+      'ForumIcon': <ForumIcon />,
+      'AnnouncementIcon': <AnnouncementIcon />,
+      'FolderOpenIcon': <FolderOpenIcon />,
+      'ChatIcon': <ChatIcon />,
+      'BusinessIcon': <BusinessIcon />,
+      'GroupIcon': <GroupIcon />,
+      'SettingsIcon': <SettingsIcon />,
+      'PeopleAltIcon': <PeopleAltIcon />
+    };
     
-    return permissions[userRole][category]?.items?.[item] || false;
+    return icons[iconName] || <DescriptionIcon />;
   };
 
+  // 기존 메뉴 정의 (API 호출 실패 시 폴백으로 사용)
   const menuItems = [
     { 
       category: '계약',
@@ -128,19 +164,19 @@ const Sidebar = () => {
       category: '커뮤니티',
       categoryId: 'community',
       items: [
-        { text: '게시판', icon: <ForumIcon />, path: '/service-preparing', id: 'board' },
-        { text: '공지사항', icon: <AnnouncementIcon />, path: '/service-preparing', id: 'notice' },
-        { text: '자료실', icon: <FolderOpenIcon />, path: '/service-preparing', id: 'file' },
-        { text: '채팅', icon: <ChatIcon />, path: '/service-preparing', id: 'chat' },
+        { text: '게시판', icon: <ForumIcon />, path: '/service-preparing', id: '008001003_0001' },
+        { text: '공지사항', icon: <AnnouncementIcon />, path: '/service-preparing', id: '008001003_0002' },
+        { text: '자료실', icon: <FolderOpenIcon />, path: '/service-preparing', id: '008001003_0003' },
+        { text: '채팅', icon: <ChatIcon />, path: '/service-preparing', id: '008001003_0004' },
       ]
     },
     {
       category: '관리',
       categoryId: 'admin',
       items: [
-        { text: '위수탁 업체 관리', icon: <BusinessIcon />, path: '/companies', id: 'company' },
-        { text: '사용자 관리', icon: <GroupIcon />, path: '/users', id: 'user' },
-        { text: '설정', icon: <SettingsIcon />, path: '/settings', id: 'settings' },
+        { text: '위수탁 업체 관리', icon: <BusinessIcon />, path: '/companies', id: '008001004_0001' },
+        { text: '사용자 관리', icon: <GroupIcon />, path: '/users', id: '008001004_0002' },
+        { text: '설정', icon: <SettingsIcon />, path: '/settings', id: '008001004_0003' },
       ]
     }
   ];
@@ -213,81 +249,84 @@ const Sidebar = () => {
             scrollbarColor: 'rgba(0, 0, 0, 0.1) transparent',
           }}
         >
-          {menuItems.map((category) => {
-            // 권한에 따라 카테고리 내 표시할 항목 필터링
-            const filteredItems = category.items.filter(item => 
-              checkMenuPermission(category.categoryId, item.id)
-            );
-            
-            // 표시할 항목이 없으면 카테고리도 표시하지 않음
-            if (filteredItems.length === 0) {
-              return null;
-            }
-            
-            return (
-              <Box key={category.category} sx={{ mb: 1 }}>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    px: 2,
-                    py: 0.3,
-                    color: '#666',
-                    fontWeight: 500,
-                    fontSize: '0.7rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}
-                >
-                  {category.category}
-                </Typography>
-                <List sx={{ py: 0 }}>
-                  {filteredItems.map((item) => (
-                    <ListItem 
-                      button 
-                      key={item.text}
-                      onClick={() => navigate(item.path)}
-                      selected={location.pathname === item.path}
-                      sx={{
-                        minHeight: '38px',
-                        my: 0.2,
-                        mx: 1,
-                        borderRadius: '8px',
-                        '&:hover': {
-                          backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                        },
-                        '&.Mui-selected': {
-                          backgroundColor: 'rgba(25, 118, 210, 0.08)',
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                메뉴 불러오는 중...
+              </Typography>
+            </Box>
+          ) : (
+            menusByCategory.map((category) => {
+              // 표시할 항목이 없으면 카테고리도 표시하지 않음
+              if (category.items.length === 0) {
+                return null;
+              }
+              
+              return (
+                <Box key={category.category} sx={{ mb: 1 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      px: 2,
+                      py: 0.3,
+                      color: '#666',
+                      fontWeight: 500,
+                      fontSize: '0.7rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    {category.category}
+                  </Typography>
+                  <List sx={{ py: 0 }}>
+                    {category.items.map((item) => (
+                      <ListItem 
+                        button 
+                        key={item.text}
+                        onClick={() => navigate(item.path)}
+                        selected={location.pathname === item.path}
+                        sx={{
+                          minHeight: '38px',
+                          my: 0.2,
+                          mx: 1,
+                          borderRadius: '8px',
                           '&:hover': {
-                            backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                            backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                          },
+                          '&.Mui-selected': {
+                            backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                            '&:hover': {
+                              backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                            }
                           }
-                        }
-                      }}
-                    >
-                      <ListItemIcon 
-                        sx={{ 
-                          minWidth: '35px',
-                          color: location.pathname === item.path ? '#1976d2' : '#666'
                         }}
                       >
-                        {item.icon}
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={item.text} 
-                        sx={{
-                          m: 0,
-                          '& .MuiListItemText-primary': {
-                            fontSize: '0.8rem',
-                            fontWeight: location.pathname === item.path ? 600 : 400,
-                            color: location.pathname === item.path ? '#1976d2' : '#333'
-                          }
-                        }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            );
-          })}
+                        <ListItemIcon 
+                          sx={{ 
+                            minWidth: '35px',
+                            color: location.pathname === item.path ? '#1976d2' : '#666'
+                          }}
+                        >
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={item.text} 
+                          sx={{
+                            m: 0,
+                            '& .MuiListItemText-primary': {
+                              fontSize: '0.8rem',
+                              fontWeight: location.pathname === item.path ? 600 : 400,
+                              color: location.pathname === item.path ? '#1976d2' : '#333'
+                            }
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              );
+            })
+          )}
         </Box>
         
         {/* 로그아웃 버튼 */}

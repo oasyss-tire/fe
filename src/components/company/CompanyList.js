@@ -527,7 +527,7 @@ const CompanyList = () => {
             {/* 목록 헤더 */}
             <Box sx={{ 
               display: 'grid',
-              gridTemplateColumns: '150px 100px 200px 400px 250px 180px 200px 150px 180px 180px 200px 150px 100px 150px 150px 150px 150px 150px', // 마지막 두 열 너비 증가
+              gridTemplateColumns: '150px 100px 200px 400px 250px 180px 180px 200px 150px 180px 180px 200px 150px 100px 150px 150px 150px 150px 150px 150px 150px', // 새 필드 추가
               gridGap: '16px', // 열 사이 간격 추가
               p: 3, // 패딩 증가
               borderBottom: '1px solid #EEEEEE',
@@ -536,19 +536,22 @@ const CompanyList = () => {
             }}>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>매장코드</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>점번</Typography>
-              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>매장명</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>수탁사업자명</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>주소</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>매장 전화번호</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>담당자 연락처</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>이메일</Typography>
-              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>휴대폰번호</Typography>
-              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>수탁자</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>매장명</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>수탁코드</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>사업자번호</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>종사업장번호</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>상호</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>대표자명</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>상태</Typography>
-              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>시작일자</Typography>
-              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>종료일자</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>계약 시작일</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>계약 종료일</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>하자보증증권 보험시작일</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>하자보증증권 보험종료일</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>담당자</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>업태</Typography>
               <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 'bold' }}>종목</Typography>
@@ -562,7 +565,7 @@ const CompanyList = () => {
                   onClick={() => handleCompanyClick(company.id)}
                   sx={{ 
                     display: 'grid',
-                    gridTemplateColumns: '150px 100px 200px 400px 250px 180px 200px 150px 180px 180px 200px 150px 100px 150px 150px 150px 150px 150px', // 마지막 두 열 너비 증가
+                    gridTemplateColumns: '150px 100px 200px 400px 250px 180px 180px 200px 150px 180px 180px 200px 150px 100px 150px 150px 150px 150px 150px 150px 150px', // 새 필드 추가
                     gridGap: '16px', // 열 사이 간격 추가
                     p: 3, // 패딩 증가
                     borderBottom: '1px solid #EEEEEE',
@@ -597,18 +600,18 @@ const CompanyList = () => {
                     {company.storeNumber || '-'}
                   </Typography>
                   
-                  {/* 매장명 */}
+                  {/* 수탁사업자명 */}
                   <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                     <Typography 
                       className="company-name"
-                      title={company.storeName || '-'}
+                      title={company.trustee || '-'}
                       sx={{ 
                         overflow: 'hidden', 
                         textOverflow: 'ellipsis', 
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {company.storeName || '-'}
+                      {company.trustee || '-'}
                     </Typography>
                   </Box>
                   
@@ -624,6 +627,30 @@ const CompanyList = () => {
                     {company.address || '-'}
                   </Typography>
                   
+                  {/* 매장 전화번호 */}
+                  <Typography 
+                    title={company.storeTelNumber || '-'} 
+                    sx={{ 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {company.storeTelNumber || '-'}
+                  </Typography>
+                  
+                  {/* 담당자 연락처 (휴대폰번호) */}
+                  <Typography 
+                    title={company.phoneNumber || '-'} 
+                    sx={{ 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {company.phoneNumber || '-'}
+                  </Typography>
+                  
                   {/* 이메일 */}
                   <Typography 
                     title={company.email || '-'} 
@@ -636,28 +663,16 @@ const CompanyList = () => {
                     {company.email || '-'}
                   </Typography>
                   
-                  {/* 휴대폰번호 */}
+                  {/* 매장명 */}
                   <Typography 
-                    title={company.phoneNumber || '-'} 
+                    title={company.storeName || '-'} 
                     sx={{ 
                       overflow: 'hidden', 
                       textOverflow: 'ellipsis', 
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    {company.phoneNumber || '-'}
-                  </Typography>
-                  
-                  {/* 수탁자 */}
-                  <Typography 
-                    title={company.trustee || '-'} 
-                    sx={{ 
-                      overflow: 'hidden', 
-                      textOverflow: 'ellipsis', 
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {company.trustee || '-'}
+                    {company.storeName || '-'}
                   </Typography>
                   
                   {/* 수탁코드 */}
@@ -734,7 +749,7 @@ const CompanyList = () => {
                     />
                   </Box>
                   
-                  {/* 시작일자 */}
+                  {/* 계약 시작일자 */}
                   <Typography 
                     title={company.startDate || '-'} 
                     sx={{ 
@@ -746,7 +761,7 @@ const CompanyList = () => {
                     {company.startDate || '-'}
                   </Typography>
                   
-                  {/* 종료일자 */}
+                  {/* 계약 종료일자 */}
                   <Typography 
                     title={company.endDate || '-'} 
                     sx={{ 
@@ -756,6 +771,30 @@ const CompanyList = () => {
                     }}
                   >
                     {company.endDate || '-'}
+                  </Typography>
+                  
+                  {/* 보증증권 시작일자 - 새로 추가 */}
+                  <Typography 
+                    title={company.insuranceStartDate || '-'} 
+                    sx={{ 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {company.insuranceStartDate || '-'}
+                  </Typography>
+                  
+                  {/* 보증증권 종료일자 - 새로 추가 */}
+                  <Typography 
+                    title={company.insuranceEndDate || '-'} 
+                    sx={{ 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {company.insuranceEndDate || '-'}
                   </Typography>
                   
                   {/* 담당자 */}

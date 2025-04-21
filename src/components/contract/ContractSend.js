@@ -29,11 +29,27 @@ import {
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { ko } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { sendContractEmail } from '../../services/EmailService';
 import { sendContractSMS } from '../../services/SMSService';
+
+// 시간대 문제를 해결하기 위한 날짜 포맷 함수 추가
+const formatDateForServer = (date) => {
+  if (!date) return null;
+  
+  const d = new Date(date);
+  
+  // YYYY-MM-DD 형식으로만 변환 (시간 제외)
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  
+  const formattedDate = `${year}-${month}-${day}`;
+  console.log(`원본 날짜: ${date}, 변환된 날짜: ${formattedDate}`);
+  return formattedDate;
+};
 
 const ContractSend = () => {
   const [participants, setParticipants] = useState([
@@ -46,10 +62,11 @@ const ContractSend = () => {
     description: '',
     startDate: null,
     expiryDate: null,
-    deadlineDate: null,
     createdBy: '',
     department: '',
-    companyId: ''
+    companyId: '',
+    insuranceStartDate: null,
+    insuranceEndDate: null
   });
 
   const [templates, setTemplates] = useState([]);
@@ -101,15 +118,44 @@ const ContractSend = () => {
       if (selectedCompany) {
         // 위수탁 업체 startDate와 endDate가 있는 경우에만 적용
         if (selectedCompany.startDate) {
+          // 날짜만 추출하여 시간을 00:00:00으로 설정
+          const date = new Date(selectedCompany.startDate);
+          date.setHours(0, 0, 0, 0);
+          
           setContractInfo(prev => ({
             ...prev,
-            startDate: new Date(selectedCompany.startDate)
+            startDate: date
           }));
         }
         if (selectedCompany.endDate) {
+          // 날짜만 추출하여 시간을 00:00:00으로 설정
+          const date = new Date(selectedCompany.endDate);
+          date.setHours(0, 0, 0, 0);
+          
           setContractInfo(prev => ({
             ...prev,
-            expiryDate: new Date(selectedCompany.endDate)
+            expiryDate: date
+          }));
+        }
+        // 하자보증증권 보험시작일과 종료일이 있는 경우에만 적용
+        if (selectedCompany.insuranceStartDate) {
+          // 날짜만 추출하여 시간을 00:00:00으로 설정
+          const date = new Date(selectedCompany.insuranceStartDate);
+          date.setHours(0, 0, 0, 0);
+          
+          setContractInfo(prev => ({
+            ...prev,
+            insuranceStartDate: date
+          }));
+        }
+        if (selectedCompany.insuranceEndDate) {
+          // 날짜만 추출하여 시간을 00:00:00으로 설정
+          const date = new Date(selectedCompany.insuranceEndDate);
+          date.setHours(0, 0, 0, 0);
+          
+          setContractInfo(prev => ({
+            ...prev,
+            insuranceEndDate: date
           }));
         }
       }
@@ -355,12 +401,6 @@ const ContractSend = () => {
         return;
       }
 
-      // 서명 마감일 검사
-      if (!contractInfo.deadlineDate) {
-        alert('서명 마감일을 선택해주세요.');
-        return;
-      }
-
       // 템플릿 선택 검사
       if (selectedTemplateIds.length === 0) {
         alert('최소 하나 이상의 템플릿을 선택해주세요.');
@@ -430,13 +470,14 @@ const ContractSend = () => {
           title: contractInfo.title,
           description: contractInfo.description || '',
           templateIds: orderedTemplateIds, // 순서가 적용된 템플릿 ID 목록
-          startDate: contractInfo.startDate,
-          expiryDate: contractInfo.expiryDate,
-          deadlineDate: contractInfo.deadlineDate,
+          startDate: contractInfo.startDate ? formatDateForServer(contractInfo.startDate) : null,
+          expiryDate: contractInfo.expiryDate ? formatDateForServer(contractInfo.expiryDate) : null,
           createdBy: contractInfo.createdBy,
           department: contractInfo.department,
           companyId: contractInfo.companyId,
           documentCodeIds: selectedDocumentIds, // 첨부파일 코드 ID 목록 추가
+          insuranceStartDate: contractInfo.insuranceStartDate ? formatDateForServer(contractInfo.insuranceStartDate) : null, // 하자보증증권 보험시작일 추가
+          insuranceEndDate: contractInfo.insuranceEndDate ? formatDateForServer(contractInfo.insuranceEndDate) : null,     // 하자보증증권 보험종료일 추가
           participants: participants.map(p => ({
             name: p.name,
             email: p.email,
@@ -597,7 +638,7 @@ const ContractSend = () => {
               renderInput={(params) => (
                 <TextField 
                   {...params} 
-                  label="수탁 업체" 
+                  label="수탁 사업자명" 
                   required
                   InputLabelProps={{ required: true }}
                   InputProps={{
@@ -673,8 +714,8 @@ const ContractSend = () => {
           </Box>
 
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr 1fr', mb: 3 }}>
-              <DateTimePicker
+            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', mb: 3 }}>
+              <DatePicker
                 label="계약 시작일"
                 value={contractInfo.startDate}
                 onChange={(newValue) => handleContractInfoChange('startDate', newValue)}
@@ -686,7 +727,7 @@ const ContractSend = () => {
                   } 
                 }}
               />
-              <DateTimePicker
+              <DatePicker
                 label="계약 만료일"
                 value={contractInfo.expiryDate}
                 onChange={(newValue) => handleContractInfoChange('expiryDate', newValue)}
@@ -698,15 +739,29 @@ const ContractSend = () => {
                   } 
                 }}
               />
-              <DateTimePicker
-                label="서명 마감일"
-                value={contractInfo.deadlineDate}
-                onChange={(newValue) => handleContractInfoChange('deadlineDate', newValue)}
+            </Box>
+            
+            {/* 하자보증증권 관련 입력 필드 추가 */}
+            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', mb: 3 }}>
+              <DatePicker
+                label="하자보증증권 보험시작일"
+                value={contractInfo.insuranceStartDate}
+                onChange={(newValue) => handleContractInfoChange('insuranceStartDate', newValue)}
                 slotProps={{ 
                   textField: { 
                     size: 'small',
-                    required: true,
-                    InputLabelProps: { required: true }
+                    required: false
+                  } 
+                }}
+              />
+              <DatePicker
+                label="하자보증증권 보험종료일"
+                value={contractInfo.insuranceEndDate}
+                onChange={(newValue) => handleContractInfoChange('insuranceEndDate', newValue)}
+                slotProps={{ 
+                  textField: { 
+                    size: 'small',
+                    required: false
                   } 
                 }}
               />

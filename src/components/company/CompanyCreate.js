@@ -19,7 +19,8 @@ import {
   Card,
   CardMedia,
   CardContent,
-  CardActions
+  CardActions,
+  Snackbar
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -38,6 +39,11 @@ const CompanyCreate = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  
+  // 스낵바 상태
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   
   // 파일 입력 참조
   const frontImageRef = useRef(null);
@@ -81,10 +87,13 @@ const CompanyCreate = () => {
     active: true,
     startDate: null,
     endDate: null,
+    insuranceStartDate: null,
+    insuranceEndDate: null,
     managerName: '',
     email: '',
     subBusinessNumber: '',
     phoneNumber: '',
+    storeTelNumber: '',
     address: '',
     addressDetail: '',
     businessType: '',
@@ -196,12 +205,61 @@ const CompanyCreate = () => {
     }
   };
   
+  // 매장 전화번호 포맷팅 함수 (다양한 지역번호 형식 지원)
+  const formatStoreTelNumber = (value) => {
+    if (!value) return '';
+    
+    // 숫자만 추출
+    const numbers = value.replace(/[^\d]/g, '');
+    
+    // 지역번호 형식에 따라 다르게 처리
+    if (numbers.length <= 2) {
+      return numbers;
+    } else if (numbers.length === 10) { // 02-XXXX-XXXX (서울)
+      if (numbers.startsWith('02')) {
+        return `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(6, 10)}`;
+      } else { // XXXX-XXX-XXXX (일반적인 경우)
+        return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6, 10)}`;
+      }
+    } else if (numbers.length === 11) { // XXX-XXXX-XXXX
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+    } else if (numbers.length >= 8 && numbers.length <= 9) { // XX-XXX-XXXX 또는 XXX-XXX-XXX
+      if (numbers.startsWith('02')) { // 서울 지역번호
+        return `${numbers.slice(0, 2)}-${numbers.slice(2, 5)}-${numbers.slice(5)}`;
+      } else { // 나머지 지역번호
+        return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+      }
+    } else {
+      // 기타 형식은 일정 단위로 끊어서 표시
+      if (numbers.length <= 4) {
+        return numbers;
+      } else if (numbers.length <= 8) {
+        return `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
+      } else {
+        // 첫 번째 부분을 지역번호로 가정하고 나머지를 적절히 분배
+        const areaCodeLength = numbers.startsWith('02') ? 2 : 3;
+        const middleLength = Math.min(4, Math.floor((numbers.length - areaCodeLength) / 2));
+        
+        return `${numbers.slice(0, areaCodeLength)}-${numbers.slice(areaCodeLength, areaCodeLength + middleLength)}-${numbers.slice(areaCodeLength + middleLength)}`;
+      }
+    }
+  };
+  
   // 전화번호 변경 핸들러
   const handlePhoneNumberChange = (e) => {
     const formattedNumber = formatPhoneNumber(e.target.value);
     setCompanyData(prev => ({
       ...prev,
       phoneNumber: formattedNumber
+    }));
+  };
+  
+  // 매장 전화번호 변경 핸들러
+  const handleStoreTelNumberChange = (e) => {
+    const formattedNumber = formatStoreTelNumber(e.target.value);
+    setCompanyData(prev => ({
+      ...prev,
+      storeTelNumber: formattedNumber
     }));
   };
   
@@ -258,9 +316,20 @@ const CompanyCreate = () => {
       newErrors.phoneNumber = '전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)';
     }
     
+    // 매장 전화번호 형식 검사 - 더 유연한 검증으로 변경
+    if (companyData.storeTelNumber && !/^(\d{2,3})-(\d{3,4})-(\d{3,4})$/.test(companyData.storeTelNumber)) {
+      newErrors.storeTelNumber = '전화번호 형식이 올바르지 않습니다. (예: 02-1234-5678 또는 055-123-4567)';
+    }
+    
     // 사업자번호 형식 검사
     if (companyData.businessNumber && !/^\d{3}-\d{2}-\d{5}$/.test(companyData.businessNumber)) {
       newErrors.businessNumber = '사업자번호 형식이 올바르지 않습니다. (예: 123-45-67890)';
+    }
+    
+    // 보험 기간 유효성 검사 - 시작일이 종료일보다 이후인 경우
+    if (companyData.insuranceStartDate && companyData.insuranceEndDate &&
+        companyData.insuranceStartDate > companyData.insuranceEndDate) {
+      newErrors.insuranceEndDate = '보험 종료일은 시작일 이후로 설정해주세요.';
     }
     
     setErrors(newErrors);
@@ -345,6 +414,11 @@ const CompanyCreate = () => {
     }
   };
   
+  // 스낵바 닫기 핸들러
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
+  
   // 폼 제출 핸들러
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -374,7 +448,6 @@ const CompanyCreate = () => {
       const hasImages = Object.values(images).some(img => img !== null);
       
       let response;
-      let data;
       
       if (hasImages) {
         // FormData 생성 및 회사 데이터 추가
@@ -418,22 +491,106 @@ const CompanyCreate = () => {
         });
       }
       
-      data = await response.json();
+      // 응답 데이터 처리
+      const data = await response.json();
+      console.log('서버 응답 상태:', response.status);
+      console.log('서버 응답 데이터:', data);
       
       if (!response.ok) {
-        throw new Error(data.message || '회사 등록에 실패했습니다.');
+        // 백엔드에서 보낸 오류 메시지 확인
+        let errorMessage = data.message || '회사 등록에 실패했습니다.';
+        
+        // 특정 오류 케이스 처리
+        if (errorMessage.includes('이미 사용 중인 매장코드')) {
+          // 매장코드 필드에 오류 표시
+          setErrors(prev => ({
+            ...prev,
+            storeCode: '이미 사용 중인 매장코드입니다. 다른 코드를 입력해주세요.'
+          }));
+          
+          // 매장코드 필드로 스크롤
+          const storeCodeElement = document.querySelector('input[name="storeCode"]');
+          if (storeCodeElement) {
+            storeCodeElement.focus();
+            storeCodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else if (errorMessage.includes('이미 사용 중인 사업자번호')) {
+          // 사업자번호 필드에 오류 표시
+          setErrors(prev => ({
+            ...prev,
+            businessNumber: '이미 사용 중인 사업자번호입니다. 다른 번호를 입력해주세요.'
+          }));
+          
+          // 사업자번호 필드로 스크롤
+          const businessNumberElement = document.querySelector('input[name="businessNumber"]');
+          if (businessNumberElement) {
+            businessNumberElement.focus();
+            businessNumberElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else if (errorMessage.includes('이미 사용 중인 수탁코드')) {
+          // 수탁코드 필드에 오류 표시
+          setErrors(prev => ({
+            ...prev,
+            trusteeCode: '이미 사용 중인 수탁코드입니다. 다른 코드를 입력해주세요.'
+          }));
+          
+          // 수탁코드 필드로 스크롤
+          const trusteeCodeElement = document.querySelector('input[name="trusteeCode"]');
+          if (trusteeCodeElement) {
+            trusteeCodeElement.focus();
+            trusteeCodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else if (errorMessage.includes('이미 사용 중인 종사업장번호')) {
+          // 종사업장번호 필드에 오류 표시
+          setErrors(prev => ({
+            ...prev,
+            subBusinessNumber: '이미 사용 중인 종사업장번호입니다. 다른 번호를 입력해주세요.'
+          }));
+          
+          // 종사업장번호 필드로 스크롤
+          const subBusinessNumberElement = document.querySelector('input[name="subBusinessNumber"]');
+          if (subBusinessNumberElement) {
+            subBusinessNumberElement.focus();
+            subBusinessNumberElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else if (response.status === 401) {
+          errorMessage = '인증이 만료되었습니다. 다시 로그인해주세요.';
+          // 로그인 페이지로 리디렉션 처리
+          setTimeout(() => {
+            navigate('/login');
+          }, 1500);
+        }
+        
+        throw new Error(errorMessage);
       }
       
-      setSuccess('회사가 성공적으로 등록되었습니다.');
+      // 성공 메시지를 스낵바로 표시
+      setSnackbarMessage('회사가 성공적으로 등록되었습니다.');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
       
-      // 3초 후 회사 목록 페이지로 이동
-      setTimeout(() => {
-        navigate('/companies');
-      }, 3000);
+      // 회사 목록 페이지로 즉시 이동
+      navigate('/companies');
       
     } catch (error) {
       console.error('회사 등록 오류:', error);
-      setError(error.message || '회사 등록 중 오류가 발생했습니다.');
+      
+      // 오류 메시지 설정
+      const errorMessage = error.message || '회사 등록 중 오류가 발생했습니다.';
+      setError(errorMessage);
+      
+      // 오류 메시지를 스낵바로 표시
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      
+      // 특정 필드 오류가 아닌 경우에만 저장 버튼으로 스크롤
+      if (!errorMessage.includes('이미 사용 중인 매장코드') && 
+          !errorMessage.includes('이미 사용 중인 사업자번호') &&
+          !errorMessage.includes('이미 사용 중인 수탁코드') &&
+          !errorMessage.includes('이미 사용 중인 종사업장번호')) {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -535,16 +692,10 @@ const CompanyCreate = () => {
         </Box>
       </Box>
 
-      {/* 알림 메시지 */}
+      {/* 알림 메시지 - 오류만 표시 */}
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
         </Alert>
       )}
 
@@ -633,7 +784,7 @@ const CompanyCreate = () => {
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="수탁자"
+                  label="수탁사업자명"
                   name="trustee"
                   value={companyData.trustee}
                   onChange={handleChange}
@@ -711,7 +862,7 @@ const CompanyCreate = () => {
               <Grid item xs={12} md={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                   <DatePicker
-                    label="시작일자"
+                    label="계약 시작일자"
                     value={companyData.startDate}
                     onChange={(date) => handleDateChange('startDate', date)}
                     slotProps={{
@@ -727,13 +878,49 @@ const CompanyCreate = () => {
               <Grid item xs={12} md={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                   <DatePicker
-                    label="종료일자"
+                    label="계약 종료일자"
                     value={companyData.endDate}
                     onChange={(date) => handleDateChange('endDate', date)}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         size: "small"
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+                  <DatePicker
+                    label="하자보증증권 보험시작일자"
+                    value={companyData.insuranceStartDate}
+                    onChange={(date) => handleDateChange('insuranceStartDate', date)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: "small",
+                        error: !!errors.insuranceStartDate,
+                        helperText: errors.insuranceStartDate
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+                  <DatePicker
+                    label="하자보증증권 보험종료일자"
+                    value={companyData.insuranceEndDate}
+                    onChange={(date) => handleDateChange('insuranceEndDate', date)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: "small",
+                        error: !!errors.insuranceEndDate,
+                        helperText: errors.insuranceEndDate
                       }
                     }}
                   />
@@ -792,7 +979,7 @@ const CompanyCreate = () => {
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="전화번호"
+                  label="담당자 전화번호"
                   name="phoneNumber"
                   value={companyData.phoneNumber}
                   onChange={handlePhoneNumberChange}
@@ -803,6 +990,23 @@ const CompanyCreate = () => {
                   placeholder="예: 010-1234-5678"
                   inputProps={{
                     maxLength: 13 // 000-0000-0000 형식의 최대 길이
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="매장 전화번호"
+                  name="storeTelNumber"
+                  value={companyData.storeTelNumber}
+                  onChange={handleStoreTelNumberChange}
+                  fullWidth
+                  size="small"
+                  error={!!errors.storeTelNumber}
+                  helperText={errors.storeTelNumber}
+                  placeholder="예: 055-123-4567"
+                  inputProps={{
+                    maxLength: 13 // 000-000-0000 형식의 최대 길이
                   }}
                 />
               </Grid>
@@ -1307,6 +1511,23 @@ const CompanyCreate = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* 스낵바 알림 */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbarSeverity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
