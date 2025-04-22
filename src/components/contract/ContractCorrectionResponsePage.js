@@ -549,7 +549,11 @@ const ContractCorrectionResponsePage = () => {
       
       // 5단계: 재서명 완료 처리
       const completeResponse = await fetch(`http://localhost:8080/api/participants/${participant.id}/complete-corrections?token=${token}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
       });
       
       if (!completeResponse.ok) {

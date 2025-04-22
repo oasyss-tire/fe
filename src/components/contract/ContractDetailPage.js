@@ -520,6 +520,10 @@ const ContractDetailPage = () => {
 
       const response = await fetch(`${url}${queryParams}`, {
         method: "POST",
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -570,6 +574,10 @@ const ContractDetailPage = () => {
 
       const response = await fetch(`${url}${queryParams}`, {
         method: "POST",
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {

@@ -757,7 +757,7 @@ const SignaturePdfViewer = () => {
         
         const template = participant.templatePdfs[i];
         
-        // 서명된 PDF 생성 요청
+        // 서명 완료
         const response = await fetch(
           `http://localhost:8080/api/contract-pdf/download-signed/${template.pdfId}`,
           { 
@@ -1025,6 +1025,9 @@ const SignaturePdfViewer = () => {
         `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents/${doc.documentCodeId}`,
         {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          },
           body: formData
         }
       );
