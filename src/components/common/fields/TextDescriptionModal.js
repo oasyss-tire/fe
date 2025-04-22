@@ -43,7 +43,6 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
   const fetchFormatOptions = async () => {
     try {
       setLoading(true);
-      console.log('형식 목록 API 호출 시작');
       const response = await fetch('http://localhost:8080/api/codes/field-formats');
       
       if (!response.ok) {
@@ -52,11 +51,8 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
       }
       
       const data = await response.json();
-      console.log('API 응답 데이터:', data);
       
       if (Array.isArray(data) && data.length > 0) {
-        console.log('형식 목록 데이터 수:', data.length);
-        console.log('첫 번째 형식 아이템:', data[0]);
         setFormatOptions(data);
       } else {
         console.warn('API에서 받은 형식 목록이 비어있거나 배열이 아닙니다:', data);

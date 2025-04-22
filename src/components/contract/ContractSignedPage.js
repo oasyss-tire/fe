@@ -67,7 +67,6 @@ const ContractSignedPage = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          console.log("API 오류 응답:", errorData);
 
           // 토큰 만료 오류 식별 (errorCode 또는 메시지 내용으로 판단)
           if (
@@ -88,17 +87,6 @@ const ContractSignedPage = () => {
 
         const data = await response.json();
         if (data.success) {
-          console.log("계약 정보 응답:", data);
-          console.log(
-            "참여자 상태:",
-            data.participant?.statusCode,
-            data.participant?.statusName
-          );
-          console.log(
-            "상태 코드 ID:",
-            data.participant?.statusCode?.codeId ||
-              data.participant?.statusCodeId
-          );
           setContractInfo(data);
           
           // 계약 정보를 받은 후 서명된 PDF 목록도 함께 조회
@@ -138,7 +126,6 @@ const ContractSignedPage = () => {
       }
 
       const pdfList = await response.json();
-      console.log("서명된 PDF 목록:", pdfList);
       setSignedPdfs(pdfList);
     } catch (error) {
       console.error("서명된 PDF 목록 조회 오류:", error);
@@ -404,14 +391,6 @@ const ContractSignedPage = () => {
       (statusToCheck === "007001_0006" &&
         contractInfo.participant.statusName === "재서명 요청");
 
-    // 백엔드로부터 받은 상태 정보 로그
-    console.log("상태 확인 개선:", {
-      statusToCheck,
-      statusCode,
-      statusName: contractInfo.participant.statusName,
-      matchByName,
-      result: statusCode === statusToCheck || matchByName,
-    });
 
     // 코드 ID 또는 상태 이름이 일치하는지 확인
     return statusCode === statusToCheck || matchByName;

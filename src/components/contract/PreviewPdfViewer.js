@@ -96,7 +96,6 @@ const PreviewPdfViewer = () => {
       if (!response.ok) throw new Error('필드 정보 조회 실패');
       
       const fieldsData = await response.json();
-      console.log('필드 정보 조회 결과:', fieldsData);
       
       // 필드 정보 저장
       setFields(fieldsData);
@@ -124,7 +123,6 @@ const PreviewPdfViewer = () => {
       const finalScale = Math.min(Math.max(baseScale, 0.8), 1.4);
       setPdfScale(finalScale);
       
-      console.log(`PDF 크기 계산: 스케일=${finalScale}`);
     };
     
     calculateScale();
@@ -140,7 +138,6 @@ const PreviewPdfViewer = () => {
   // PDF 문서 로드 성공 시 실행
   const handleDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
-    console.log(`PDF 로드 성공: 총 ${numPages}페이지, 현재 스케일: ${pdfScale}`);
   };
   
   // 페이지 변경 처리

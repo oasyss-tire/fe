@@ -59,7 +59,6 @@ const ContractList = () => {
       const response = await fetch('http://localhost:8080/api/contracts');
       if (!response.ok) throw new Error('계약 목록 조회 실패');
       const data = await response.json();
-      console.log('Fetched contracts:', data);
       
       // 계약 데이터에 회사 정보 추가
       const contractsWithCompanyDetails = await Promise.all(data.map(async (contract) => {
@@ -104,7 +103,6 @@ const ContractList = () => {
       const response = await fetch('http://localhost:8080/api/codes/groups/001002/codes');
       if (!response.ok) throw new Error('상태 코드 조회 실패');
       const data = await response.json();
-      console.log('Fetched status codes:', data);
       // sortOrder 기준으로 정렬
       setStatusCodes(data.sort((a, b) => a.sortOrder - b.sortOrder));
     } catch (error) {

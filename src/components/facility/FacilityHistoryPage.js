@@ -148,7 +148,6 @@ const FacilityHistoryPage = () => {
       
       if (facilityTypeResponse.ok) {
         const facilityTypeData = await facilityTypeResponse.json();
-        console.log('시설물 타입 코드 로드 완료:', facilityTypeData);
         setFacilityTypes(facilityTypeData);
       } else {
         console.error('시설물 타입 코드 로드 실패:', facilityTypeResponse.status);
@@ -163,7 +162,6 @@ const FacilityHistoryPage = () => {
       
       if (statusResponse.ok) {
         const statusData = await statusResponse.json();
-        console.log('상태 코드 로드 완료:', statusData);
         setStatusCodes(statusData);
       } else {
         console.error('상태 코드 로드 실패:', statusResponse.status);
@@ -178,7 +176,6 @@ const FacilityHistoryPage = () => {
       
       if (transactionTypeResponse.ok) {
         const transactionTypeData = await transactionTypeResponse.json();
-        console.log('트랜잭션 타입 코드 로드 완료:', transactionTypeData);
         setTransactionTypes(transactionTypeData);
       } else {
         console.error('트랜잭션 타입 코드 로드 실패:', transactionTypeResponse.status);
@@ -209,23 +206,19 @@ const FacilityHistoryPage = () => {
       
       // 시설물 유형 필터 - facilityTypeName 사용 (백엔드 API 요청용)
       if (facilityTypeFilter && facilityTypeFilter !== '') {
-        console.log('시설물 유형 필터 적용:', facilityTypeFilter);
         url.searchParams.append('facilityTypeName', facilityTypeFilter);
       }
       
       // 트랜잭션 유형 필터
       if (transactionTypeFilter && transactionTypeFilter !== '') {
-        console.log('트랜잭션 유형 필터 적용:', transactionTypeFilter);
         url.searchParams.append('transactionTypeCode', transactionTypeFilter);
       }
       
       // 상태 필터
       if (statusFilter && statusFilter !== '') {
-        console.log('상태 필터 적용:', statusFilter);
         url.searchParams.append('statusCode', statusFilter);
       }
       
-      console.log('API 요청 URL:', url.toString());
       
       const response = await fetch(url, {
         headers: {
@@ -238,27 +231,22 @@ const FacilityHistoryPage = () => {
       }
       
       const data = await response.json();
-      console.log('응답 데이터 개수:', data.length);
 
       // 백엔드 필터링이 작동하지 않는 경우 프론트엔드에서 필터링 수행
       let filteredData = [...data];
       
       // 프론트엔드에서 시설물 유형 필터링 (백엔드가 처리하지 않는 경우)
       if (facilityTypeFilter && facilityTypeFilter !== '') {
-        console.log('프론트엔드에서 시설물 유형 필터링 수행:', facilityTypeFilter);
         filteredData = filteredData.filter(
           item => item.facilityTypeName === facilityTypeFilter
         );
-        console.log('필터링 후 데이터 개수:', filteredData.length);
       }
       
       // 프론트엔드에서 트랜잭션 유형 필터링 (백엔드가 처리하지 않는 경우)
       if (transactionTypeFilter && transactionTypeFilter !== '') {
-        console.log('프론트엔드에서 트랜잭션 유형 필터링 수행:', transactionTypeFilter);
         filteredData = filteredData.filter(
           item => item.transactionTypeName === transactionTypeFilter
         );
-        console.log('필터링 후 데이터 개수:', filteredData.length);
       }
       
       setFacilityTransactions(filteredData);
@@ -292,11 +280,9 @@ const FacilityHistoryPage = () => {
       
       // 시설물 유형 필터 - facilityTypeName 사용
       if (facilityTypeFilter && facilityTypeFilter !== '') {
-        console.log('시설물 유형 필터 적용:', facilityTypeFilter);
         url.searchParams.append('facilityTypeName', facilityTypeFilter);
       }
       
-      console.log('API 요청 URL:', url.toString());
       
       const response = await fetch(url, {
         headers: {
@@ -309,7 +295,6 @@ const FacilityHistoryPage = () => {
       }
       
       const data = await response.json();
-      console.log('응답 데이터 개수:', data.length);
       setVoucherTransactions(data);
       setPage(0); // 페이지 초기화
     } catch (error) {
@@ -341,11 +326,8 @@ const FacilityHistoryPage = () => {
       
       // 시설물 유형 필터 - facilityTypeName 사용
       if (facilityTypeFilter && facilityTypeFilter !== '') {
-        console.log('시설물 유형 필터 적용:', facilityTypeFilter);
         url.searchParams.append('facilityTypeName', facilityTypeFilter);
       }
-      
-      console.log('API 요청 URL:', url.toString());
       
       const response = await fetch(url, {
         headers: {
@@ -358,7 +340,6 @@ const FacilityHistoryPage = () => {
       }
       
       const data = await response.json();
-      console.log('응답 데이터 개수:', data.length);
       setDepreciationHistory(data);
       setPage(0); // 페이지 초기화
     } catch (error) {
@@ -388,14 +369,6 @@ const FacilityHistoryPage = () => {
 
   // 검색 핸들러
   const handleSearch = () => {
-    console.log('검색 실행 - 필터 값들:', {
-      facilityTypeFilter,
-      transactionTypeFilter,
-      statusFilter,
-      searchKeyword,
-      startDate: format(startDate, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd')
-    });
     
     if (tabValue === 0) {
       fetchFacilityTransactions();
@@ -414,7 +387,6 @@ const FacilityHistoryPage = () => {
     setFacilityTypeFilter('');
     setStatusFilter('');
     setTransactionTypeFilter('');
-    console.log('필터 초기화 완료');
   };
 
   // 스낵바 메시지 표시 함수
@@ -437,13 +409,11 @@ const FacilityHistoryPage = () => {
   // 필터 선택 이벤트 핸들러
   const handleFacilityTypeChange = (e) => {
     const value = e.target.value;
-    console.log('시설물 유형 선택됨:', value);
     setFacilityTypeFilter(value);
   };
 
   const handleTransactionTypeChange = (e) => {
     const value = e.target.value;
-    console.log('트랜잭션 유형 선택됨:', value);
     setTransactionTypeFilter(value);
   };
 
@@ -479,7 +449,6 @@ const FacilityHistoryPage = () => {
               value={facilityTypeFilter}
               onChange={(e) => {
                 const selectedValue = e.target.value;
-                console.log('시설물 유형 선택됨:', selectedValue);
                 setFacilityTypeFilter(selectedValue);
               }}
               label="시설물 유형"
@@ -501,7 +470,6 @@ const FacilityHistoryPage = () => {
                 value={transactionTypeFilter}
                 onChange={(e) => {
                   const selectedValue = e.target.value;
-                  console.log('트랜잭션 유형 선택됨:', selectedValue);
                   setTransactionTypeFilter(selectedValue);
                 }}
                 label="유형"

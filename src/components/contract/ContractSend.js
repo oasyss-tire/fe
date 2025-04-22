@@ -47,7 +47,6 @@ const formatDateForServer = (date) => {
   const day = String(d.getDate()).padStart(2, '0');
   
   const formattedDate = `${year}-${month}-${day}`;
-  console.log(`원본 날짜: ${date}, 변환된 날짜: ${formattedDate}`);
   return formattedDate;
 };
 
@@ -186,14 +185,11 @@ const ContractSend = () => {
         
         setParticipants(newParticipants);
         
-        // 콘솔에 로그만 출력하고 알림은 표시하지 않음
-        console.log(`위수탁 업체 직원 ${newParticipants.length}명의 정보가 자동으로 입력되었습니다.`);
       } else {
         // 직원 정보가 없을 경우 기본 참여자 1명 설정
         setParticipants([
           { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
         ]);
-        console.log('조회된 위수탁 업체 직원 정보가 없습니다. 참여자 정보를 직접 입력해주세요.');
       }
     } catch (error) {
       console.error('위수탁 업체 사용자 목록 조회 중 오류:', error);
@@ -217,8 +213,6 @@ const ContractSend = () => {
         const allDocumentIds = data.map(doc => doc.codeId);
         setSelectedDocumentIds(allDocumentIds);
       }
-      
-      console.log('첨부파일 코드 목록:', data);
     } catch (error) {
       console.error('첨부파일 코드 목록 조회 중 오류:', error);
     }

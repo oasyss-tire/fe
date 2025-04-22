@@ -104,23 +104,10 @@ const ContractDetailPage = () => {
         if (!response.ok) throw new Error("계약 조회 실패");
         const data = await response.json();
 
-        // 참여자 정보 및 상태코드 세부 로깅
-        console.log("전체 계약 정보:", data);
-        console.log("참여자 목록:", data.participants);
 
         // 각 참여자의 상태 정보 확인
         if (data.participants && data.participants.length > 0) {
           data.participants.forEach((participant, index) => {
-            console.log(
-              `참여자 ${index + 1} [${participant.name}] 상태 정보:`,
-              {
-                statusCodeId: participant.statusCodeId,
-                statusName: participant.statusName,
-                signed: participant.signed,
-                approved: participant.approved,
-                rejectionReason: participant.rejectionReason,
-              }
-            );
           });
         }
         
@@ -154,7 +141,6 @@ const ContractDetailPage = () => {
                     }) 
                   : '-'
               };
-              console.log("회사 정보 통합 완료:", contractWithCompanyDetails);
             }
           } catch (error) {
             console.error(`회사 정보 조회 중 오류 (ID: ${data.companyId}):`, error);
@@ -184,7 +170,6 @@ const ContractDetailPage = () => {
       );
       if (!response.ok) throw new Error("첨부파일 조회 실패");
       const data = await response.json();
-      console.log("참여자별 문서 목록:", data);
       setParticipantDocuments(data);
     } catch (error) {
       console.error("첨부파일 조회 중 오류:", error);
@@ -373,7 +358,6 @@ const ContractDetailPage = () => {
       }
 
       const result = await response.json();
-      console.log("업로드 성공:", result);
 
       // 업로드 성공 후 문서 목록 다시 조회
       await fetchContractDocuments(contract.id);
@@ -781,7 +765,6 @@ const ContractDetailPage = () => {
         // 첫 번째 PDF ID를 사용
         const firstPdfId = participant.templatePdfs[0]?.pdfId;
         if (firstPdfId) {
-          console.log("미리보기 이동: 참여자ID =", participant.id, "PDF ID =", firstPdfId);
           
           // PDF ID를 포함하여 미리보기 페이지로 이동
           navigate(
@@ -796,7 +779,6 @@ const ContractDetailPage = () => {
         const pdfList = await fetchSignedPdfIds(participant.id);
         if (pdfList && pdfList.length > 0) {
           const pdfId = pdfList[0].pdfId;
-          console.log("PDF 목록 조회 후 미리보기 이동: 참여자ID =", participant.id, "PDF ID =", pdfId);
           
           navigate(
             `/contract-preview/${contract.id}/participant/${participant.id}/pdf/${encodeURIComponent(pdfId)}`
@@ -808,7 +790,6 @@ const ContractDetailPage = () => {
       }
       
       // 그래도 PDF ID가 없으면 PDF ID 없이 미리보기 페이지로 이동
-      console.log("PDF ID 없이 미리보기 이동: 참여자ID =", participant.id);
       navigate(
         `/contract-preview/${contract.id}/participant/${participant.id}`
       );
@@ -921,7 +902,6 @@ const ContractDetailPage = () => {
       }
 
       const signedPdfs = await response.json();
-      console.log("서명된 PDF 목록:", signedPdfs);
       
       // PDF ID 목록 저장
       if (signedPdfs && signedPdfs.length > 0) {

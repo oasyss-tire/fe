@@ -4,12 +4,10 @@ export const sendContractSMS = async (contractId, participants, contractInfo) =>
     const kakaoParticipants = participants.filter(p => p.notifyType === 'KAKAO');
     let successCount = 0;
     
-    console.log('알림톡 대상자 수:', kakaoParticipants.length, '명');
     
     for (const participant of kakaoParticipants) {
       try {
         // 1. 먼저 토큰 발급 API 호출
-        console.log('토큰 발급 요청 - 참여자 ID:', participant.id);
         const tokenResponse = await fetch('http://localhost:8080/api/kakao-alert/generate-token', {
           method: 'POST',
           headers: {
@@ -29,7 +27,6 @@ export const sendContractSMS = async (contractId, participants, contractInfo) =>
         
         // 2. 토큰 발급 결과 확인
         const tokenData = await tokenResponse.json();
-        console.log('토큰 발급 성공:', tokenData);
         
         if (!tokenData.token) {
           throw new Error('토큰이 생성되지 않았습니다.');
@@ -52,7 +49,6 @@ export const sendContractSMS = async (contractId, participants, contractInfo) =>
           url: signatureUrl  // 토큰이 포함된 URL
         };
         
-        console.log('알림톡 요청 데이터:', kakaoAlertData);
         
         // 6. 알림톡 API 호출
         const response = await fetch('http://localhost:8080/api/kakao-alert/contract-signature', {
@@ -70,7 +66,6 @@ export const sendContractSMS = async (contractId, participants, contractInfo) =>
           throw new Error(`알림톡 발송 실패 - ${participant.phoneNumber}`);
         }
         
-        console.log('알림톡 발송 성공:', participant.phoneNumber);
         successCount++;
       } catch (participantError) {
         // 단일 참여자 처리 중 오류가 발생한 경우 기록하고 다음 참여자 계속 처리

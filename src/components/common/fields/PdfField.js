@@ -289,13 +289,6 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
   
   // 디버깅을 위한 상태 체크
   useEffect(() => {
-    console.log('ConfirmTextField 마운트/업데이트:', { 
-      id: field.id, 
-      confirmText: field.confirmText ? field.confirmText.substring(0, 20) + '...' : null,
-      isEditMode: field.isEditMode,
-      inputText: inputText ? inputText.substring(0, 20) + '...' : null,
-      hasInput
-    });
   }, [field, inputText, hasInput]);
   
   // 필드 데이터에서 초기값 설정

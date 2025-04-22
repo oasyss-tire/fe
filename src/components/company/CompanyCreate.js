@@ -493,8 +493,6 @@ const CompanyCreate = () => {
       
       // 응답 데이터 처리
       const data = await response.json();
-      console.log('서버 응답 상태:', response.status);
-      console.log('서버 응답 데이터:', data);
       
       if (!response.ok) {
         // 백엔드에서 보낸 오류 메시지 확인

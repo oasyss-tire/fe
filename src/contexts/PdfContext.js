@@ -29,7 +29,6 @@ export const PdfProvider = ({ children }) => {
         }))
       };
 
-      console.log('Saving fields request:', requestData);
 
       const response = await fetch('http://localhost:8080/api/contract-pdf/fields', {
         method: 'POST',

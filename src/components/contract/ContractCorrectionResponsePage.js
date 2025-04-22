@@ -86,7 +86,6 @@ const ContractCorrectionResponsePage = () => {
         setLoading(true);
         setError(null);
         
-        console.log('사용 중인 토큰:', token); // 디버깅을 위한 로그 추가
         
         // 1단계: 토큰으로 기본 정보 조회 (Authorization 헤더 없이 쿼리 파라미터만 사용)
         const response = await fetch(`http://localhost:8080/api/contracts/correction-request/info?token=${token}`, {
@@ -99,7 +98,6 @@ const ContractCorrectionResponsePage = () => {
         }
         
         const data = await response.json();
-        console.log('재서명 기본 정보:', data);
         
         // 기본 정보 설정
         setContract({
@@ -142,16 +140,11 @@ const ContractCorrectionResponsePage = () => {
       }
       
       const fieldsData = await response.json();
-      console.log('재서명 필드 목록:', fieldsData);
+
       
       // 필드 데이터 처리 전에 디버깅을 위한 로그 추가
       fieldsData.forEach((field, index) => {
-        console.log(`필드 ${index+1} 정보:`, {
-          id: field.id,
-          fieldName: field.fieldName,
-          page: field.page,
-          pdfId: field.pdfId
-        });
+
         
         // 페이지 정보가 없으면 기본값 1 설정
         if (!field.page) {
@@ -180,7 +173,6 @@ const ContractCorrectionResponsePage = () => {
           .filter(field => field.pdfId)
           .map(field => field.pdfId))];
         
-        console.log('고유 PDF IDs:', uniquePdfIds);
         
         if (uniquePdfIds.length > 0) {
           // PDF 정보 설정
@@ -204,7 +196,6 @@ const ContractCorrectionResponsePage = () => {
   // PDF URL 가져오기
   const fetchPdfUrl = async (pdfId, currentToken) => {
     try {
-      console.log(`PDF URL 로드: ID=${pdfId}, 토큰=${currentToken?.substring(0, 10)}...`);
       // 토큰을 URL 쿼리 파라미터로 전달
       setPdfUrl(`http://localhost:8080/api/contract-pdf/view/${pdfId}?token=${currentToken || token}`);
     } catch (err) {
@@ -215,7 +206,6 @@ const ContractCorrectionResponsePage = () => {
   
   // PDF 변경 처리
   const handleChangePdf = async (index) => {
-    console.log(`PDF 전환: ${index}, 해당 PDF ID: ${pdfs[index]?.id}`);
     if (pdfs.length > 0 && index >= 0 && index < pdfs.length) {
       setCurrentPdfIndex(index);
       setCurrentPage(1);
@@ -245,8 +235,6 @@ const ContractCorrectionResponsePage = () => {
     
     // 페이지 너비 다시 계산
     setPageWidth(Math.floor(595.28 * limitedScale));
-    
-    console.log(`확대/축소: 새 스케일 ${limitedScale}, 너비 ${Math.floor(595.28 * limitedScale)}`);
   };
   
   // 컨테이너 크기 변경 감지 및 스케일 계산
@@ -259,8 +247,6 @@ const ContractCorrectionResponsePage = () => {
       const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
       const availableWidth = container.clientWidth - paddingX;
       
-      // 디버깅을 위한 로그 추가
-      console.log(`컨테이너 크기: 가용 너비=${availableWidth}px`);
       
       // 고정 너비 사용 (렌더링 문제 해결을 위해)
       const fixedWidth = Math.min(595, availableWidth - 40);
@@ -274,7 +260,6 @@ const ContractCorrectionResponsePage = () => {
       const finalScale = Math.min(Math.max(baseScale, 0.8), 1.4);
       setPdfScale(finalScale);
       
-      console.log(`PDF 크기 계산: 스케일=${finalScale}, 너비=${fixedWidth}px`);
     };
     
     calculateScale();
@@ -289,7 +274,6 @@ const ContractCorrectionResponsePage = () => {
   
   // PDF 로드 성공 처리
   const handleDocumentLoadSuccess = ({ numPages }) => {
-    console.log(`PDF 로드 성공: 총 ${numPages}페이지, 현재 스케일: ${pdfScale}, 페이지 너비: ${pageWidth}`);
     setNumPages(numPages);
   };
   
@@ -297,9 +281,7 @@ const ContractCorrectionResponsePage = () => {
   const handleFieldValueChange = (fieldId, value) => {
     const field = correctionFields.find(f => f.id === fieldId);
     const isCheckboxField = field?.fieldName && field.fieldName.startsWith('checkbox');
-    
-    console.log(`필드 값 변경: ID=${fieldId}, 타입=${isCheckboxField ? '체크박스' : '일반'}, 값=${JSON.stringify(value)}`);
-    
+      
     // 텍스트 필드인 경우 formatCodeId에 따라 포맷팅 적용
     if (!isCheckboxField && field) {
       const formattedValue = formatInputValue(value, field.formatCodeId);
@@ -589,8 +571,7 @@ const ContractCorrectionResponsePage = () => {
         value: isCheckboxField ? value : value // 체크박스 필드는 boolean 값 그대로 전송
       };
       
-      console.log(`필드 업데이트 요청: ID=${fieldId}, 타입=${isCheckboxField ? '체크박스' : '일반'}, 값=${JSON.stringify(value)}`);
-      
+   
       const response = await fetch(`http://localhost:8080/api/participants/${participant.id}/correction-fields/${fieldId}?token=${token}`, {
         method: 'PUT',
         headers: {
@@ -621,7 +602,6 @@ const ContractCorrectionResponsePage = () => {
   
   // 필드가 있는 페이지로 이동하는 함수 추가
   const navigateToField = (field) => {
-    console.log(`필드 ${field.id} (${field.fieldName})로 이동: PDF ID ${field.pdfId}, 페이지 ${field.page}`);
     
     // 현재 PDF와 다른 PDF인 경우 PDF 전환
     if (pdfs.length > 0 && field.pdfId) {
@@ -884,8 +864,6 @@ const ContractCorrectionResponsePage = () => {
                         // 현재 페이지의 필드만 표시 (PDF 페이지 인덱스는 0부터 시작하므로 +1)
                         const isCurrentPage = field.page === index + 1;
                         
-                        // 필터링 로직 디버깅 (PDF 오버레이)
-                        console.log(`[PDF오버레이] 필드 ID:${field.id}, PDF ID:${field.pdfId}, 페이지:${field.page}, 현재 PDF:${pdfs[currentPdfIndex]?.id}, 현재 페이지:${index+1}, 표시여부:${isPdfMatch && isCurrentPage}`);
                         
                         return isPdfMatch && isCurrentPage;
                       })

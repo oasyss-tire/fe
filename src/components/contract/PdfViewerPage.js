@@ -465,8 +465,6 @@ const PdfViewerPage = () => {
         ...(field.formatCodeId ? { formatCodeId: field.formatCodeId } : {})
       }));
 
-      // 디버깅용 로그
-      console.log('저장할 필드 목록:', allFields);
 
       await saveFields(allFields);
       setSaveTemplateModalOpen(true);
@@ -518,35 +516,30 @@ const PdfViewerPage = () => {
 
   // 따라쓰기 모달 열기 함수
   const handleOpenConfirmTextModal = (fieldId) => {
-    console.log('handleOpenConfirmTextModal 호출됨:', fieldId);
     
     // activeConfirmFieldId가 이미 설정되어 있더라도 새로운 필드 ID로 업데이트
     setActiveConfirmFieldId(fieldId);
     
     // 해당 필드 찾기
     const field = confirmTextFields.find(f => f.id === fieldId);
-    console.log('열려는 필드:', field);
     
     // 모달 열기
     setConfirmTextModalOpen(true);
   };
 
   const handleCloseConfirmTextModal = () => {
-    console.log('모달 닫기');
     setConfirmTextModalOpen(false);
     setActiveConfirmFieldId(null);
     
     // 모달이 닫힐 때 빈 confirmText가 있는 필드는 삭제
     setConfirmTextFields(prev => {
       const filtered = prev.filter(field => field.confirmText?.trim() !== '');
-      console.log('필터링 후 남은 필드:', filtered.length);
       return filtered;
     });
   };
 
   // 따라쓰기 텍스트 업데이트 함수 수정
   const handleConfirmTextInput = (fieldId, inputText) => {
-    console.log('텍스트 업데이트:', fieldId, inputText);
     
     // 관리자 모드에서는 confirmText를 업데이트, 사용자 모드에서는 value를 업데이트
     setConfirmTextFields(prev => 
@@ -554,11 +547,9 @@ const PdfViewerPage = () => {
         if (field.id === fieldId) {
           if (field.isEditMode) {
             // 관리자 모드: confirmText 업데이트
-            console.log('관리자 모드로 업데이트:', inputText);
             return { ...field, confirmText: inputText };
           } else {
             // 사용자 모드: value 업데이트
-            console.log('사용자 모드로 업데이트:', inputText);
             return { ...field, value: inputText };
           }
         }
@@ -569,14 +560,14 @@ const PdfViewerPage = () => {
 
   // 텍스트 필드 클릭 처리 함수 추가
   const handleTextFieldClick = (fieldId) => {
-    console.log('텍스트 필드 클릭됨:', fieldId);
+
     setActiveTextFieldId(fieldId);
     setTextDescriptionModalOpen(true);
   };
 
   // 텍스트 필드 설명 저장 함수 수정
   const handleTextDescriptionSave = (description, formatCodeId) => {
-    console.log('텍스트 필드 설명 저장:', activeTextFieldId, description, formatCodeId);
+
     
     // 형식 이름을 가져오기 위한 API 호출
     const fetchFormatName = async (codeId) => {
@@ -829,7 +820,6 @@ const PdfViewerPage = () => {
                     onDelete={(e) => handleDeleteField(e, field.id)}
                     onInputSave={(inputText) => handleConfirmTextInput(field.id, inputText)}
                     onFieldClick={() => {
-                      console.log('onFieldClick 호출됨:', field.id);
                       handleOpenConfirmTextModal(field.id);
                     }}
                   />
@@ -891,13 +881,12 @@ const PdfViewerPage = () => {
         open={confirmTextModalOpen}
         onClose={handleCloseConfirmTextModal}
         onSave={(inputText) => {
-          console.log('onSave 호출됨:', inputText);
+
           if (activeConfirmFieldId) {
             handleConfirmTextInput(activeConfirmFieldId, inputText);
           }
         }}
         onUpdate={(originalText) => {
-          console.log('onUpdate 호출됨:', originalText);
           if (activeConfirmFieldId) {
             handleConfirmTextInput(activeConfirmFieldId, originalText);
           }

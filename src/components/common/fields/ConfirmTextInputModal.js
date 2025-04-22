@@ -37,14 +37,7 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
   
   // 모달이 열릴 때마다 입력값 초기화
   useEffect(() => {
-    if (open && field) {
-      console.log('ConfirmTextInputModal 열림:', { 
-        fieldId: field.id, 
-        isEditMode: field.isEditMode, 
-        confirmText: field.confirmText,
-        value: field.value
-      });
-      
+    if (open && field) {      
       // 관리자 모드면 confirmText를, 사용자 모드면 value를 초기값으로
       setInputText(isAdminMode ? (field.confirmText || '') : (field.value || ''));
       setCursorPosition(0);
@@ -153,19 +146,12 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
 
   // 저장 핸들러
   const handleSave = () => {
-    console.log('저장 버튼 클릭:', { 
-      isAdminMode, 
-      inputText, 
-      fieldId: field?.id 
-    });
-    
     // 관리자 모드 - 원본 텍스트 저장
     if (isAdminMode) {
       if (!inputText.trim()) {
         setError('서명문구를 입력해주세요.');
         return;
       }
-      console.log('관리자 모드로 업데이트 호출');
       if (onUpdate) {
         onUpdate(inputText.trim());
       }
@@ -183,8 +169,6 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
       setError('입력한 문구가 원본 서명문구와 일치하지 않습니다.');
       return;
     }
-
-    console.log('사용자 모드로 저장 호출');
     if (onSave) {
       onSave(inputText);
     }

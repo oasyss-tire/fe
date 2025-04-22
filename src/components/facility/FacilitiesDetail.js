@@ -280,7 +280,6 @@ const FacilitiesDetail = () => {
       }
 
       const result = await response.json();
-      console.log('감가상각 처리 결과:', result);
       
       // 시설물 정보 새로고침 (현재 가치가 업데이트되었을 것임)
       const updatedFacilityResponse = await fetch(`http://localhost:8080/api/facilities/${id}`, {

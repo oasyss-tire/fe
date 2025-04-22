@@ -88,11 +88,9 @@ const FacilityTransfer = () => {
       }
 
       const data = await response.json();
-      console.log('회사 목록 조회 결과:', data); // 디버깅용 로그
       
       // 회사 데이터 구조 확인
       if (data && data.length > 0) {
-        console.log('첫 번째 회사 데이터 구조:', JSON.stringify(data[0]));
       }
       
       setCompanies(data);
@@ -112,7 +110,6 @@ const FacilityTransfer = () => {
     }
     
     try {
-      console.log('회사ID로 시설물 조회:', companyId); // 디버깅용 로그
       const response = await fetch(`http://localhost:8080/api/facilities?companyId=${companyId}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -124,14 +121,12 @@ const FacilityTransfer = () => {
       }
 
       const data = await response.json();
-      console.log('시설물 목록 조회 결과:', data); // 디버깅용 로그
       
       // 폐기 상태가 아닌 시설물만 필터링 (statusCode가 "002003_0003"(폐기중) 또는 "002003_0004"(폐기완료)가 아닌 것만 포함)
       const availableFacilities = (data.content || []).filter(facility => {
         return facility.statusCode !== "002003_0003" && facility.statusCode !== "002003_0004";
       });
       
-      console.log('사용 가능한 시설물 필터링 결과:', availableFacilities);
       return availableFacilities;
     } catch (error) {
       console.error('시설물 목록 조회 실패:', error);
@@ -142,7 +137,6 @@ const FacilityTransfer = () => {
 
   // 회사 선택 변경 시 시설물 목록 업데이트
   const handleCompanyChange = async (index, field, value) => {
-    console.log('회사 선택 변경:', field, value, typeof value); // 디버깅용 로그
     
     // 값이 없거나 undefined인 경우 처리
     if (!value) {
@@ -166,7 +160,6 @@ const FacilityTransfer = () => {
           facilityId: '', // 시설물 선택 초기화
           facilities: companyFacilities // 해당 항목에만 시설물 목록 저장
         };
-        console.log('업데이트된 이동 항목:', updatedItems);
         setTransferItems(updatedItems);
         
         // 로딩 상태 해제
@@ -178,7 +171,6 @@ const FacilityTransfer = () => {
           ...updatedItems[index],
           [field]: value
         };
-        console.log('업데이트된 이동 항목(목적지):', updatedItems);
         setTransferItems(updatedItems);
       }
     } catch (error) {
@@ -190,7 +182,6 @@ const FacilityTransfer = () => {
 
   // 폐기할 회사 선택 변경 시
   const handleDisposalCompanyChange = async (index, value) => {
-    console.log('폐기 회사 선택 변경:', value, typeof value); // 디버깅용 로그
     
     // 값이 없거나 undefined인 경우 처리
     if (!value) {
@@ -213,7 +204,6 @@ const FacilityTransfer = () => {
         facilityId: '', // 시설물 선택 초기화
         facilities: companyFacilities // 해당 항목에만 시설물 목록 저장
       };
-      console.log('업데이트된 폐기 항목:', updatedItems);
       setDisposalItems(updatedItems);
       
       // 로딩 상태 해제
@@ -242,7 +232,6 @@ const FacilityTransfer = () => {
 
   // 시설물 선택 변경 시
   const handleFacilityChange = (index, facilityId, type) => {
-    console.log('시설물 선택 변경:', facilityId, type, typeof facilityId);
     
     if (!facilityId) {
       console.error('시설물 선택 값이 없음:', facilityId);
@@ -255,7 +244,6 @@ const FacilityTransfer = () => {
         ...updatedItems[index],
         facilityId
       };
-      console.log('업데이트된 이동 항목(시설물):', updatedItems);
       setTransferItems(updatedItems);
     } else {
       const updatedItems = [...disposalItems];
@@ -263,7 +251,6 @@ const FacilityTransfer = () => {
         ...updatedItems[index],
         facilityId
       };
-      console.log('업데이트된 폐기 항목(시설물):', updatedItems);
       setDisposalItems(updatedItems);
     }
   };
@@ -362,7 +349,6 @@ const FacilityTransfer = () => {
       
       try {
         const checkedItems = await Promise.all(statusCheckPromises);
-        console.log('상태 확인된 이동 항목:', checkedItems);
         
         // 이동 요청을 백엔드로 전송
         const promises = checkedItems.map(item => 
@@ -560,7 +546,6 @@ const FacilityTransfer = () => {
                       <Select
                         value={item.sourceCompanyId ? String(item.sourceCompanyId) : ''}
                         onChange={(e) => {
-                          console.log('출발지 회사 선택값:', e.target.value);
                           handleCompanyChange(index, 'sourceCompanyId', e.target.value);
                         }}
                         displayEmpty
@@ -597,7 +582,6 @@ const FacilityTransfer = () => {
                       <Select
                         value={item.facilityId ? String(item.facilityId) : ''}
                         onChange={(e) => {
-                          console.log('시설물 선택값:', e.target.value);
                           handleFacilityChange(index, e.target.value, 'transfer');
                         }}
                         displayEmpty
@@ -644,7 +628,6 @@ const FacilityTransfer = () => {
                       <Select
                         value={item.destinationCompanyId ? String(item.destinationCompanyId) : ''}
                         onChange={(e) => {
-                          console.log('목적지 회사 선택값:', e.target.value);
                           handleCompanyChange(index, 'destinationCompanyId', e.target.value);
                         }}
                         displayEmpty
@@ -768,7 +751,6 @@ const FacilityTransfer = () => {
                       <Select
                         value={item.companyId ? String(item.companyId) : ''}
                         onChange={(e) => {
-                          console.log('폐기 회사 선택값:', e.target.value);
                           handleDisposalCompanyChange(index, e.target.value);
                         }}
                         displayEmpty
@@ -805,7 +787,6 @@ const FacilityTransfer = () => {
                       <Select
                         value={item.facilityId ? String(item.facilityId) : ''}
                         onChange={(e) => {
-                          console.log('폐기 시설물 선택값:', e.target.value);
                           handleFacilityChange(index, e.target.value, 'disposal');
                         }}
                         displayEmpty

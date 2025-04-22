@@ -557,22 +557,18 @@ const SignaturePdfViewer = () => {
   // 현재 PDF의 모든 필드가 작성되었는지 확인하는 함수 추가
   const areAllFieldsCompleted = (pdfId) => {
     if (!fields || fields.length === 0) {
-      console.log(`areAllFieldsCompleted: fields 없음 (${pdfId})`);
       return false;
     }
     
     // 현재 PDF의 필드만 필터링
     const currentFields = fields.filter(field => field.pdfId === pdfId);
-    console.log(`areAllFieldsCompleted: pdfId=${pdfId}, 필드 수=${currentFields.length}`);
     
     if (currentFields.length === 0) {
-      console.log(`areAllFieldsCompleted: 해당 PDF의 필드 없음 (${pdfId})`);
       return false;
     }
     
     // 모든 필드에 값이 입력되었는지 확인
     const result = currentFields.every(field => field.value !== null && field.value !== '');
-    console.log(`areAllFieldsCompleted 결과: ${result} (${pdfId})`);
     return result;
   };
   
@@ -605,8 +601,6 @@ const SignaturePdfViewer = () => {
       
       // 다음 템플릿으로 이동
       const nextIndex = currentTemplateIndex + 1;
-      console.log('다음 템플릿으로 이동:', nextIndex);
-      console.log('다음 템플릿 정보:', participant.templatePdfs[nextIndex]);
       setCurrentTemplateIndex(nextIndex);
       
       // 다음 템플릿의 필드 정보 가져오기
@@ -668,7 +662,6 @@ const SignaturePdfViewer = () => {
   const areRequiredDocumentsUploaded = () => {
     // 첨부파일이 없는 경우 조건 충족
     if (!participantDocuments || participantDocuments.length === 0) {
-      console.log("첨부파일 없음 - 조건 충족");
       return true;
     }
     
@@ -677,17 +670,13 @@ const SignaturePdfViewer = () => {
       doc => doc.required === 1 || doc.required === '1' || doc.required === true
     );
     
-    console.log("필수 첨부파일:", requiredDocuments);
-    
     // 필수 첨부파일이 없는 경우 조건 충족
     if (requiredDocuments.length === 0) {
-      console.log("필수 첨부파일 없음 - 조건 충족");
       return true;
     }
     
     // 모든 필수 문서의 업로드 상태 확인
     const allUploaded = requiredDocuments.every(doc => doc.fileId && doc.fileId.trim() !== '');
-    console.log("모든 필수 첨부파일 업로드 완료:", allUploaded);
     
     return allUploaded;
   };
@@ -713,7 +702,6 @@ const SignaturePdfViewer = () => {
   const handleConfirmComplete = () => {
     // 필수 첨부파일 업로드 확인
     const requiredUploaded = areRequiredDocumentsUploaded();
-    console.log("필수 첨부파일 업로드 확인:", requiredUploaded);
     
     // 필수 첨부파일이 업로드되지 않은 경우 경고
     if (!requiredUploaded) {
@@ -901,13 +889,10 @@ const SignaturePdfViewer = () => {
     
     // 건너뛰기 시도 체크 (2개 이상 이동 시 중간 계약서들 검사)
     if (index > currentTemplateIndex + 1) {
-      // 디버깅 위한 로그 추가
-      console.log(`handleTemplateChange: 건너뛰기 시도 (${currentTemplateIndex} → ${index})`);
       
       // 먼저 중간 계약서들의 필드 정보 로드
       for (let i = currentTemplateIndex + 1; i < index; i++) {
         const intermediatePdfId = participant.templatePdfs[i].pdfId;
-        console.log(`중간 계약서 체크: index=${i}, pdfId=${intermediatePdfId}`);
         
         // 각 중간 계약서의 필드 정보를 가져옴
         try {
@@ -916,7 +901,6 @@ const SignaturePdfViewer = () => {
             const intermediateFields = await response.json();
             // 필드가 전부 비어있는지 확인
             const emptyFields = intermediateFields.filter(f => f.value === null || f.value === '');
-            console.log(`중간 계약서(${i}): 전체 필드=${intermediateFields.length}, 빈 필드=${emptyFields.length}`);
             
             if (emptyFields.length > 0) {
               // 작성되지 않은 필드가 있음
