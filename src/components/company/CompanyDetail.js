@@ -15,18 +15,25 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { 
   ArrowBack,
   Save as SaveIcon,
   Upload as UploadIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import koLocale from 'date-fns/locale/ko';
+import TrusteeChangeForm from './TrusteeChangeForm';
+import TrusteeHistoryList from './TrusteeHistoryList';
 
 const CompanyDetail = () => {
   const navigate = useNavigate();
@@ -39,6 +46,7 @@ const CompanyDetail = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [openTrusteeDialog, setOpenTrusteeDialog] = useState(false);
   const [imageFiles, setImageFiles] = useState({
     frontImage: null,
     backImage: null,
@@ -53,6 +61,10 @@ const CompanyDetail = () => {
     rightSideImage: null,
     fullImage: null
   });
+
+  // 수탁자 변경 다이얼로그 열기/닫기 핸들러
+  const handleOpenTrusteeDialog = () => setOpenTrusteeDialog(true);
+  const handleCloseTrusteeDialog = () => setOpenTrusteeDialog(false);
 
   // 회사 정보 조회 함수
   const fetchCompanyData = async () => {
@@ -471,6 +483,49 @@ const CompanyDetail = () => {
     }
   };
 
+  // 수탁자 변경 제출 핸들러
+  const handleTrusteeChangeSubmit = async (trusteeData) => {
+    try {
+      setIsSubmitting(true);
+      
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/companies/${companyId}/trustee`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(trusteeData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('수탁자 변경에 실패했습니다.');
+      }
+      
+      const updatedCompany = await response.json();
+      setCompany(updatedCompany);
+      setSuccessMessage('신규 수탁자 정보가 등록되었습니다. 지정된 시작일에 자동으로 적용됩니다.');
+      
+      // 다이얼로그 닫기
+      handleCloseTrusteeDialog();
+      
+      // 3초 후 성공 메시지 숨기기
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('수탁자 변경 오류:', error);
+      setError(error.message || '수탁자 변경에 실패했습니다.');
+      
+      // 3초 후 에러 메시지 숨기기
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // 편집 모드 토글
   const toggleEditMode = () => {
@@ -630,7 +685,7 @@ const CompanyDetail = () => {
       {formData && (
         <form id="company-form" onSubmit={handleSubmit}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={koLocale}>
-            {/* 기본 정보 */}
+            {/* 기본 정보 섹션 - 매장코드, 점번, 매장명만 포함 */}
             <Paper sx={{ 
               p: 3,
               mb: 3,
@@ -640,9 +695,8 @@ const CompanyDetail = () => {
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-                  기본 정보
+                  매장 정보
                 </Typography>
-              
               </Box>
               <Divider sx={{ mb: 3 }} />
               
@@ -706,6 +760,52 @@ const CompanyDetail = () => {
                     </>
                   )}
                 </Grid>
+                <Grid item xs={12}>
+                  {isEditing ? (
+                    <TextField
+                      label="주소"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleFormChange}
+                      fullWidth
+                      size="small"
+                    />
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">주소</Typography>
+                      <Typography variant="body1">{company?.address || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* 수탁자 정보 섹션 */}
+            <Paper sx={{ 
+              p: 3,
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: 'none',
+              border: '1px solid #EEEEEE'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+                  수탁자 정보
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="primary"
+                  startIcon={<EditIcon />}
+                  onClick={handleOpenTrusteeDialog}
+                  sx={{ height: 32 }}
+                >
+                  수탁자 변경
+                </Button>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+              
+              <Grid container spacing={3}>
                 <Grid item xs={12} md={4}>
                   {isEditing ? (
                     <TextField
@@ -920,23 +1020,6 @@ const CompanyDetail = () => {
                     </FormControl>
                   </Grid>
                 )}
-              </Grid>
-            </Paper>
-
-            {/* 담당자 정보 */}
-            <Paper sx={{ 
-              p: 3,
-              mb: 3,
-              borderRadius: 2,
-              boxShadow: 'none',
-              border: '1px solid #EEEEEE'
-            }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-                담당자 정보
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
-              
-              <Grid container spacing={3}>
                 <Grid item xs={12} md={4}>
                   {isEditing ? (
                     <TextField
@@ -1012,23 +1095,6 @@ const CompanyDetail = () => {
                     <>
                       <Typography variant="body2" color="text.secondary">매장 전화번호</Typography>
                       <Typography variant="body1">{company?.storeTelNumber || '-'}</Typography>
-                    </>
-                  )}
-                </Grid>
-                <Grid item xs={12}>
-                  {isEditing ? (
-                    <TextField
-                      label="주소"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleFormChange}
-                      fullWidth
-                      size="small"
-                    />
-                  ) : (
-                    <>
-                      <Typography variant="body2" color="text.secondary">주소</Typography>
-                      <Typography variant="body1">{company?.address || '-'}</Typography>
                     </>
                   )}
                 </Grid>
@@ -1658,6 +1724,9 @@ const CompanyDetail = () => {
               </Grid>
             </Paper>
             
+            {/* 수탁자 이력 정보 */}
+            <TrusteeHistoryList companyId={companyId} />
+            
             {/* 하단 버튼 그룹 (편집 모드일 때만 표시) */}
             {isEditing && (
               <Box sx={{ 
@@ -1701,6 +1770,35 @@ const CompanyDetail = () => {
           </LocalizationProvider>
         </form>
       )}
+
+      {/* 수탁자 변경 다이얼로그 */}
+      <Dialog 
+        open={openTrusteeDialog} 
+        onClose={handleCloseTrusteeDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>신규 수탁자 등록</DialogTitle>
+        <DialogContent dividers>
+          <TrusteeChangeForm 
+            companyId={companyId} 
+            onSave={handleTrusteeChangeSubmit}
+            onCancel={handleCloseTrusteeDialog}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseTrusteeDialog} color="inherit">
+            취소
+          </Button>
+          <Button 
+            onClick={() => document.getElementById('trustee-change-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
+            variant="contained"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? '처리 중...' : '저장'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -16,7 +16,9 @@ import {
   DialogContent,
   DialogActions,
   Popover,
-  Grid
+  Grid,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -29,6 +31,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
 import { format, isWithinInterval, parseISO, endOfDay, startOfDay } from 'date-fns';
+// 재계약 모달 컴포넌트 import
+import ContractRenewModal from './ContractRenewModal';
 
 const ContractList = () => {
   const navigate = useNavigate();
@@ -37,7 +41,7 @@ const ContractList = () => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [companyFilter, setCompanyFilter] = useState('');
+  const [activeStatusFilter, setActiveStatusFilter] = useState('active');
   const [companyOptions, setCompanyOptions] = useState([]);
   const [sortOrder, setSortOrder] = useState('desc');
   const [anchorEl, setAnchorEl] = useState(null);
@@ -52,44 +56,34 @@ const ContractList = () => {
   // 상태 코드 데이터
   const [statusCodes, setStatusCodes] = useState([]);
 
+  // 재계약 모달 상태 추가
+  const [renewModalOpen, setRenewModalOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  
+  // 알림 스낵바 상태 추가
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+
   // 계약 목록 조회
   const fetchContracts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8080/api/contracts');
+      
+      // 활성화 상태에 따른 API 엔드포인트 설정
+      let apiUrl = 'http://localhost:8080/api/contracts/with-trustee';
+      if (activeStatusFilter === 'inactive') {
+        apiUrl += '?status=inactive';
+      } else if (activeStatusFilter === 'all') {
+        apiUrl += '?status=all';
+      }
+      
+      const response = await fetch(apiUrl);
       if (!response.ok) throw new Error('계약 목록 조회 실패');
       const data = await response.json();
-      
-      // 계약 데이터에 회사 정보 추가
-      const contractsWithCompanyDetails = await Promise.all(data.map(async (contract) => {
-        // 위수탁 업체 정보가 있는 경우만 추가 정보 조회
-        if (contract.companyId) {
-          try {
-            const companyResponse = await fetch(`http://localhost:8080/api/companies/${contract.companyId}`);
-            if (companyResponse.ok) {
-              const companyData = await companyResponse.json();
-              return {
-                ...contract,
-                storeTelNumber: companyData.storeTelNumber || '-',
-                insuranceStartDate: companyData.insuranceStartDate ? formatDate(companyData.insuranceStartDate, true) : '-',
-                insuranceEndDate: companyData.insuranceEndDate ? formatDate(companyData.insuranceEndDate, true) : '-'
-              };
-            }
-          } catch (error) {
-            console.error(`회사 정보 조회 중 오류 (ID: ${contract.companyId}):`, error);
-          }
-        }
-        // 조회 실패 시 빈 값으로 설정
-        return {
-          ...contract,
-          storeTelNumber: '-',
-          insuranceStartDate: '-',
-          insuranceEndDate: '-'
-        };
-      }));
-      
-      setContracts(contractsWithCompanyDetails);
-      setFilteredContracts(contractsWithCompanyDetails);
+      setContracts(data);
+      setFilteredContracts(data);
     } catch (error) {
       console.error('계약 목록 조회 중 오류:', error);
     } finally {
@@ -113,7 +107,7 @@ const ContractList = () => {
   useEffect(() => {
     fetchContracts();
     fetchStatusCodes(); // 상태 코드 조회 추가
-  }, []);
+  }, [activeStatusFilter]);
   
   // 업체명 목록 설정
   useEffect(() => {
@@ -143,10 +137,7 @@ const ContractList = () => {
       result = result.filter(contract => contract.statusName === statusFilter);
     }
     
-    // 업체명 필터링
-    if (companyFilter) {
-      result = result.filter(contract => contract.companyName === companyFilter);
-    }
+    // 활성화 상태 필터링은 API에서 처리되므로 여기서는 추가 필터링하지 않음
     
     // 날짜 필터링 추가
     if (dateFilterActive && startDate && endDate) {
@@ -180,16 +171,78 @@ const ContractList = () => {
     });
     
     setFilteredContracts(result);
-  }, [contracts, searchQuery, statusFilter, companyFilter, sortOrder, dateFilterActive, startDate, endDate]);
+  }, [contracts, searchQuery, statusFilter, sortOrder, dateFilterActive, startDate, endDate]);
 
   const handleMenuClick = (event, contractId) => {
     setAnchorEl(event.currentTarget);
     setSelectedContractId(contractId);
+    
+    // 선택된 계약 정보 저장
+    const contract = contracts.find(c => c.id === contractId);
+    if (contract) {
+      setSelectedContract(contract);
+      
+      // 수정: with-trustee API에서는 company 객체가 별도로 없고 계약 객체에 통합되어 있음
+      // 회사 정보를 직접 생성하여 설정
+      const companyInfo = {
+        id: contract.companyId,
+        storeName: contract.storeName || contract.companyName,
+        trustee: contract.trustee,
+        companyName: contract.companyName,
+        // 필요한 다른 회사 관련 필드들 추가
+        businessNumber: contract.businessNumber,
+        representativeName: contract.representativeName
+      };
+      
+      setSelectedCompany(companyInfo);
+    }
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedContractId(null);
+  };
+  
+  // 재계약 모달 열기
+  const handleOpenRenewModal = () => {
+    const contract = selectedContract;
+    const company = selectedCompany;
+    
+    if (!contract) {
+      showSnackbar('계약 정보를 찾을 수 없습니다.', 'error');
+      return;
+    }
+    
+    if (!company || !company.id) {
+      showSnackbar('수탁업체 정보를 찾을 수 없습니다.', 'error');
+      return;
+    }
+    
+    setRenewModalOpen(true);
+    handleMenuClose();
+  };
+  
+  // 재계약 모달 닫기
+  const handleCloseRenewModal = () => {
+    setRenewModalOpen(false);
+  };
+  
+  // 재계약 성공 처리
+  const handleRenewSuccess = (result) => {
+    showSnackbar('재계약이 성공적으로 신청되었습니다.', 'success');
+    fetchContracts(); // 계약 목록 새로고침
+  };
+  
+  // 스낵바 표시 함수
+  const showSnackbar = (message, severity = 'info') => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+  
+  // 스낵바 닫기
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   // 계약 상태에 따른 Chip 컴포넌트 렌더링 (수정: statusCode와 statusName 사용)
@@ -274,7 +327,7 @@ const ContractList = () => {
   const handleResetFilter = () => {
     setSearchQuery('');
     setStatusFilter('');
-    setCompanyFilter('');
+    setActiveStatusFilter('active');
     setStartDate(null);
     setEndDate(null);
     setDateFilterActive(false);
@@ -462,10 +515,10 @@ const ContractList = () => {
           </FormControl>
         </Box>
 
-        {/* 구분 필터 */}
+        {/* 활성화 상태 필터 (수정됨) */}
         <Box>
           <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-            수탁 사업자명
+            활성화 상태
           </Typography>
           <FormControl 
             size="small" 
@@ -476,8 +529,8 @@ const ContractList = () => {
           >
             <Select
               displayEmpty
-              value={companyFilter}
-              onChange={(e) => setCompanyFilter(e.target.value)}
+              value={activeStatusFilter}
+              onChange={(e) => setActiveStatusFilter(e.target.value)}
               IconComponent={KeyboardArrowDownIcon}
               sx={{
                 '& .MuiOutlinedInput-notchedOutline': {
@@ -485,10 +538,9 @@ const ContractList = () => {
                 },
               }}
             >
-              <MenuItem value="">전체</MenuItem>
-              {companyOptions.map(companyName => (
-                <MenuItem key={companyName} value={companyName}>{companyName}</MenuItem>
-              ))}
+              <MenuItem value="active">활성화</MenuItem>
+              <MenuItem value="inactive">만료</MenuItem>
+              <MenuItem value="all">전체</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -536,11 +588,11 @@ const ContractList = () => {
           <Typography variant="body2" sx={{ color: '#666' }}>
             전체 {contracts.length}건 중 {filteredContracts.length}건 검색됨
           </Typography>
-          {(searchQuery || statusFilter || companyFilter || dateFilterActive) && (
+          {(searchQuery || statusFilter || activeStatusFilter !== 'active' || dateFilterActive) && (
             <Typography variant="body2" sx={{ color: '#1976d2' }}>
               {searchQuery && `검색어: "${searchQuery}" `}
               {statusFilter && `상태: ${statusFilter} `}
-              {companyFilter && `업체: ${companyFilter} `}
+              {activeStatusFilter !== 'active' && `활성화: ${activeStatusFilter === 'inactive' ? '만료' : '전체'} `}
               {dateFilterActive && `기간: ${getDateRangeText()}`}
             </Typography>
           )}
@@ -628,15 +680,40 @@ const ContractList = () => {
         )}
       </Box>
 
+      {/* 계약 관리 메뉴 */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleMenuClose}>수정</MenuItem>
-        <MenuItem onClick={handleMenuClose}>삭제</MenuItem>
-        <MenuItem onClick={handleMenuClose}>복사</MenuItem>
+        {/* 재계약 메뉴 추가 */}
+        <MenuItem onClick={handleOpenRenewModal}>재계약</MenuItem>
       </Menu>
+      
+      {/* 재계약 모달 */}
+      <ContractRenewModal
+        open={renewModalOpen}
+        onClose={handleCloseRenewModal}
+        contract={selectedContract}
+        company={selectedCompany}
+        onSuccess={handleRenewSuccess}
+      />
+      
+      {/* 알림 스낵바 */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbarSeverity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

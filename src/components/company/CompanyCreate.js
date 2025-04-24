@@ -438,11 +438,30 @@ const CompanyCreate = () => {
       // 주소와 상세주소 합치기
       const fullAddress = baseAddress + (detailAddress ? ` ${detailAddress}` : '');
       
+      // 날짜를 안전하게 포맷팅하는 함수
+      const formatDateForServer = (date) => {
+        if (!date) return null;
+        
+        // Date 객체에서 년, 월, 일 추출
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // 월은 0부터 시작하므로 +1
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        // YYYY-MM-DD 형식으로 반환
+        return `${year}-${month}-${day}`;
+      };
+      
       // 최종 데이터 준비
       const finalCompanyData = {
         ...companyData,
-        address: fullAddress
+        address: fullAddress,
+        // 날짜 필드를 문자열로 변환
+        startDate: companyData.startDate ? formatDateForServer(companyData.startDate) : null,
+        endDate: companyData.endDate ? formatDateForServer(companyData.endDate) : null,
+        insuranceStartDate: companyData.insuranceStartDate ? formatDateForServer(companyData.insuranceStartDate) : null,
+        insuranceEndDate: companyData.insuranceEndDate ? formatDateForServer(companyData.insuranceEndDate) : null
       };
+      
       
       // 이미지 파일이 있는지 확인
       const hasImages = Object.values(images).some(img => img !== null);
@@ -1491,7 +1510,7 @@ const CompanyCreate = () => {
       <Dialog open={addressDialogOpen} onClose={handleCloseAddressDialog} maxWidth="sm" fullWidth>
         <DialogTitle>주소 검색</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 2 , mt:2}}>
             아래 버튼을 클릭하여 주소를 검색해주세요.
           </Typography>
           <Button 

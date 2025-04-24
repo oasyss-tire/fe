@@ -17,6 +17,7 @@ import {
   Paper,
   Checkbox,
   FormControlLabel,
+  Dialog,
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -26,6 +27,7 @@ import {
   ArrowDownward as ArrowDownwardIcon,
   Delete as DeleteIcon,
   Description as DescriptionIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -34,6 +36,7 @@ import { ko } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { sendContractEmail } from '../../services/EmailService';
 import { sendContractSMS } from '../../services/SMSService';
+import CompanySelectDialog from './CompanySelectDialog';
 
 // 시간대 문제를 해결하기 위한 날짜 포맷 함수 추가
 const formatDateForServer = (date) => {
@@ -64,6 +67,7 @@ const ContractSend = () => {
     createdBy: '',
     department: '',
     companyId: '',
+    trusteeHistoryId: null,
     insuranceStartDate: null,
     insuranceEndDate: null
   });
@@ -72,6 +76,10 @@ const ContractSend = () => {
   const [selectedTemplateIds, setSelectedTemplateIds] = useState([]);
   const [templateOrder, setTemplateOrder] = useState([]);
   const [companies, setCompanies] = useState([]);
+  
+  const [openCompanyDialog, setOpenCompanyDialog] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedTrusteeHistory, setSelectedTrusteeHistory] = useState(null);
 
   // 첨부파일 관련 상태 추가
   const [documents, setDocuments] = useState([]);
@@ -111,60 +119,63 @@ const ContractSend = () => {
       [field]: value
     }));
 
-    // 위수탁 업체 선택 시 계약 시작일과 만료일을 자동으로 설정
     if (field === 'companyId' && value) {
       const selectedCompany = companies.find(company => company.id === value);
       if (selectedCompany) {
-        // 위수탁 업체 startDate와 endDate가 있는 경우에만 적용
-        if (selectedCompany.startDate) {
-          // 날짜만 추출하여 시간을 00:00:00으로 설정
-          const date = new Date(selectedCompany.startDate);
-          date.setHours(0, 0, 0, 0);
+        // 수탁사업자 이력 정보만 사용
+        const trusteeHistory = selectedTrusteeHistory;
+        
+        if (trusteeHistory) {
+          // 시작일 설정
+          if (trusteeHistory.startDate) {
+            const date = new Date(trusteeHistory.startDate);
+            date.setHours(0, 0, 0, 0);
+            
+            setContractInfo(prev => ({
+              ...prev,
+              startDate: date
+            }));
+          }
           
-          setContractInfo(prev => ({
-            ...prev,
-            startDate: date
-          }));
-        }
-        if (selectedCompany.endDate) {
-          // 날짜만 추출하여 시간을 00:00:00으로 설정
-          const date = new Date(selectedCompany.endDate);
-          date.setHours(0, 0, 0, 0);
+          // 종료일 설정
+          if (trusteeHistory.endDate) {
+            const date = new Date(trusteeHistory.endDate);
+            date.setHours(0, 0, 0, 0);
+            
+            setContractInfo(prev => ({
+              ...prev,
+              expiryDate: date
+            }));
+          }
           
-          setContractInfo(prev => ({
-            ...prev,
-            expiryDate: date
-          }));
-        }
-        // 하자보증증권 보험시작일과 종료일이 있는 경우에만 적용
-        if (selectedCompany.insuranceStartDate) {
-          // 날짜만 추출하여 시간을 00:00:00으로 설정
-          const date = new Date(selectedCompany.insuranceStartDate);
-          date.setHours(0, 0, 0, 0);
+          // 보험 시작일 설정
+          if (trusteeHistory.insuranceStartDate) {
+            const date = new Date(trusteeHistory.insuranceStartDate);
+            date.setHours(0, 0, 0, 0);
+            
+            setContractInfo(prev => ({
+              ...prev,
+              insuranceStartDate: date
+            }));
+          }
           
-          setContractInfo(prev => ({
-            ...prev,
-            insuranceStartDate: date
-          }));
-        }
-        if (selectedCompany.insuranceEndDate) {
-          // 날짜만 추출하여 시간을 00:00:00으로 설정
-          const date = new Date(selectedCompany.insuranceEndDate);
-          date.setHours(0, 0, 0, 0);
-          
-          setContractInfo(prev => ({
-            ...prev,
-            insuranceEndDate: date
-          }));
+          // 보험 종료일 설정
+          if (trusteeHistory.insuranceEndDate) {
+            const date = new Date(trusteeHistory.insuranceEndDate);
+            date.setHours(0, 0, 0, 0);
+            
+            setContractInfo(prev => ({
+              ...prev,
+              insuranceEndDate: date
+            }));
+          }
         }
       }
       
-      // 위수탁 업체 직원 정보 자동 불러오기
       fetchCompanyUsers(value);
     }
   };
 
-  // 위수탁 업체 사용자 정보 조회 함수 수정
   const fetchCompanyUsers = async (companyId) => {
     try {
       const response = await fetch(`http://localhost:8080/api/companies/${companyId}/users`);
@@ -173,34 +184,30 @@ const ContractSend = () => {
       const data = await response.json();
       
       if (data && data.length > 0) {
-        // 위수탁 업체 직원 정보로 참여자 설정 (userId 필드 추가)
         const newParticipants = data.map((user, index) => ({
           id: index + 1,
           name: user.userName || '',
           email: user.email || '',
           phone: user.phoneNumber || '',
-          sendMethod: '',  // 발송 방법은 사용자가 선택하도록 비워둠
-          userId: user.id  // 사용자 ID 추가
+          sendMethod: '',
+          userId: user.id
         }));
         
         setParticipants(newParticipants);
         
       } else {
-        // 직원 정보가 없을 경우 기본 참여자 1명 설정
         setParticipants([
           { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
         ]);
       }
     } catch (error) {
       console.error('위수탁 업체 사용자 목록 조회 중 오류:', error);
-      // 오류 발생 시 기본 참여자 1명 설정
       setParticipants([
         { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
       ]);
     }
   };
 
-  // 첨부파일 코드 목록 조회 함수 추가
   const fetchDocumentCodes = async () => {
     try {
       const response = await fetch('http://localhost:8080/api/codes/groups/001003/codes/active');
@@ -208,7 +215,6 @@ const ContractSend = () => {
       const data = await response.json();
       setDocuments(data);
       
-      // 모든 첨부파일을 기본으로 선택
       if (data && data.length > 0) {
         const allDocumentIds = data.map(doc => doc.codeId);
         setSelectedDocumentIds(allDocumentIds);
@@ -218,7 +224,6 @@ const ContractSend = () => {
     }
   };
 
-  // 템플릿 목록 조회
   const fetchTemplates = async () => {
     try {
       const response = await fetch('http://localhost:8080/api/contract-pdf/templates');
@@ -226,12 +231,10 @@ const ContractSend = () => {
       const data = await response.json();
       setTemplates(data);
       
-      // 모든 템플릿을 기본으로 선택
       if (data && data.length > 0) {
         const allTemplateIds = data.map(template => template.id);
         setSelectedTemplateIds(allTemplateIds);
         
-        // 템플릿 순서 설정
         const initialOrder = allTemplateIds.map((id, index) => ({
           id,
           order: index + 1
@@ -243,7 +246,6 @@ const ContractSend = () => {
     }
   };
 
-  // 위수탁 업체 목록 조회
   const fetchCompanies = async () => {
     try {
       const response = await fetch('http://localhost:8080/api/companies?active=true');
@@ -255,19 +257,16 @@ const ContractSend = () => {
     }
   };
 
-  // 컴포넌트 마운트 시 템플릿, 위수탁 업체, 첨부파일 코드 목록 조회
   useEffect(() => {
     fetchTemplates();
     fetchCompanies();
     fetchDocumentCodes();
   }, []);
 
-  // 템플릿 선택 핸들러 수정
   const handleTemplateChange = (event, newValues) => {
     const newTemplateIds = newValues.map(template => template.id);
     setSelectedTemplateIds(newTemplateIds);
     
-    // 새로 선택된 템플릿들의 순서 정보 업데이트
     const currentOrder = [...templateOrder];
     const newOrder = newTemplateIds.map((id, index) => {
       const existingOrderItem = currentOrder.find(item => item.id === id);
@@ -277,29 +276,25 @@ const ContractSend = () => {
     setTemplateOrder(newOrder);
   };
   
-  // 첨부파일 선택 핸들러 추가
   const handleDocumentChange = (event, newValues) => {
     const newDocumentIds = newValues.map(doc => doc.codeId);
     setSelectedDocumentIds(newDocumentIds);
   };
   
-  // 템플릿 순서 변경 핸들러
   const handleMoveTemplate = (id, direction) => {
     const currentIndex = templateOrder.findIndex(item => item.id === id);
     if (
       (direction === 'up' && currentIndex === 0) || 
       (direction === 'down' && currentIndex === templateOrder.length - 1)
     ) {
-      return; // 이동 불가능한 경우
+      return;
     }
     
     const newOrder = [...templateOrder];
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     
-    // 위치 교환
     [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
     
-    // 순서 번호 재할당
     newOrder.forEach((item, index) => {
       item.order = index + 1;
     });
@@ -307,7 +302,6 @@ const ContractSend = () => {
     setTemplateOrder(newOrder);
   };
   
-  // 템플릿 제거 핸들러
   const handleRemoveTemplate = (id) => {
     const newSelectedIds = selectedTemplateIds.filter(templateId => templateId !== id);
     setSelectedTemplateIds(newSelectedIds);
@@ -317,12 +311,10 @@ const ContractSend = () => {
     setTemplateOrder(newOrder);
   };
 
-  // 위수탁 업체 검색어 변경 핸들러
   const handleCompanySearchChange = (e) => {
     setCompanySearchTerm(e.target.value);
   };
   
-  // 위수탁 업체 목록 필터링
   const filteredCompanies = companySearchTerm 
     ? companies.filter(company => 
         company.storeName?.toLowerCase().includes(companySearchTerm.toLowerCase()) ||
@@ -332,16 +324,12 @@ const ContractSend = () => {
     : companies;
 
   const formatPhoneNumber = (value) => {
-    // 이전 값과 현재 값의 길이를 비교하여 삭제 중인지 확인
     const numbers = value.replace(/[^\d]/g, '');
     
-    // 빈 값이면 그대로 반환
     if (!numbers) return '';
     
-    // 숫자만 남기고 모두 제거한 후 길이 체크
     if (numbers.length > 11) return value;
     
-    // 숫자를 3-4-4 형식으로 포맷팅
     if (numbers.length >= 7) {
       return numbers.replace(/(\d{3})(\d{4})(\d{0,4})/, '$1-$2-$3').replace(/-*$/, '');
     } else if (numbers.length >= 3) {
@@ -350,64 +338,116 @@ const ContractSend = () => {
     return numbers;
   };
 
-  // 계약 생성 및 이메일 발송을 처리하는 함수
+  const handleOpenCompanyDialog = () => setOpenCompanyDialog(true);
+  const handleCloseCompanyDialog = () => setOpenCompanyDialog(false);
+
+  const handleSelectCompanyAndTrustee = (company, trusteeHistory) => {
+
+    
+    setSelectedCompany(company);
+    setSelectedTrusteeHistory(trusteeHistory);
+    
+    setContractInfo(prev => ({
+      ...prev,
+      companyId: company.id,
+      trusteeHistoryId: trusteeHistory?.id || null
+    }));
+    
+    if (trusteeHistory) {
+
+      
+      if (trusteeHistory.startDate) {
+        const date = new Date(trusteeHistory.startDate);
+        date.setHours(0, 0, 0, 0);
+        setContractInfo(prev => ({ ...prev, startDate: date }));
+      }
+      
+      if (trusteeHistory.endDate) {
+        const date = new Date(trusteeHistory.endDate);
+        date.setHours(0, 0, 0, 0);
+        setContractInfo(prev => ({ ...prev, expiryDate: date }));
+      }
+      
+      if (trusteeHistory.insuranceStartDate) {
+        const date = new Date(trusteeHistory.insuranceStartDate);
+        date.setHours(0, 0, 0, 0);
+        setContractInfo(prev => ({ ...prev, insuranceStartDate: date }));
+      }
+      
+      if (trusteeHistory.insuranceEndDate) {
+        const date = new Date(trusteeHistory.insuranceEndDate);
+        date.setHours(0, 0, 0, 0);
+        setContractInfo(prev => ({ ...prev, insuranceEndDate: date }));
+      }
+      
+      // 수탁사업자 정보가 있으면 대표자 정보를 첫 번째 참여자에 설정
+      if (trusteeHistory.representativeName) {
+        const newParticipant = {
+          id: 1,
+          name: trusteeHistory.representativeName || '',
+          email: trusteeHistory.email || '',
+          phone: trusteeHistory.phoneNumber ? formatPhoneNumber(trusteeHistory.phoneNumber) : '',
+          sendMethod: 'EMAIL',
+          userId: null
+        };
+        
+        setParticipants([newParticipant]);
+      }
+    } else {
+      // 수탁사업자 정보가 없으면 회사 직원 정보 조회
+      fetchCompanyUsers(company.id);
+    }
+    
+    handleCloseCompanyDialog();
+  };
+
   const handleCreateContractAndSendEmail = async () => {
     try {
-      // 계약 제목 검사
       if (!contractInfo.title || contractInfo.title.trim() === '') {
         alert('계약 제목을 입력해주세요.');
         return;
       }
 
-      // 위수탁 업체 검사
       if (!contractInfo.companyId) {
         alert('위수탁 업체를 선택해주세요.');
         return;
       }
 
-      // 담당자 검사
       if (!contractInfo.createdBy || contractInfo.createdBy.trim() === '') {
         alert('담당자를 입력해주세요.');
         return;
       }
 
-      // 담당 부서 검사
       if (!contractInfo.department || contractInfo.department.trim() === '') {
         alert('담당 부서를 입력해주세요.');
         return;
       }
 
-      // 계약 설명 검사
       if (!contractInfo.description || contractInfo.description.trim() === '') {
         alert('계약 설명을 입력해주세요.');
         return;
       }
 
-      // 계약 시작일 검사
       if (!contractInfo.startDate) {
         alert('계약 시작일을 선택해주세요.');
         return;
       }
 
-      // 계약 만료일 검사
       if (!contractInfo.expiryDate) {
         alert('계약 만료일을 선택해주세요.');
         return;
       }
 
-      // 템플릿 선택 검사
       if (selectedTemplateIds.length === 0) {
         alert('최소 하나 이상의 템플릿을 선택해주세요.');
         return;
       }
 
-      // 첨부파일 선택 검사
       if (selectedDocumentIds.length === 0) {
         alert('최소 하나 이상의 첨부파일을 선택해주세요.');
         return;
       }
 
-      // 참여자 정보 검사
       for (let i = 0; i < participants.length; i++) {
         const p = participants[i];
         
@@ -421,7 +461,6 @@ const ContractSend = () => {
           return;
         }
         
-        // 이메일 형식 검사
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(p.email)) {
           alert(`${i+1}번째 참여자의 이메일 형식이 올바르지 않습니다.`);
@@ -433,7 +472,6 @@ const ContractSend = () => {
           return;
         }
         
-        // 전화번호 형식 검사
         const phoneRegex = /^\d{3}-\d{3,4}-\d{4}$/;
         if (!phoneRegex.test(p.phone)) {
           alert(`${i+1}번째 참여자의 연락처 형식이 올바르지 않습니다. (예: 010-1234-5678)`);
@@ -446,14 +484,12 @@ const ContractSend = () => {
         }
       }
       
-      setIsLoading(true);  // 로딩 시작
+      setIsLoading(true);
       
-      // 순서에 따라 템플릿 ID 정렬
       const orderedTemplateIds = templateOrder
         .sort((a, b) => a.order - b.order)
         .map(item => item.id);
       
-      // 계약 생성 요청 - userId 필드 추가
       const response = await fetch('http://localhost:8080/api/contracts', {
         method: 'POST',
         headers: {
@@ -463,22 +499,23 @@ const ContractSend = () => {
         body: JSON.stringify({
           title: contractInfo.title,
           description: contractInfo.description || '',
-          templateIds: orderedTemplateIds, // 순서가 적용된 템플릿 ID 목록
+          templateIds: orderedTemplateIds,
           startDate: contractInfo.startDate ? formatDateForServer(contractInfo.startDate) : null,
           expiryDate: contractInfo.expiryDate ? formatDateForServer(contractInfo.expiryDate) : null,
           createdBy: contractInfo.createdBy,
           department: contractInfo.department,
           companyId: contractInfo.companyId,
-          documentCodeIds: selectedDocumentIds, // 첨부파일 코드 ID 목록 추가
-          insuranceStartDate: contractInfo.insuranceStartDate ? formatDateForServer(contractInfo.insuranceStartDate) : null, // 하자보증증권 보험시작일 추가
-          insuranceEndDate: contractInfo.insuranceEndDate ? formatDateForServer(contractInfo.insuranceEndDate) : null,     // 하자보증증권 보험종료일 추가
+          trusteeHistoryId: contractInfo.trusteeHistoryId,
+          documentCodeIds: selectedDocumentIds,
+          insuranceStartDate: contractInfo.insuranceStartDate ? formatDateForServer(contractInfo.insuranceStartDate) : null,
+          insuranceEndDate: contractInfo.insuranceEndDate ? formatDateForServer(contractInfo.insuranceEndDate) : null,
           participants: participants.map(p => ({
             name: p.name,
             email: p.email,
             phoneNumber: p.phone,
             notifyType: p.sendMethod.toUpperCase(),
             signed: false,
-            userId: p.userId // 사용자 ID 추가
+            userId: p.userId
           }))
         })
       });
@@ -487,7 +524,6 @@ const ContractSend = () => {
         const errorData = await response.text();
         console.error('서버 응답 에러:', errorData);
         
-        // 서버 에러 메시지 파싱 시도
         try {
           const parsedError = JSON.parse(errorData);
           if (parsedError.message) {
@@ -496,7 +532,6 @@ const ContractSend = () => {
             throw new Error(parsedError.error);
           }
         } catch (parseError) {
-          // JSON 파싱에 실패하면 원본 에러 메시지 사용
           if (errorData.includes("code not found") || errorData.includes("Status code not found")) {
             throw new Error("필요한 상태 코드를 찾을 수 없습니다. 관리자에게 문의하세요.");
           } else if (errorData.includes("EntityNotFoundException")) {
@@ -511,13 +546,11 @@ const ContractSend = () => {
 
       const contractData = await response.json();
 
-      // 2. 알림 발송 (이메일 & 알림톡)
       const [emailResult, smsResult] = await Promise.all([
         sendContractEmail(contractData.id, contractData.participants),
         sendContractSMS(contractData.id, contractData.participants, contractInfo)
       ]);
 
-      // 3. 결과 처리
       let message = '계약서가 생성되었습니다.';
       const notifications = [];
 
@@ -548,7 +581,7 @@ const ContractSend = () => {
       console.error('처리 중 오류:', error);
       alert(`처리 중 오류가 발생했습니다.\n${error.message || ''}`);
     } finally {
-      setIsLoading(false);  // 로딩 종료
+      setIsLoading(false);
     }
   };
 
@@ -558,7 +591,6 @@ const ContractSend = () => {
       backgroundColor: '#F8F8FE',
       minHeight: '100vh'
     }}>
-      {/* 상단 헤더 */}
       <Box 
         sx={{ 
           display: 'flex', 
@@ -578,7 +610,6 @@ const ContractSend = () => {
         </Typography>
       </Box>
 
-      {/* 메인 컨텐츠 - 흰색 배경의 Paper */}
       <Box sx={{ 
         backgroundColor: 'white',
         borderRadius: 2,
@@ -589,7 +620,6 @@ const ContractSend = () => {
         gap: 4,
         minHeight: 'calc(100vh - 140px)'
       }}>
-        {/* 계약 정보 섹션 추가 */}
         <Box sx={{ mb: 4 }}>
           <Box sx={{ 
             display: 'flex', 
@@ -619,71 +649,58 @@ const ContractSend = () => {
               required
               InputLabelProps={{ required: true }}
             />
-            <Autocomplete
-              size="small"
-              options={companies}
-              loading={companies.length === 0}
-              getOptionLabel={(option) => option.companyName || ''}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              value={companies.find(company => company.id === contractInfo.companyId) || null}
-              onChange={(event, newValue) => {
-                handleContractInfoChange('companyId', newValue ? newValue.id : '');
-              }}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  label="수탁 사업자명" 
-                  required
-                  InputLabelProps={{ required: true }}
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {companies.length === 0 ? (
-                          <CircularProgress color="inherit" size={20} />
-                        ) : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}
-                />
-              )}
-              renderOption={(props, option) => (
-                <li {...props}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body2">{option.companyName}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.businessNumber} {option.storeName ? `| ${option.storeName}` : ''}
+            
+            <Box sx={{ position: 'relative' }}>
+              <TextField
+                label="매장명 (수탁사업자명)"
+                value={selectedCompany ? 
+                  `[${selectedCompany.storeCode || ''}] ${selectedCompany.storeName || ''}${selectedTrusteeHistory ? ` - ${selectedTrusteeHistory.trustee}` : ''}` 
+                  : ''}
+                fullWidth
+                size="small"
+                required
+                InputLabelProps={{ required: true }}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        onClick={handleOpenCompanyDialog}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                onClick={handleOpenCompanyDialog}
+                sx={{ 
+                  cursor: 'pointer',
+                  '.MuiInputBase-input': { 
+                    cursor: 'pointer',
+                    caretColor: 'transparent'
+                  }
+                }}
+              />
+              {selectedCompany && (
+                <Box sx={{ mt: 1, fontSize: '0.75rem', color: 'text.secondary' }}>
+                  {selectedTrusteeHistory && (
+                    <Typography variant="caption" display="block">
+                      <strong>수탁코드:</strong> {selectedTrusteeHistory.trusteeCode} | <strong>대표자:</strong> {selectedTrusteeHistory.representativeName || '-'}
                     </Typography>
-                    {option.startDate && option.endDate && (
-                      <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
-                        계약 기간: {new Date(option.startDate).toLocaleDateString()} ~ {new Date(option.endDate).toLocaleDateString()}
-                      </Typography>
-                    )}
-                  </Box>
-                </li>
+                  )}
+                  {selectedTrusteeHistory && selectedTrusteeHistory.insuranceStartDate && selectedTrusteeHistory.insuranceEndDate ? (
+                    <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
+                      <strong>하자보증보험:</strong> {new Date(selectedTrusteeHistory.insuranceStartDate).toLocaleDateString()} ~ {new Date(selectedTrusteeHistory.insuranceEndDate).toLocaleDateString()}
+                    </Typography>
+                  ) : selectedCompany.insuranceStartDate && selectedCompany.insuranceEndDate && (
+                    <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
+                      <strong>하자보증보험:</strong> {new Date(selectedCompany.insuranceStartDate).toLocaleDateString()} ~ {new Date(selectedCompany.insuranceEndDate).toLocaleDateString()}
+                    </Typography>
+                  )}
+                </Box>
               )}
-              noOptionsText="검색 결과가 없습니다"
-              loadingText="위수탁 업체 목록을 불러오는 중..."
-              filterOptions={(options, { inputValue }) => {
-                return options.filter(option => 
-                  option.storeName?.toLowerCase().includes(inputValue.toLowerCase()) ||
-                  option.businessNumber?.toLowerCase().includes(inputValue.toLowerCase()) ||
-                  option.companyName?.toLowerCase().includes(inputValue.toLowerCase())
-                );
-              }}
-              PaperComponent={(props) => (
-                <Paper 
-                  {...props} 
-                  sx={{ 
-                    maxHeight: 300,
-                    overflowY: 'auto',
-                    width: 'auto',
-                    minWidth: '400px'
-                  }} 
-                />
-              )}
-            />
+            </Box>
           </Box>
 
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', mb: 3 }}>
@@ -735,7 +752,6 @@ const ContractSend = () => {
               />
             </Box>
             
-            {/* 하자보증증권 관련 입력 필드 추가 */}
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: '1fr 1fr', mb: 3 }}>
               <DatePicker
                 label="하자보증증권 보험시작일"
@@ -775,7 +791,6 @@ const ContractSend = () => {
           />
         </Box>
 
-        {/* 서명 참여자 섹션 */}
         <Box sx={{ mb: 4 }}>
           <Box sx={{ 
             display: 'flex', 
@@ -787,7 +802,7 @@ const ContractSend = () => {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                서명 참여자
+                수탁사업자
               </Typography>
               <Typography variant="caption" sx={{ color: '#FF4D4D', ml: 1 }}>
                 (필수)
@@ -803,11 +818,10 @@ const ContractSend = () => {
                 }
               }}
             >
-              참여자 추가하기
+              수탁사업자 추가하기
             </Button>
           </Box>
 
-          {/* 참여자 입력 폼 */}
           {participants.map((participant) => (
             <Box 
               key={participant.id} 
@@ -895,7 +909,6 @@ const ContractSend = () => {
           ))}
         </Box>
 
-        {/* 첨부파일 섹션 추가 */}
         <Box sx={{ mb: 4 }}>
           <Box sx={{ 
             mb: 3,
@@ -915,10 +928,8 @@ const ContractSend = () => {
                 size="small"
                 onClick={() => {
                   if (selectedDocumentIds.length === documents.length) {
-                    // 모두 선택된 상태라면 모두 해제
                     setSelectedDocumentIds([]);
                   } else {
-                    // 일부만 선택되었거나 아무것도 선택되지 않았다면 모두 선택
                     setSelectedDocumentIds(documents.map(doc => doc.codeId));
                   }
                 }}
@@ -962,7 +973,6 @@ const ContractSend = () => {
             sx={{ width: '100%' }}
           />
           
-          {/* 선택된 첨부파일 표시 */}
           {selectedDocumentIds.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -1024,7 +1034,6 @@ const ContractSend = () => {
           )}
         </Box>
 
-        {/* 계약서 선택 섹션 */}
         <Box>
           <Box sx={{ 
             mb: 3,
@@ -1044,15 +1053,12 @@ const ContractSend = () => {
                 size="small"
                 onClick={() => {
                   if (selectedTemplateIds.length === templates.length) {
-                    // 모두 선택된 상태라면 모두 해제
                     setSelectedTemplateIds([]);
                     setTemplateOrder([]);
                   } else {
-                    // 일부만 선택되었거나 아무것도 선택되지 않았다면 모두 선택
                     const allTemplateIds = templates.map(template => template.id);
                     setSelectedTemplateIds(allTemplateIds);
                     
-                    // 템플릿 순서 설정
                     const initialOrder = allTemplateIds.map((id, index) => ({
                       id,
                       order: index + 1
@@ -1100,7 +1106,6 @@ const ContractSend = () => {
             sx={{ width: '100%' }}
           />
           
-          {/* 선택된 템플릿 표시 - 순서 조정 가능 */}
           {selectedTemplateIds.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -1191,7 +1196,6 @@ const ContractSend = () => {
           )}
         </Box>
 
-        {/* 하단 버튼 - 가운데 정렬 */}
         <Box sx={{ 
           display: 'flex',
           justifyContent: 'center',
@@ -1237,6 +1241,13 @@ const ContractSend = () => {
           </Button>
         </Box>
       </Box>
+
+      <CompanySelectDialog
+        open={openCompanyDialog}
+        onClose={handleCloseCompanyDialog}
+        onSelect={handleSelectCompanyAndTrustee}
+      />
+
     </Box>
   );
 };

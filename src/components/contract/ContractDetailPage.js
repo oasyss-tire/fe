@@ -98,57 +98,27 @@ const ContractDetailPage = () => {
   useEffect(() => {
     const fetchContractDetail = async () => {
       try {
+        setLoading(true);
         const response = await fetch(
-          `http://localhost:8080/api/contracts/${id}`
+          `http://localhost:8080/api/contracts/${id}/with-trustee`
         );
+        
         if (!response.ok) throw new Error("계약 조회 실패");
         const data = await response.json();
-
-
-        // 각 참여자의 상태 정보 확인
-        if (data.participants && data.participants.length > 0) {
-          data.participants.forEach((participant, index) => {
-          });
-        }
         
-        // 계약에 연결된 회사 정보가 있는 경우 회사 상세 정보 조회
-        let contractWithCompanyDetails = { ...data };
+        // 날짜 형식화 처리 - 하이픈(-) 형식으로 변경
+        const formattedData = {
+          ...data,
+          insuranceStartDate: data.trusteeInsuranceStartDate 
+            ? formatDateWithHyphen(new Date(data.trusteeInsuranceStartDate))
+            : '-',
+          insuranceEndDate: data.trusteeInsuranceEndDate 
+            ? formatDateWithHyphen(new Date(data.trusteeInsuranceEndDate))
+            : '-'
+        };
         
-        if (data.companyId) {
-          try {
-            const companyResponse = await fetch(
-              `http://localhost:8080/api/companies/${data.companyId}`
-            );
-            
-            if (companyResponse.ok) {
-              const companyData = await companyResponse.json();
-              // 회사 정보를 계약 객체에 통합
-              contractWithCompanyDetails = {
-                ...data,
-                storeTelNumber: companyData.storeTelNumber || '-',
-                insuranceStartDate: companyData.insuranceStartDate 
-                  ? new Date(companyData.insuranceStartDate).toLocaleDateString("ko-KR", { 
-                      year: 'numeric', 
-                      month: '2-digit', 
-                      day: '2-digit' 
-                    }) 
-                  : '-',
-                insuranceEndDate: companyData.insuranceEndDate 
-                  ? new Date(companyData.insuranceEndDate).toLocaleDateString("ko-KR", { 
-                      year: 'numeric', 
-                      month: '2-digit', 
-                      day: '2-digit' 
-                    }) 
-                  : '-'
-              };
-            }
-          } catch (error) {
-            console.error(`회사 정보 조회 중 오류 (ID: ${data.companyId}):`, error);
-          }
-        }
-
-        setContract(contractWithCompanyDetails);
-
+        setContract(formattedData);
+        
         // 계약 조회 후 문서 정보도 함께 조회
         fetchContractDocuments(id);
       } catch (error) {
@@ -160,6 +130,21 @@ const ContractDetailPage = () => {
 
     fetchContractDetail();
   }, [id]);
+
+  // 하이픈(-) 형식의 날짜 포맷팅 함수 추가
+  const formatDateWithHyphen = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateTimeWithHyphen = (date) => {
+    const formattedDate = formatDateWithHyphen(date);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${formattedDate} ${hours}:${minutes}`;
+  };
 
   // 첨부파일 정보 조회
   const fetchContractDocuments = async (contractId) => {
@@ -996,16 +981,9 @@ const ContractDetailPage = () => {
                   gap: 1,
                   alignItems: "center"
                 }}>
-                  <Typography sx={{ color: "#666", fontWeight: 500 }}>작성일</Typography>
+                  <Typography sx={{ color: "#666", fontWeight: 500 }}>계약 생성일</Typography>
                   <Typography>
-                    {new Date(contract.createdAt).toLocaleDateString("ko-KR", {
-                      year: "2-digit",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
+                    {contract.createdAt ? formatDateTimeWithHyphen(new Date(contract.createdAt)) : '-'}
                   </Typography>
                 </Box>
                 <Box sx={{ 
