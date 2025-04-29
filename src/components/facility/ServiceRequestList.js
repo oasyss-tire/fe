@@ -172,54 +172,7 @@ const ServiceRequestList = () => {
     } catch (error) {
       console.error('AS 접수 목록 조회 실패:', error);
       showSnackbar('AS 접수 목록을 불러오는데 실패했습니다.', 'error');
-      
-      // 임시 데이터 (API 실패 시)
-      setServiceRequests([
-        {
-          serviceRequestId: 1,
-          requestNumber: 'SR230501001',
-          facilityId: 1,
-          facilityTypeName: '리프트',
-          storeName: '본점',
-          brandName: '공기돌이',
-          modelNumber: '5600A',
-          requestDate: '2023-05-01',
-          receivedDate: '2023-05-02',
-          completionDate: '2023-05-05',
-          requestContent: '리프트 작동 불량',
-          serviceTypeCode: '003001_0001',
-          serviceTypeName: '고장수리',
-          priorityCode: '003002_0001',
-          priorityName: '긴급',
-          statusCode: '003003_0004',
-          statusName: '완료',
-          repairCost: 50000,
-          createdAt: '2023-05-01T10:30:00',
-          updatedAt: '2023-05-05T16:45:00'
-        },
-        {
-          serviceRequestId: 2,
-          requestNumber: 'SR230510002',
-          facilityId: 2,
-          facilityTypeName: '밸런스기',
-          storeName: '세종점',
-          brandName: '타이어돌이',
-          modelNumber: '111A',
-          requestDate: '2023-05-10',
-          receivedDate: null,
-          completionDate: null,
-          requestContent: '밸런스기 보정 필요',
-          serviceTypeCode: '003001_0002',
-          serviceTypeName: '점검',
-          priorityCode: '003002_0002',
-          priorityName: '보통',
-          statusCode: '003003_0001',
-          statusName: '접수대기',
-          repairCost: null,
-          createdAt: '2023-05-10T09:15:00',
-          updatedAt: '2023-05-10T09:15:00'
-        }
-      ]);
+    
     } finally {
       setLoading(false);
     }
@@ -691,7 +644,7 @@ const ServiceRequestList = () => {
                       <TableCell>{page * 10 + index + 1}</TableCell>
                       <TableCell>{request.companyName}</TableCell>
                       <TableCell>{request.facilityTypeName}</TableCell>
-                      <TableCell>{request.modelNumber || '-'}</TableCell>
+                      <TableCell>{request.brandName || '-'}</TableCell>
                       <TableCell>{request.quantity || '1'}</TableCell>
                       <TableCell>{request.usefulLifeMonths || '-'}</TableCell>
                       <TableCell>{formatDate(request.installationDate) || '-'}</TableCell>
@@ -790,7 +743,7 @@ const ServiceRequestList = () => {
                   시설물: <Typography component="span" variant="body2">{currentRequest.facilityTypeName}</Typography>
                 </Typography>
                 <Typography variant="subtitle2">
-                  제조사/품목: <Typography component="span" variant="body2">{currentRequest.brandName} / {currentRequest.modelNumber}</Typography>
+                  품목: <Typography component="span" variant="body2">{currentRequest.brandName}</Typography>
                 </Typography>
                 <Typography variant="subtitle2">
                   요청일자: <Typography component="span" variant="body2">{formatDate(currentRequest.requestDate)}</Typography>
@@ -884,7 +837,7 @@ const ServiceRequestList = () => {
             <Box sx={{ mt: 2, minWidth: '400px' }}>
               {/* 요청 정보 */}
               <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                매장: {currentRequest.companyName} | 시설물: {currentRequest.facilityTypeName} ({currentRequest.modelNumber})
+                매장: {currentRequest.companyName} | 시설물: {currentRequest.facilityTypeName} ({currentRequest.brandName})
               </Typography>
               
               {/* 수리 비용 입력 */}

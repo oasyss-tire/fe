@@ -5,7 +5,6 @@ import {
   Typography, 
   Button, 
   Grid, 
-  Divider, 
   Paper, 
   Table, 
   TableBody, 
@@ -15,7 +14,6 @@ import {
   TableRow,
   Chip,
   IconButton,
-  Pagination,
   CircularProgress,
   Snackbar,
   Alert,
@@ -24,7 +22,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Tooltip
+  Tooltip,
+  Modal
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
@@ -33,7 +32,9 @@ import {
   History as HistoryIcon,
   Print as PrintIcon,
   Calculate as CalculateIcon,
-  InfoOutlined as InfoIcon
+  InfoOutlined as InfoIcon,
+  Download as DownloadIcon,
+  ZoomIn as ZoomInIcon
 } from '@mui/icons-material';
 import { format, addMonths, isBefore } from 'date-fns';
 
@@ -58,6 +59,11 @@ const FacilitiesDetail = () => {
     message: '',
     onConfirm: null
   });
+  const [imageModal, setImageModal] = useState({
+    open: false,
+    imageUrl: '',
+    title: ''
+  });
 
   // 스낵바 메시지 표시
   const showSnackbar = (message, severity = 'info') => {
@@ -80,6 +86,23 @@ const FacilitiesDetail = () => {
   const handleCloseDialog = () => {
     setConfirmDialog({
       ...confirmDialog,
+      open: false
+    });
+  };
+
+  // 이미지 모달 열기
+  const handleOpenImageModal = (imageUrl, title) => {
+    setImageModal({
+      open: true,
+      imageUrl,
+      title
+    });
+  };
+
+  // 이미지 모달 닫기
+  const handleCloseImageModal = () => {
+    setImageModal({
+      ...imageModal,
       open: false
     });
   };
@@ -209,10 +232,6 @@ const FacilitiesDetail = () => {
     navigate(`/facility-edit/${id}`);
   };
 
-
-
-
-
   const handleRepairRequest = () => {
     navigate(`/service-request/create/${id}`);
   };
@@ -311,6 +330,48 @@ const FacilitiesDetail = () => {
       setDepreciationLoading(false);
       setConfirmDialog({ ...confirmDialog, open: false });
     }
+  };
+
+  // QR 코드 다운로드 처리
+  const handleDownloadQRCode = () => {
+    const qrCodeImageUrl = getImageByType('002005_0005');
+    if (!qrCodeImageUrl) {
+      showSnackbar('다운로드할 QR 코드 이미지가 없습니다.', 'error');
+      return;
+    }
+
+    // 파일명 추출
+    const fileName = qrCodeImageUrl.split('/').pop();
+    
+    // 다운로드 요청
+    fetch(`http://localhost:8080/api/facility-images/download/${fileName}`, {
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('QR 코드 다운로드에 실패했습니다.');
+      }
+      return response.blob();
+    })
+    .then(blob => {
+      // 다운로드 링크 생성
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${facility.serialNumber || 'facility'}_qrcode.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      showSnackbar('QR 코드가 성공적으로 다운로드되었습니다.', 'success');
+    })
+    .catch(error => {
+      console.error('QR 코드 다운로드 오류:', error);
+      showSnackbar('QR 코드 다운로드 중 오류가 발생했습니다.', 'error');
+    });
   };
 
   if (loading) {
@@ -457,24 +518,9 @@ const FacilitiesDetail = () => {
                   fontWeight: 500
                 }}
               >
-                제조사
-              </Typography>
-              <Typography>{facility.brandName}</Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
                 품목
               </Typography>
-              <Typography>{facility.modelNumber}</Typography>
+              <Typography>{facility.brandName}</Typography>
             </Box>
           </Grid>
 
@@ -805,6 +851,136 @@ const FacilitiesDetail = () => {
         </Grid>
       </Paper>
 
+      {/* 시설물 QR코드 */}
+      <Paper sx={{ mb: 3, p: 3, borderRadius: 2 }}>
+        <Typography 
+          variant="subtitle1" 
+          sx={{ 
+            fontWeight: 600, 
+            color: '#3A3A3A',
+            mb: 2 
+          }}
+        >
+          시설물 QR코드
+        </Typography>
+
+        <Grid container alignItems="center" spacing={2}>
+          <Grid item xs={12} sm={4} md={2}>
+            <Box
+              sx={{
+                width: '100%',
+                paddingTop: '100%',
+                position: 'relative',
+                backgroundColor: '#F8F9FA',
+                borderRadius: 1,
+                overflow: 'hidden',
+                maxWidth: '150px',
+                mx: 'auto',
+                cursor: 'pointer',
+                '&:hover': {
+                  boxShadow: '0px 0px 10px rgba(0,0,0,0.2)'
+                }
+              }}
+              onClick={() => handleOpenImageModal(getImageByType('002005_0005'), '시설물 QR코드')}
+            >
+              {getImageByType('002005_0005') ? (
+                <>
+                  <img 
+                    src={getImageByType('002005_0005')} 
+                    alt="시설물 QR코드"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.3s',
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
+                  </Box>
+                </>
+              ) : (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#EEEEEE'
+                  }}
+                >
+                  <Typography sx={{ color: '#888', fontSize: '0.75rem', textAlign: 'center', px: 1 }}>
+                    QR코드 이미지 없음
+                  </Typography>
+                </Box>
+              )}
+              <Typography
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  color: 'white',
+                  p: 0.5,
+                  fontSize: '0.75rem'
+                }}
+              >
+                시설물 QR코드
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={8} md={10}>
+            <Box sx={{ pl: { sm: 2 }, pt: { xs: 2, sm: 0 } }}>
+              <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
+                이 QR코드는 시설물 고유 식별을 위한 코드입니다. 스캔하여 시설물 정보를 확인하거나 관련 서비스를 이용할 수 있습니다.
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={handleDownloadQRCode}
+                disabled={!getImageByType('002005_0005')}
+                sx={{
+                  mt: 2,
+                  borderColor: '#1976d2',
+                  color: '#1976d2',
+                  '&:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                    borderColor: '#1976d2',
+                  },
+                }}
+              >
+                QR코드 다운로드
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+
       {/* 시설물 이미지 */}
       <Paper sx={{ mb: 3, p: 3, borderRadius: 2 }}>
         <Typography 
@@ -820,7 +996,7 @@ const FacilitiesDetail = () => {
 
         <Grid container spacing={2}>
           {/* 정면 이미지 */}
-          <Grid item xs={12} sm={6} md={2.4} sx={{ width: '20%' }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box
               sx={{
                 width: '100%',
@@ -828,22 +1004,49 @@ const FacilitiesDetail = () => {
                 position: 'relative',
                 backgroundColor: '#F8F9FA',
                 borderRadius: 1,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                cursor: 'pointer',
+                '&:hover': {
+                  boxShadow: '0px 0px 10px rgba(0,0,0,0.2)'
+                }
               }}
+              onClick={() => handleOpenImageModal(getImageByType('002005_0001'), '정면 이미지')}
             >
               {getImageByType('002005_0001') ? (
-                <img 
-                  src={getImageByType('002005_0001')} 
-                  alt="시설물 정면 이미지"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
+                <>
+                  <img 
+                    src={getImageByType('002005_0001')} 
+                    alt="시설물 정면 이미지"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.3s',
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
+                  </Box>
+                </>
               ) : (
                 <Box
                   sx={{
@@ -882,7 +1085,7 @@ const FacilitiesDetail = () => {
           </Grid>
           
           {/* 후면 이미지 */}
-          <Grid item xs={12} sm={6} md={2.4} sx={{ width: '20%' }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box
               sx={{
                 width: '100%',
@@ -890,22 +1093,49 @@ const FacilitiesDetail = () => {
                 position: 'relative',
                 backgroundColor: '#F8F9FA',
                 borderRadius: 1,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                cursor: 'pointer',
+                '&:hover': {
+                  boxShadow: '0px 0px 10px rgba(0,0,0,0.2)'
+                }
               }}
+              onClick={() => handleOpenImageModal(getImageByType('002005_0002'), '후면 이미지')}
             >
               {getImageByType('002005_0002') ? (
-                <img 
-                  src={getImageByType('002005_0002')} 
-                  alt="시설물 후면 이미지"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
+                <>
+                  <img 
+                    src={getImageByType('002005_0002')} 
+                    alt="시설물 후면 이미지"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.3s',
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
+                  </Box>
+                </>
               ) : (
                 <Box
                   sx={{
@@ -944,7 +1174,7 @@ const FacilitiesDetail = () => {
           </Grid>
           
           {/* 좌측면 이미지 */}
-          <Grid item xs={12} sm={6} md={2.4} sx={{ width: '20%' }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box
               sx={{
                 width: '100%',
@@ -952,22 +1182,49 @@ const FacilitiesDetail = () => {
                 position: 'relative',
                 backgroundColor: '#F8F9FA',
                 borderRadius: 1,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                cursor: 'pointer',
+                '&:hover': {
+                  boxShadow: '0px 0px 10px rgba(0,0,0,0.2)'
+                }
               }}
+              onClick={() => handleOpenImageModal(getImageByType('002005_0003'), '좌측면 이미지')}
             >
               {getImageByType('002005_0003') ? (
-                <img 
-                  src={getImageByType('002005_0003')} 
-                  alt="시설물 좌측면 이미지"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
+                <>
+                  <img 
+                    src={getImageByType('002005_0003')} 
+                    alt="시설물 좌측면 이미지"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.3s',
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
+                  </Box>
+                </>
               ) : (
                 <Box
                   sx={{
@@ -1006,7 +1263,7 @@ const FacilitiesDetail = () => {
           </Grid>
           
           {/* 우측면 이미지 */}
-          <Grid item xs={12} sm={6} md={2.4} sx={{ width: '20%' }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box
               sx={{
                 width: '100%',
@@ -1014,22 +1271,49 @@ const FacilitiesDetail = () => {
                 position: 'relative',
                 backgroundColor: '#F8F9FA',
                 borderRadius: 1,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                cursor: 'pointer',
+                '&:hover': {
+                  boxShadow: '0px 0px 10px rgba(0,0,0,0.2)'
+                }
               }}
+              onClick={() => handleOpenImageModal(getImageByType('002005_0004'), '우측면 이미지')}
             >
               {getImageByType('002005_0004') ? (
-                <img 
-                  src={getImageByType('002005_0004')} 
-                  alt="시설물 우측면 이미지"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
+                <>
+                  <img 
+                    src={getImageByType('002005_0004')} 
+                    alt="시설물 우측면 이미지"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.3s',
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }}
+                  >
+                    <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
+                  </Box>
+                </>
               ) : (
                 <Box
                   sx={{
@@ -1066,70 +1350,67 @@ const FacilitiesDetail = () => {
               </Typography>
             </Box>
           </Grid>
-          
-          {/* 라벨 이미지 - 항상 표시 */}
-          <Grid item xs={12} sm={6} md={2.4} sx={{ width: '20%' }}>
-            <Box
-              sx={{
-                width: '100%',
-                paddingTop: '100%',
-                position: 'relative',
-                backgroundColor: '#F8F9FA',
-                borderRadius: 1,
-                overflow: 'hidden'
-              }}
-            >
-              {getImageByType('002005_0005') ? (
-                <img 
-                  src={getImageByType('002005_0005')} 
-                  alt="시설물 라벨 이미지"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
-              ) : (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#EEEEEE'
-                  }}
-                >
-                  <Typography sx={{ color: '#888', fontSize: '0.875rem' }}>
-                    이미지없음
-                  </Typography>
-                </Box>
-              )}
-              <Typography
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  textAlign: 'center',
-                  backgroundColor: 'rgba(0,0,0,0.5)',
-                  color: 'white',
-                  p: 0.5,
-                  fontSize: '0.75rem'
-                }}
-              >
-                라벨
-              </Typography>
-            </Box>
-          </Grid>
         </Grid>
       </Paper>
+
+      {/* 이미지 확대 모달 */}
+      <Modal
+        open={imageModal.open}
+        onClose={handleCloseImageModal}
+        aria-labelledby="modal-image-title"
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: { xs: '90%', sm: '80%', md: '70%', lg: '60%' },
+          maxHeight: '90vh',
+          bgcolor: 'background.paper',
+          boxShadow: 24,
+          p: 4,
+          borderRadius: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+          <Typography id="modal-image-title" variant="h6" component="h2" sx={{ mb: 2 }}>
+            {imageModal.title}
+          </Typography>
+          <Box sx={{ 
+            width: '100%', 
+            height: 'calc(90vh - 160px)', 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            overflow: 'hidden'
+          }}>
+            {imageModal.imageUrl ? (
+              <img 
+                src={imageModal.imageUrl} 
+                alt={imageModal.title}
+                style={{
+                  maxWidth: imageModal.title === '시설물 QR코드' ? '400px' : '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  width: imageModal.title === '시설물 QR코드' ? '400px' : 'auto'
+                }}
+              />
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                이미지를 불러올 수 없습니다.
+              </Typography>
+            )}
+          </Box>
+          <Button 
+            onClick={handleCloseImageModal} 
+            sx={{ mt: 2 }}
+            variant="contained"
+          >
+            닫기
+          </Button>
+        </Box>
+      </Modal>
 
       {/* 수리 이력 */}
       <Paper sx={{ mb: 3, p: 3, borderRadius: 2 }}>

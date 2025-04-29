@@ -87,7 +87,6 @@ const FacilitiesList = () => {
   useEffect(() => {
     fetchCompanies();
     fetchFacilities();
-    fetchStatistics();
   }, []);
 
   // 회사 목록 조회
@@ -139,36 +138,6 @@ const FacilitiesList = () => {
       showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // 통계 데이터 조회
-  const fetchStatistics = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/dashboard/statistics', {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('통계 데이터를 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
-      setStatistics({
-        totalRequests: data.currentMonthRequests || 0,
-        completedRequests: data.currentMonthCompletedRequests || 0,
-        pendingRequests: data.pendingRequests || 0
-      });
-    } catch (error) {
-      console.error('통계 데이터 조회 실패:', error);
-      // 오류 발생 시 기본값 설정
-      setStatistics({
-        totalRequests: 0,
-        completedRequests: 0,
-        pendingRequests: 0
-      });
     }
   };
 
@@ -542,7 +511,6 @@ const FacilitiesList = () => {
                   <TableCell>No.</TableCell>
                   <TableCell>매장명</TableCell>
                   <TableCell>시설구분</TableCell>
-                  <TableCell>제조사</TableCell>
                   <TableCell>품목</TableCell>
                   <TableCell>관리번호</TableCell>
                   <TableCell>설치일자</TableCell>
@@ -573,7 +541,6 @@ const FacilitiesList = () => {
                       <TableCell>{facility.locationStoreName}</TableCell>
                       <TableCell>{facility.facilityTypeName}</TableCell>
                       <TableCell>{facility.brandName}</TableCell>
-                      <TableCell>{facility.modelNumber}</TableCell>
                       <TableCell>{facility.managementNumber}</TableCell>
                       <TableCell>{formatInstallationDate(facility.installationDate)}</TableCell>
                       <TableCell>{facility.usefulLifeMonths}</TableCell>

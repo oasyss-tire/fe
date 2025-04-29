@@ -318,10 +318,10 @@ const ServiceRequestCreate = () => {
                     </Grid>
                     <Grid item xs={12} md={6}>
                       <Typography variant="subtitle2" sx={{ mb: 1, color: '#666' }}>
-                        제조사/품목
+                        품목
                       </Typography>
                       <Typography variant="body1">
-                        {facility.brandName} / {facility.modelNumber}
+                        {facility.brandName}
                       </Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
@@ -382,7 +382,7 @@ const ServiceRequestCreate = () => {
                     id="facility-search"
                     options={facilitiesOptions}
                     getOptionLabel={(option) => 
-                      `${option.facilityTypeName} - ${option.brandName} ${option.modelNumber} (${option.storeName})`
+                      `${option.facilityTypeName} - ${option.brandName} (${option.storeName})`
                     }
                     onChange={handleFacilitySelect}
                     onInputChange={(e, value) => setSearchText(value)}
@@ -410,7 +410,7 @@ const ServiceRequestCreate = () => {
                       <li {...props}>
                         <Box>
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {option.facilityTypeName} - {option.brandName} {option.modelNumber}
+                            {option.facilityTypeName} - {option.brandName}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                             {option.storeName} ({option.currentLocation})

@@ -32,22 +32,25 @@ const FacilitiesRegister = () => {
   const [statusCodes, setStatusCodes] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [depreciationMethods, setDepreciationMethods] = useState([]);
+  const [headquarters, setHeadquarters] = useState({ id: 1, companyName: '본사' });
+  
+  // 오늘 날짜를 YYYY-MM-DD 형식으로 가져오기
+  const today = new Date().toISOString().split('T')[0];
   
   // 폼 데이터
   const [formData, setFormData] = useState({
     brandCode: '',            // 제조사 코드
     facilityTypeCode: '',     // 시설물 항목 코드
-    modelNumber: '',          // 품목 번호
     serialNumber: '',         // 시리얼 번호 (백엔드에서 자동 생성)
-    managementNumber: '',     // 관리 번호 (사용자 직접 입력)
-    installationDate: '',     // 설치일
+    installationDate: today,  // 설치일, 기본값으로 오늘 날짜 설정
     acquisitionCost: '',      // 취득가액
     installationTypeCode: '', // 설치 유형 (선택적)
     usefulLifeMonths: 12,     // 사용연한(개월)
     statusCode: '',           // 상태코드
     depreciationMethodCode: '',// 감가상각 방법 (선택적)
-    locationCompanyId: '',    // 설치 매장 ID
-    ownerCompanyId: 1         // 소유 매장 ID (본점 소유, 항상 1)
+    locationCompanyId: 1,     // 설치 매장 ID (본사로 고정, 항상 1)
+    ownerCompanyId: 1,        // 소유 매장 ID (본점 소유, 항상 1)
+    quantity: 1               // 수량 (배치 등록용)
   });
   
   // 사용연한 년 단위 입력 상태 (UI 표시용)
@@ -73,17 +76,6 @@ const FacilitiesRegister = () => {
   useEffect(() => {
     const fetchCodes = async () => {
       try {
-        // 제조사 코드 조회
-        const brandResponse = await fetch('http://localhost:8080/api/codes/groups/002008/codes/active', {
-          headers: {
-            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-          }
-        });
-        if (brandResponse.ok) {
-          const data = await brandResponse.json();
-          setBrands(data);
-        }
-
         // 시설물 유형 코드 조회
         const facilityTypeResponse = await fetch('http://localhost:8080/api/codes/groups/002001/codes/active', {
           headers: {
@@ -156,6 +148,12 @@ const FacilitiesRegister = () => {
         if (response.ok) {
           const data = await response.json();
           setCompanies(data);
+          
+          // 본사 정보 찾기 (ID가 1인 회사)
+          const hq = data.find(company => company.id === 1);
+          if (hq) {
+            setHeadquarters(hq);
+          }
         }
       } catch (error) {
         console.error('회사 목록 조회 실패:', error);
@@ -166,24 +164,53 @@ const FacilitiesRegister = () => {
     fetchCompanies();
   }, []);
   
+  // 시설물 유형이 변경될 때 해당 유형에 맞는 브랜드 목록 조회
+  const fetchBrandsForFacilityType = async (facilityTypeCode) => {
+    if (!facilityTypeCode) {
+      setBrands([]);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/facilities/facility-type/${facilityTypeCode}/brands`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setBrands(data);
+      } else {
+        throw new Error('브랜드 목록 조회 실패');
+      }
+    } catch (error) {
+      console.error('브랜드 목록 조회 실패:', error);
+      showSnackbar('브랜드 목록을 불러오는데 실패했습니다.', 'error');
+      setBrands([]);
+    }
+  };
+  
   // 이벤트 핸들러
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // 품목 필드 처리를 위한 핸들러
-  const handleModelNumberChange = (e) => {
-    const { value } = e.target;
     
-    // 최대 10글자로 제한
-    if (value.length <= 10) {
+    // 시설물 유형이 변경된 경우 해당 유형에 맞는 브랜드 조회
+    if (name === 'facilityTypeCode') {
+      // 시설물 유형이 변경되면 브랜드 초기화
       setFormData(prev => ({
         ...prev,
-        modelNumber: value
+        [name]: value,
+        brandCode: '' // 브랜드 선택 초기화
+      }));
+      
+      // 새로운 시설물 유형에 맞는 브랜드 목록 조회
+      fetchBrandsForFacilityType(value);
+    } else {
+      // 다른 필드 변경 시 일반 처리
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
       }));
     }
   };
@@ -222,12 +249,19 @@ const FacilitiesRegister = () => {
     
     // 필드별 최대 길이 제한
     let limitedValue = numericValue;
-    if (name === 'modelNumber' && numericValue.length > 10) {
-      limitedValue = numericValue.slice(0, 10);
-    } else if (name === 'usefulLifeMonths' && numericValue.length > 5) {
-      limitedValue = numericValue.slice(0, 5);
-    } else if (name === 'acquisitionCost' && numericValue.length > 30) {
+    if (name === 'acquisitionCost' && numericValue.length > 30) {
       limitedValue = numericValue.slice(0, 30);
+    }
+    
+    // 수량의 경우 1~100 사이로 제한
+    if (name === 'quantity') {
+      if (numericValue === '') {
+        limitedValue = '1';
+      } else {
+        const num = parseInt(numericValue, 10);
+        if (num < 1) limitedValue = '1';
+        if (num > 100) limitedValue = '100';
+      }
     }
     
     // 취득가액의 경우 콤마 포맷팅 적용
@@ -317,7 +351,6 @@ const FacilitiesRegister = () => {
       back: '002005_0002',   // 후면 사진
       left: '002005_0003',   // 측면 사진(좌)
       right: '002005_0004',  // 측면 사진(우)
-      tag: '002005_0005',    // 라벨 사진
     };
     
     return imageTypeCodes[position] || '002005_0001';
@@ -346,12 +379,10 @@ const FacilitiesRegister = () => {
         ? `${formData.installationDate}T00:00:00` 
         : null;
       
-      // 필요한 필드만 추출
+      // 배치 API용 데이터 준비
       const submitData = {
         brandCode: formData.brandCode,
         facilityTypeCode: formData.facilityTypeCode,
-        modelNumber: formData.modelNumber,
-        managementNumber: formData.managementNumber,
         installationDate: formattedInstallationDate,
         acquisitionCost: formData.acquisitionCost,
         installationTypeCode: formData.installationTypeCode || null,
@@ -359,11 +390,12 @@ const FacilitiesRegister = () => {
         statusCode: formData.statusCode,
         depreciationMethodCode: formData.depreciationMethodCode || null,
         locationCompanyId: formData.locationCompanyId,
-        ownerCompanyId: 1 // 본점 소유, 항상 1
+        ownerCompanyId: 1, // 본점 소유, 항상 1
+        quantity: formData.quantity // 배치 등록용 수량
       };
       
-      // 1. 시설물 등록
-      const facilityResponse = await fetch('http://localhost:8080/api/facilities', {
+      // 배치 API로 시설물 등록
+      const facilityResponse = await fetch('http://localhost:8080/api/facilities/batch', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -376,33 +408,37 @@ const FacilitiesRegister = () => {
         throw new Error('시설물 등록에 실패했습니다.');
       }
 
-      const facilityResult = await facilityResponse.json();
-      const facilityId = facilityResult.facilityId;
+      const facilityResults = await facilityResponse.json();
       
-      // 2. 이미지 업로드
-      const imageUploadPromises = Object.values(images)
-        .filter(image => image !== null)
-        .map(async (imageData) => {
-          const imageFormData = new FormData();
-          imageFormData.append('file', imageData.file);
-          imageFormData.append('imageTypeCode', imageData.imageTypeCode);
-          imageFormData.append('uploadBy', sessionStorage.getItem('userId') || '');
+      // 배치 생성 결과가 배열로 반환되므로, 첫 번째 시설물에만 이미지를 업로드
+      if (facilityResults.length > 0) {
+        const facilityId = facilityResults[0].facilityId;
+        
+        // 2. 이미지 업로드 (첫 번째 시설물에만 적용)
+        const imageUploadPromises = Object.values(images)
+          .filter(image => image !== null)
+          .map(async (imageData) => {
+            const imageFormData = new FormData();
+            imageFormData.append('file', imageData.file);
+            imageFormData.append('imageTypeCode', imageData.imageTypeCode);
+            imageFormData.append('uploadBy', sessionStorage.getItem('userId') || '');
 
-          return fetch(`http://localhost:8080/api/facility-images/facility/${facilityId}`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            },
-            body: imageFormData
+            return fetch(`http://localhost:8080/api/facility-images/facility/${facilityId}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+              },
+              body: imageFormData
+            });
           });
-        });
-      
-      // 이미지가 있는 경우에만 업로드 실행
-      if (imageUploadPromises.length > 0) {
-        await Promise.all(imageUploadPromises);
+        
+        // 이미지가 있는 경우에만 업로드 실행
+        if (imageUploadPromises.length > 0) {
+          await Promise.all(imageUploadPromises);
+        }
       }
       
-      showSnackbar('시설물이 성공적으로 등록되었습니다.', 'success');
+      showSnackbar(`시설물 ${formData.quantity}개가 성공적으로 등록되었습니다.`, 'success');
       
       // 등록 후 리스트 화면으로 바로 이동
       navigate('/facility-list');
@@ -416,7 +452,7 @@ const FacilitiesRegister = () => {
   };
 
   const ImageUploadBox = ({ position, title }) => (
-    <Grid item xs={12} sm={6} md={4} lg={2.4}>
+    <Grid item xs={12} sm={6} md={3}>
       <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
         {title}
       </Typography>
@@ -584,15 +620,16 @@ const FacilitiesRegister = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    품목
+                    수량
                   </Typography>
                   <TextField
                     fullWidth
                     size="small"
-                    name="modelNumber"
-                    value={formData.modelNumber}
-                    onChange={handleModelNumberChange}
-                    placeholder="품목 입력"
+                    type="text"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleNumberChange}
+                    placeholder="수량 입력"
                     sx={{ 
                       backgroundColor: '#F8F9FA',
                       '& .MuiOutlinedInput-root': {
@@ -601,26 +638,8 @@ const FacilitiesRegister = () => {
                         },
                       },
                     }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    관리 번호
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    name="managementNumber"
-                    value={formData.managementNumber}
-                    onChange={handleChange}
-                    placeholder="관리 번호 입력 (예: TB-2000-001)"
-                    sx={{ 
-                      backgroundColor: '#F8F9FA',
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': {
-                          borderColor: '#E0E0E0',
-                        },
-                      },
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">개</InputAdornment>,
                     }}
                   />
                 </Grid>
@@ -762,27 +781,24 @@ const FacilitiesRegister = () => {
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
                     설치 매장
                   </Typography>
-                  <FormControl fullWidth size="small">
-                    <Select
-                      displayEmpty
-                      name="locationCompanyId"
-                      value={formData.locationCompanyId}
-                      onChange={handleCompanyChange}
-                      sx={{
-                        backgroundColor: '#F8F9FA',
-                        '& .MuiOutlinedInput-notchedOutline': {
+                  <TextField
+                    fullWidth
+                    size="small"
+                    value={headquarters.companyName}
+                    disabled
+                    sx={{
+                      backgroundColor: '#F8F9FA',
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
                           borderColor: '#E0E0E0',
                         },
-                      }}
-                    >
-                      <MenuItem value="">매장 선택</MenuItem>
-                      {companies.map((company) => (
-                        <MenuItem key={company.id} value={company.id}>
-                          {company.companyName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                      },
+                      '& .Mui-disabled': {
+                        backgroundColor: '#F0F0F0',
+                        color: '#666'
+                      }
+                    }}
+                  />
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
@@ -860,7 +876,6 @@ const FacilitiesRegister = () => {
                 <ImageUploadBox position="back" title="후면 사진" />
                 <ImageUploadBox position="left" title="측면 사진(좌)" />
                 <ImageUploadBox position="right" title="측면 사진(우)" />
-                <ImageUploadBox position="tag" title="태그 사진" />
               </Grid>
             </Box>
           </Box>

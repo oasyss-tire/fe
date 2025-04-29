@@ -571,7 +571,7 @@ const FacilityHistoryPage = () => {
                     <TableCell sx={{ px: 2 }}>
                       <Box>
                         <Typography variant="body2">{transaction.facilityTypeName}</Typography>
-                        <Typography variant="caption" color="text.secondary">품목: {transaction.facilityModelNumber}<br/></Typography>
+                        <Typography variant="caption" color="text.secondary">품목: {transaction.brandCodeName}<br/></Typography>
                         <Typography variant="caption" color="text.secondary">관리번호: {transaction.managementNumber}</Typography>
                       </Box>
                     </TableCell>
@@ -668,7 +668,7 @@ const FacilityHistoryPage = () => {
                       <TableCell sx={{ px: 2 }}>
                         <Box>
                           <Typography variant="body2">{voucher.facilityTypeName}</Typography>
-                          <Typography variant="caption" color="text.secondary">품목: {voucher.facilityModelNumber}<br/></Typography>
+                          <Typography variant="caption" color="text.secondary">품목: {voucher.brandCodeName}<br/></Typography>
                           <Typography variant="caption" color="text.secondary">관리번호: {voucher.facilityManagementNumber}</Typography>
                         </Box>
                       </TableCell>
@@ -783,7 +783,7 @@ const FacilityHistoryPage = () => {
                     <TableCell sx={{ px: 2 }}>
                       <Box>
                         <Typography variant="body2">{depreciation.facilityName}</Typography>
-                        <Typography variant="caption" color="text.secondary">품목: {depreciation.modelNumber}<br/></Typography>
+                        <Typography variant="caption" color="text.secondary">품목: {depreciation.brandCodeName}<br/></Typography>
                         <Typography variant="caption" color="text.secondary">관리번호: {depreciation.managementNumber}</Typography>
                       </Box>
                     </TableCell>
