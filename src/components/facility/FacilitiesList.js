@@ -403,7 +403,7 @@ const FacilitiesList = () => {
           onClick={() => navigate('/facility-transfer')}
           sx={{ mr: 1 }}
         >
-          시설물 이동/폐기
+          시설물 출고 (이동/폐기)
         </Button>
         <Button
           variant="contained"
@@ -411,7 +411,7 @@ const FacilitiesList = () => {
           startIcon={<AddIcon />}
           onClick={handleAddFacility}
         >
-          시설물 등록
+          시설물 입고
         </Button>
       </Box>
 

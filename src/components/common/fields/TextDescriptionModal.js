@@ -23,15 +23,24 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [formatOptions, setFormatOptions] = useState([]);
-  const [selectedFormat, setSelectedFormat] = useState('');
+  const [selectedFormat, setSelectedFormat] = useState('default_text');
   const [loading, setLoading] = useState(false);
+
+  // 기본 텍스트 형식의 값 상수로 정의
+  const DEFAULT_TEXT_FORMAT = 'default_text';
+  
+  // 날짜 관련 형식 코드 ID 상수 정의
+  const YEAR_FORMAT_CODE = '001004_0004';
+  const MONTH_FORMAT_CODE = '001004_0005';
+  const DAY_FORMAT_CODE = '001004_0006';
 
   // field 정보가 변경될 때마다 상태 초기화
   useEffect(() => {
     if (field && open) {
       // description 속성이 있으면 설정, 없으면 빈 문자열
       setDescription(field.description || '');
-      setSelectedFormat(field.formatCodeId || '');
+      // formatCodeId가 빈 문자열이거나 없으면 기본 텍스트로 설정
+      setSelectedFormat(field.formatCodeId || DEFAULT_TEXT_FORMAT);
       setError('');
       
       // 형식 목록 로드
@@ -71,13 +80,15 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
       return;
     }
 
-    onSave(description, selectedFormat);
+    // 기본 텍스트를 선택한 경우 빈 문자열로 전달 (서버 처리 호환성 유지)
+    const formatToSave = selectedFormat === DEFAULT_TEXT_FORMAT ? '' : selectedFormat;
+    onSave(description, formatToSave);
     handleClose();
   };
 
   const handleClose = () => {
     setDescription('');
-    setSelectedFormat('');
+    setSelectedFormat(DEFAULT_TEXT_FORMAT); // 기본값으로 초기화
     setError('');
     onClose();
   };
@@ -86,6 +97,31 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
     setDescription(e.target.value);
     if (e.target.value.trim()) {
       setError('');
+    }
+  };
+
+  // 포맷 선택 변경 시 날짜 관련 필드인 경우 자동 설명 텍스트 설정
+  const handleFormatChange = (e) => {
+    const formatValue = e.target.value;
+    const previousFormat = selectedFormat;
+    setSelectedFormat(formatValue);
+    
+    // 날짜 관련 형식이 선택된 경우 자동으로 설명 텍스트 입력
+    if (formatValue === YEAR_FORMAT_CODE) {
+      setDescription('날짜-년도');
+    } else if (formatValue === MONTH_FORMAT_CODE) {
+      setDescription('날짜-월');
+    } else if (formatValue === DAY_FORMAT_CODE) {
+      setDescription('날짜-일');
+    } else {
+      // 이전에 날짜 관련 형식이었다면 텍스트 초기화
+      const wasDateFormat = previousFormat === YEAR_FORMAT_CODE || 
+                            previousFormat === MONTH_FORMAT_CODE || 
+                            previousFormat === DAY_FORMAT_CODE;
+      
+      if (wasDateFormat) {
+        setDescription('');
+      }
     }
   };
 
@@ -146,12 +182,12 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
           <InputLabel>입력 형식</InputLabel>
           <Select
             value={selectedFormat}
-            onChange={(e) => setSelectedFormat(e.target.value)}
+            onChange={handleFormatChange}
             label="입력 형식"
             disabled={loading}
           >
-            <MenuItem value="">
-              <em>기본 텍스트</em>
+            <MenuItem value={DEFAULT_TEXT_FORMAT}>
+              기본 텍스트
             </MenuItem>
             {formatOptions.map((option) => (
               <MenuItem key={option.codeId} value={option.codeId}>

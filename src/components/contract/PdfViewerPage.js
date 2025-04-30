@@ -188,7 +188,7 @@ const PdfViewerPage = () => {
     
     // 필드 타입에 따라 다른 크기 설정
     const width = selectedTool === 'checkbox' ? 20 * scale :
-                 selectedTool === 'signature' ? 100 * scale :
+                 selectedTool === 'signature' ? 60 * scale :
                  selectedTool === 'confirmText' ? 250 * scale : 150 * scale;
                  
     const height = selectedTool === 'checkbox' ? 20 * scale :
@@ -227,10 +227,10 @@ const PdfViewerPage = () => {
       x: relativeX,
       y: relativeY,
       width: selectedTool === 'checkbox' ? 20 / scale : 
-             selectedTool === 'signature' ? 100 / scale :
+             selectedTool === 'signature' ? 60 / scale :
              selectedTool === 'confirmText' ? 250 / scale : 150 / scale,
       height: selectedTool === 'checkbox' ? 20 / scale : 
-              selectedTool === 'signature' ? 60 / scale : 
+              selectedTool === 'signature' ? 60 / scale :
               selectedTool === 'confirmText' ? 50 / scale : 30 / scale,
       value: '',
       page: pageNumber,
@@ -349,10 +349,13 @@ const PdfViewerPage = () => {
     // 텍스트 필드 리사이즈
     setTextFields(prev => prev.map(field => {
       if (field.id === resizeTarget) {
+        // 기본 높이값 계산 (30/scale)
+        const defaultHeight = 30 / scale;
+        
         return {
           ...field,
-          width: Math.max(30, resizeStartPos.current.width + dx),
-          height: Math.max(10, resizeStartPos.current.height + dy)
+          width: Math.max(20, resizeStartPos.current.width + dx), // 최소 너비 20으로 유지
+          height: Math.max(defaultHeight, resizeStartPos.current.height + dy) // 최소 높이는 기본 높이로 설정
         };
       }
       return field;
@@ -361,10 +364,13 @@ const PdfViewerPage = () => {
     // 서명 필드 리사이즈
     setSignatureFields(prev => prev.map(field => {
       if (field.id === resizeTarget) {
-        const size = Math.max(50, Math.max(
-          resizeStartPos.current.width + dx,
-          resizeStartPos.current.height + dy
-        ));
+        // 초기 크기와 동일하게 60으로 설정하되, 단순히 같은 비율로 조정
+        const newWidth = Math.max(60 / scale, resizeStartPos.current.width + dx);
+        const newHeight = Math.max(60 / scale, resizeStartPos.current.height + dy);
+        
+        // 정사각형 유지를 위해 큰 값으로 맞춤
+        const size = Math.max(newWidth, newHeight);
+        
         return {
           ...field,
           width: size,
@@ -377,10 +383,13 @@ const PdfViewerPage = () => {
     // 확인 텍스트 필드 리사이즈
     setConfirmTextFields(prev => prev.map(field => {
       if (field.id === resizeTarget) {
+        // 기본 높이값 계산 (30/scale) - 텍스트 필드와 동일하게 설정
+        const defaultHeight = 30 / scale;
+        
         return {
           ...field,
           width: Math.max(100, resizeStartPos.current.width + dx),
-          height: Math.max(30, resizeStartPos.current.height + dy)
+          height: Math.max(defaultHeight, resizeStartPos.current.height + dy) // 최소 높이를 30/scale로 유지
         };
       }
       return field;
@@ -624,7 +633,7 @@ const PdfViewerPage = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)', bgcolor: '#f5f5f5' }}>
+    <Box sx={{ display: 'flex', height: '100vh !important', bgcolor: '#f5f5f5' }}>
       {/* 왼쪽 썸네일 영역 - 고정 너비 */}
       <Box 
         sx={{ 
@@ -674,7 +683,8 @@ const PdfViewerPage = () => {
         onClick={handlePdfClick}
         sx={{ 
           flex: '1 1 auto',
-          overflowY: 'auto',
+          overflowY: 'scroll',
+          maxHeight: '100vh',
           p: 4,
           bgcolor: '#fff',
           display: 'flex',
@@ -697,10 +707,10 @@ const PdfViewerPage = () => {
               left: mousePosition.x,
               top: mousePosition.y,
               width: selectedTool === 'checkbox' ? '20px' : 
-                     selectedTool === 'signature' ? '100px' : 
+                     selectedTool === 'signature' ? '60px' :
                      selectedTool === 'confirmText' ? '250px' : '150px',
               height: selectedTool === 'checkbox' ? '20px' : 
-                      selectedTool === 'signature' ? '60px' : 
+                      selectedTool === 'signature' ? '60px' :
                       selectedTool === 'confirmText' ? '50px' : '30px',
               border: '1px dashed',
               borderColor: selectedTool === 'signature' ? '#f44336' :
@@ -740,7 +750,7 @@ const PdfViewerPage = () => {
               id={`page-${index + 1}`}
               sx={{ 
                 position: 'relative',
-                mb: 4,
+                mb: index === numPages - 1 ? 20 : 4, // 마지막 페이지인 경우 더 큰 마진 추가
                 display: 'flex',
                 justifyContent: 'center',
                 boxShadow: '0 3px 6px rgba(0,0,0,0.1)',

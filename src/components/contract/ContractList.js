@@ -53,6 +53,9 @@ const ContractList = () => {
   const [dateDialogOpen, setDateDialogOpen] = useState(false);
   const [dateFilterActive, setDateFilterActive] = useState(false);
   
+  // 이번 달 보험 종료 필터 상태 추가
+  const [currentMonthExpiryFilter, setCurrentMonthExpiryFilter] = useState(false);
+  
   // 상태 코드 데이터
   const [statusCodes, setStatusCodes] = useState([]);
 
@@ -162,6 +165,32 @@ const ContractList = () => {
       }
     }
     
+    // 이번 달 보험 종료 필터링 추가
+    if (currentMonthExpiryFilter) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      result = result.filter(contract => {
+        if (!contract.insuranceEndDate) return false;
+        
+        try {
+          // 보험종료일 파싱 (YYYY-MM-DD 형식 가정)
+          const endDateParts = contract.insuranceEndDate.split('-');
+          if (endDateParts.length !== 3) return false;
+          
+          const endYear = parseInt(endDateParts[0], 10);
+          const endMonth = parseInt(endDateParts[1], 10) - 1; // JavaScript의 월은 0부터 시작
+          
+          // 현재 년도와 월이 보험종료일과 일치하는지 확인
+          return endYear === currentYear && endMonth === currentMonth;
+        } catch (error) {
+          console.error('보험종료일 파싱 오류:', error, contract.insuranceEndDate);
+          return false;
+        }
+      });
+    }
+    
     // 정렬
     result.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
@@ -171,7 +200,7 @@ const ContractList = () => {
     });
     
     setFilteredContracts(result);
-  }, [contracts, searchQuery, statusFilter, sortOrder, dateFilterActive, startDate, endDate]);
+  }, [contracts, searchQuery, statusFilter, sortOrder, dateFilterActive, startDate, endDate, currentMonthExpiryFilter]);
 
   const handleMenuClick = (event, contractId) => {
     setAnchorEl(event.currentTarget);
@@ -331,6 +360,7 @@ const ContractList = () => {
     setStartDate(null);
     setEndDate(null);
     setDateFilterActive(false);
+    setCurrentMonthExpiryFilter(false);
   };
   
   // 날짜 다이얼로그 열기
@@ -563,6 +593,31 @@ const ContractList = () => {
           />
         </Box>
         
+        {/* 이번 달 보험 만료 필터 추가 */}
+        <Box>
+          <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+            보험만료 예정
+          </Typography>
+          <Button
+            variant={currentMonthExpiryFilter ? "contained" : "outlined"}
+            size="small"
+            onClick={() => setCurrentMonthExpiryFilter(!currentMonthExpiryFilter)}
+            sx={{
+              minWidth: 100,
+              height: 40,
+              borderColor: currentMonthExpiryFilter ? '#1976d2' : '#E0E0E0',
+              backgroundColor: currentMonthExpiryFilter ? '#1976d2' : 'white',
+              color: currentMonthExpiryFilter ? 'white' : '#666',
+              '&:hover': {
+                backgroundColor: currentMonthExpiryFilter ? '#1565c0' : 'rgba(25, 118, 210, 0.04)',
+                borderColor: currentMonthExpiryFilter ? '#1565c0' : '#BDBDBD',
+              },
+            }}
+          >
+            {currentMonthExpiryFilter ? '이번 달 만료' : '이번 달 만료'}
+          </Button>
+        </Box>
+        
         {/* 날짜 범위 선택 캘린더 다이얼로그 */}
         <DateRangeCalendar
           startDate={startDate}
@@ -588,12 +643,13 @@ const ContractList = () => {
           <Typography variant="body2" sx={{ color: '#666' }}>
             전체 {contracts.length}건 중 {filteredContracts.length}건 검색됨
           </Typography>
-          {(searchQuery || statusFilter || activeStatusFilter !== 'active' || dateFilterActive) && (
+          {(searchQuery || statusFilter || activeStatusFilter !== 'active' || dateFilterActive || currentMonthExpiryFilter) && (
             <Typography variant="body2" sx={{ color: '#1976d2' }}>
               {searchQuery && `검색어: "${searchQuery}" `}
               {statusFilter && `상태: ${statusFilter} `}
               {activeStatusFilter !== 'active' && `활성화: ${activeStatusFilter === 'inactive' ? '만료' : '전체'} `}
-              {dateFilterActive && `기간: ${getDateRangeText()}`}
+              {dateFilterActive && `기간: ${getDateRangeText()} `}
+              {currentMonthExpiryFilter && `이번 달 보험 만료 `}
             </Typography>
           )}
         </Box>

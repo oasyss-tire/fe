@@ -293,7 +293,7 @@ const CompanyCreate = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    // 필수 필드 검사
+    // 기본 정보 - 필수 필드 검사
     if (!companyData.storeCode) {
       newErrors.storeCode = '매장코드를 입력해주세요.';
     } else if (companyData.storeCode.length > 10) {
@@ -306,24 +306,83 @@ const CompanyCreate = () => {
       newErrors.storeName = '매장명은 100자 이내로 입력해주세요.';
     }
     
-    // 이메일 형식 검사
-    if (companyData.email && !/\S+@\S+\.\S+/.test(companyData.email)) {
+    if (!baseAddress) {
+      newErrors.baseAddress = '주소를 입력해주세요.';
+    }
+    
+    if (!detailAddress) {
+      newErrors.addressDetail = '상세 주소를 입력해주세요.';
+    }
+    
+    if (!companyData.trustee) {
+      newErrors.trustee = '수탁사업자명을 입력해주세요.';
+    }
+    
+    if (!companyData.trusteeCode) {
+      newErrors.trusteeCode = '수탁코드를 입력해주세요.';
+    }
+    
+    if (!companyData.businessNumber) {
+      newErrors.businessNumber = '사업자번호를 입력해주세요.';
+    } else if (!/^\d{3}-\d{2}-\d{5}$/.test(companyData.businessNumber)) {
+      newErrors.businessNumber = '사업자번호 형식이 올바르지 않습니다. (예: 123-45-67890)';
+    }
+    
+    if (!companyData.subBusinessNumber) {
+      newErrors.subBusinessNumber = '종사업장번호를 입력해주세요.';
+    }
+    
+    if (!companyData.companyName) {
+      newErrors.companyName = '상호를 입력해주세요.';
+    }
+    
+    if (!companyData.representativeName) {
+      newErrors.representativeName = '대표자명을 입력해주세요.';
+    }
+    
+    if (!companyData.startDate) {
+      newErrors.startDate = '계약 시작일자를 입력해주세요.';
+    }
+    
+    if (!companyData.endDate) {
+      newErrors.endDate = '계약 종료일자를 입력해주세요.';
+    }
+    
+    if (!companyData.insuranceStartDate) {
+      newErrors.insuranceStartDate = '보험 시작일자를 입력해주세요.';
+    }
+    
+    if (!companyData.insuranceEndDate) {
+      newErrors.insuranceEndDate = '보험 종료일자를 입력해주세요.';
+    }
+    
+    // 연락처 정보 - 필수 필드 검사
+    if (!companyData.managerName) {
+      newErrors.managerName = '담당자를 입력해주세요.';
+    }
+    
+    if (!companyData.email) {
+      newErrors.email = '이메일을 입력해주세요.';
+    } else if (!/\S+@\S+\.\S+/.test(companyData.email)) {
       newErrors.email = '유효한 이메일 주소를 입력해주세요.';
     }
     
-    // 전화번호 형식 검사
-    if (companyData.phoneNumber && !/^\d{3}-\d{3,4}-\d{4}$/.test(companyData.phoneNumber)) {
+    if (!companyData.phoneNumber) {
+      newErrors.phoneNumber = '담당자 전화번호를 입력해주세요.';
+    } else if (!/^\d{3}-\d{3,4}-\d{4}$/.test(companyData.phoneNumber)) {
       newErrors.phoneNumber = '전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)';
     }
     
-    // 매장 전화번호 형식 검사 - 더 유연한 검증으로 변경
-    if (companyData.storeTelNumber && !/^(\d{2,3})-(\d{3,4})-(\d{3,4})$/.test(companyData.storeTelNumber)) {
+    if (!companyData.storeTelNumber) {
+      newErrors.storeTelNumber = '매장 전화번호를 입력해주세요.';
+    } else if (!/^(\d{2,3})-(\d{3,4})-(\d{3,4})$/.test(companyData.storeTelNumber)) {
       newErrors.storeTelNumber = '전화번호 형식이 올바르지 않습니다. (예: 02-1234-5678 또는 055-123-4567)';
     }
     
-    // 사업자번호 형식 검사
-    if (companyData.businessNumber && !/^\d{3}-\d{2}-\d{5}$/.test(companyData.businessNumber)) {
-      newErrors.businessNumber = '사업자번호 형식이 올바르지 않습니다. (예: 123-45-67890)';
+    // 계약 시작일이 종료일보다 이후인 경우
+    if (companyData.startDate && companyData.endDate &&
+        companyData.startDate > companyData.endDate) {
+      newErrors.endDate = '계약 종료일은 시작일 이후로 설정해주세요.';
     }
     
     // 보험 기간 유효성 검사 - 시작일이 종료일보다 이후인 경우
@@ -586,7 +645,10 @@ const CompanyCreate = () => {
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
       
-      // 회사 목록 페이지로 즉시 이동
+      // 성공 알림 표시
+      alert('업체 등록이 완료되었습니다.');
+      
+      // 회사 목록 페이지로 이동
       navigate('/companies');
       
     } catch (error) {
@@ -766,11 +828,14 @@ const CompanyCreate = () => {
               <Grid item xs={12}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <TextField
-                    label="주소"
+                    label="주소 *"
                     name="baseAddress"
                     value={baseAddress}
                     fullWidth
                     size="small"
+                    required
+                    error={!!errors.baseAddress}
+                    helperText={errors.baseAddress}
                     placeholder="주소 검색 버튼을 클릭하세요"
                     InputProps={{
                       readOnly: true,
@@ -789,48 +854,58 @@ const CompanyCreate = () => {
               
               <Grid item xs={12}>
                 <TextField
-                  label="상세 주소"
+                  label="상세 주소 *"
                   name="addressDetail"
                   value={detailAddress}
                   onChange={handleDetailAddressChange}
                   fullWidth
                   size="small"
+                  required
+                  error={!!errors.addressDetail}
+                  helperText={errors.addressDetail}
                   placeholder="상세 주소를 입력하세요"
                 />
               </Grid>
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="수탁사업자명"
+                  label="수탁사업자명 *"
                   name="trustee"
                   value={companyData.trustee}
                   onChange={handleChange}
                   fullWidth
                   size="small"
+                  required
+                  error={!!errors.trustee}
+                  helperText={errors.trustee}
                   placeholder="예: 타이어 뱅크(본점)"
                 />
               </Grid>
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="수탁코드"
+                  label="수탁코드 *"
                   name="trusteeCode"
                   value={companyData.trusteeCode}
                   onChange={handleChange}
                   fullWidth
                   size="small"
+                  required
+                  error={!!errors.trusteeCode}
+                  helperText={errors.trusteeCode}
                   placeholder="예: 0001"
                 />
               </Grid>
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="사업자번호"
+                  label="사업자번호 *"
                   name="businessNumber"
                   value={companyData.businessNumber}
                   onChange={handleBusinessNumberChange}
                   fullWidth
                   size="small"
+                  required
                   error={!!errors.businessNumber}
                   helperText={errors.businessNumber}
                   placeholder="예: 123-45-67890"
@@ -842,36 +917,45 @@ const CompanyCreate = () => {
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="종사업장번호"
+                  label="종사업장번호 *"
                   name="subBusinessNumber"
                   value={companyData.subBusinessNumber}
                   onChange={handleChange}
                   fullWidth
                   size="small"
+                  required
+                  error={!!errors.subBusinessNumber}
+                  helperText={errors.subBusinessNumber}
                   placeholder="예: 0001"
                 />
               </Grid>
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="상호"
+                  label="상호 *"
                   name="companyName"
                   value={companyData.companyName}
                   onChange={handleChange}
                   fullWidth
                   size="small"
+                  required
+                  error={!!errors.companyName}
+                  helperText={errors.companyName}
                   placeholder="예: 타이어 뱅크(본점)"
                 />
               </Grid>
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="대표자명"
+                  label="대표자명 *"
                   name="representativeName"
                   value={companyData.representativeName}
                   onChange={handleChange}
                   fullWidth
                   size="small"
+                  required
+                  error={!!errors.representativeName}
+                  helperText={errors.representativeName}
                   placeholder="예: 대표자"
                 />
               </Grid>
@@ -879,13 +963,16 @@ const CompanyCreate = () => {
               <Grid item xs={12} md={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                   <DatePicker
-                    label="계약 시작일자"
+                    label="계약 시작일자 *"
                     value={companyData.startDate}
                     onChange={(date) => handleDateChange('startDate', date)}
                     slotProps={{
                       textField: {
                         fullWidth: true,
-                        size: "small"
+                        size: "small",
+                        required: true,
+                        error: !!errors.startDate,
+                        helperText: errors.startDate
                       }
                     }}
                   />
@@ -895,13 +982,16 @@ const CompanyCreate = () => {
               <Grid item xs={12} md={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                   <DatePicker
-                    label="계약 종료일자"
+                    label="계약 종료일자 *"
                     value={companyData.endDate}
                     onChange={(date) => handleDateChange('endDate', date)}
                     slotProps={{
                       textField: {
                         fullWidth: true,
-                        size: "small"
+                        size: "small",
+                        required: true,
+                        error: !!errors.endDate,
+                        helperText: errors.endDate
                       }
                     }}
                   />
@@ -911,13 +1001,14 @@ const CompanyCreate = () => {
               <Grid item xs={12} md={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                   <DatePicker
-                    label="하자보증증권 보험시작일자"
+                    label="하자보증증권 보험시작일자 *"
                     value={companyData.insuranceStartDate}
                     onChange={(date) => handleDateChange('insuranceStartDate', date)}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         size: "small",
+                        required: true,
                         error: !!errors.insuranceStartDate,
                         helperText: errors.insuranceStartDate
                       }
@@ -929,13 +1020,14 @@ const CompanyCreate = () => {
               <Grid item xs={12} md={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
                   <DatePicker
-                    label="하자보증증권 보험종료일자"
+                    label="하자보증증권 보험종료일자 *"
                     value={companyData.insuranceEndDate}
                     onChange={(date) => handleDateChange('insuranceEndDate', date)}
                     slotProps={{
                       textField: {
                         fullWidth: true,
                         size: "small",
+                        required: true,
                         error: !!errors.insuranceEndDate,
                         helperText: errors.insuranceEndDate
                       }
@@ -969,25 +1061,29 @@ const CompanyCreate = () => {
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="담당자"
+                  label="담당자 *"
                   name="managerName"
                   value={companyData.managerName}
                   onChange={handleChange}
                   fullWidth
                   size="small"
+                  required
+                  error={!!errors.managerName}
+                  helperText={errors.managerName}
                   placeholder="예: 홍길동"
                 />
               </Grid>
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="이메일"
+                  label="이메일 *"
                   name="email"
                   type="email"
                   value={companyData.email}
                   onChange={handleChange}
                   fullWidth
                   size="small"
+                  required
                   error={!!errors.email}
                   helperText={errors.email}
                   placeholder="예: example@example.com"
@@ -996,12 +1092,13 @@ const CompanyCreate = () => {
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="담당자 전화번호"
+                  label="담당자 전화번호 *"
                   name="phoneNumber"
                   value={companyData.phoneNumber}
                   onChange={handlePhoneNumberChange}
                   fullWidth
                   size="small"
+                  required
                   error={!!errors.phoneNumber}
                   helperText={errors.phoneNumber}
                   placeholder="예: 010-1234-5678"
@@ -1013,12 +1110,13 @@ const CompanyCreate = () => {
               
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="매장 전화번호"
+                  label="매장 전화번호 *"
                   name="storeTelNumber"
                   value={companyData.storeTelNumber}
                   onChange={handleStoreTelNumberChange}
                   fullWidth
                   size="small"
+                  required
                   error={!!errors.storeTelNumber}
                   helperText={errors.storeTelNumber}
                   placeholder="예: 055-123-4567"

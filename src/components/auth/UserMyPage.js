@@ -95,8 +95,8 @@ const UserMyPage = () => {
   // 탭 변경 핸들러
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
-    // 계약 탭으로 변경 시 계약 정보 로드
-    if (newValue === 1 && contracts.length === 0) {
+    // 계약 탭으로 변경 시 계약 정보 로드 (항상 최신 정보 가져오기)
+    if (newValue === 1) {
       fetchContracts();
     }
   };
@@ -171,6 +171,17 @@ const UserMyPage = () => {
     };
 
     fetchUserData();
+    
+    // 초기 계약 정보도 함께 로드
+    if (authUser) {
+      fetchContracts();
+    }
+    
+    // URL 파라미터 확인하여 서명 완료 후 접근한 경우 계약 탭으로 이동
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('from') === 'signing') {
+      setTabValue(1); // 계약 탭 선택
+    }
   }, [authUser]);
 
   // 내 계약 정보 가져오기
@@ -484,8 +495,8 @@ const UserMyPage = () => {
 
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                     <TextField
-                      label="회사"
-                      value={user.companyName ? `${user.companyName} (${user.storeCode})` : '회사 정보 없음'}
+                      label="수탁사업자명"
+                      value={user.companyName ? `${user.companyName} (${user.storeCode})` : '수탁사업자명 정보 없음'}
                       fullWidth
                       disabled
                       size="small"
@@ -674,8 +685,8 @@ const UserMyPage = () => {
                         <TableRow>
                           <TableCell>계약 번호</TableCell>
                           <TableCell>계약명</TableCell>
-                          <TableCell>회사</TableCell>
-                          <TableCell>계약일</TableCell>
+                          <TableCell>수탁사업자명</TableCell>
+                          <TableCell>계약생성일</TableCell>
                           <TableCell>상태</TableCell>
                           <TableCell align="center">진행률</TableCell>
                           <TableCell align="center">상세</TableCell>

@@ -880,7 +880,7 @@ const FacilityTransfer = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
-        시설물 이동/폐기 관리
+        시설물 출고 (이동/폐기)
       </Typography>
 
       {/* 탭 UI */}

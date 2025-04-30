@@ -31,6 +31,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ChatIcon from '@mui/icons-material/Chat';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import HistoryIcon from '@mui/icons-material/History';
 import { useAuth } from '../../contexts/AuthContext';
 
 const DRAWER_WIDTH = 240;
@@ -117,6 +118,7 @@ const Sidebar = () => {
       'BusinessCenterIcon': <BusinessCenterIcon />,
       'EditIcon': <EditIcon />,
       'SendIcon': <SendIcon />,
+      'HistoryIcon': <HistoryIcon />,
       'ListAltIcon': <ListAltIcon />,
       'EngineeringIcon': <EngineeringIcon />,
       'BuildIcon': <BuildIcon />,
@@ -142,10 +144,11 @@ const Sidebar = () => {
       categoryId: 'contract',
       items: [
         { text: '홈', icon: <HomeIcon />, path: '/', id: 'home' },
-        { text: '계약 관리', icon: <DescriptionIcon />, path: '/contract-list', id: 'contract_management' },
+        { text: '계약 리스트', icon: <DescriptionIcon />, path: '/contract-list', id: 'contract_management' },
         { text: '계약서 템플릿', icon: <BusinessCenterIcon />, path: '/contract-templates', id: 'contract_template' },
         { text: '계약서 등록', icon: <EditIcon />, path: '/contract-upload', id: 'contract_upload' },
         { text: '계약 생성', icon: <SendIcon />, path: '/contract-send', id: 'contract_create' },
+        { text: '계약 이벤트 로그', icon: <HistoryIcon />, path: '/contract-log', id: 'contract_log' },
         // { text: '현장 계약', icon: <PeopleAltIcon />, path: '/field-contracts' },
       ]
     },

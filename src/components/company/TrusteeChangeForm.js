@@ -177,6 +177,10 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
       errors.trustee = '수탁자 이름은 필수 입력 항목입니다.';
     }
     
+    if (!formData.trusteeCode) {
+      errors.trusteeCode = '수탁코드는 필수 입력 항목입니다.';
+    }
+    
     if (!formData.companyName) {
       errors.companyName = '상호는 필수 입력 항목입니다.';
     }
@@ -191,14 +195,48 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
       errors.businessNumber = '사업자번호 형식이 올바르지 않습니다. (예: 123-45-67890)';
     }
     
+    if (!formData.subBusinessNumber) {
+      errors.subBusinessNumber = '종사업장번호는 필수 입력 항목입니다.';
+    }
+    
+    // 업태와 종목은 필수 검사에서 제외
+    
+    if (!formData.managerName) {
+      errors.managerName = '담당자명은 필수 입력 항목입니다.';
+    }
+    
+    if (!formData.email) {
+      errors.email = '이메일은 필수 입력 항목입니다.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = '이메일 형식이 올바르지 않습니다.';
+    }
+    
+    if (!formData.phoneNumber) {
+      errors.phoneNumber = '휴대폰번호는 필수 입력 항목입니다.';
+    }
+    
+    if (!formData.storeTelNumber) {
+      errors.storeTelNumber = '매장 전화번호는 필수 입력 항목입니다.';
+    }
+    
     // 시작일 필수 검사
     if (!formData.startDate) {
       errors.startDate = '시작일자는 필수 입력 항목입니다.';
     }
     
-    // 이메일 형식 검사
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = '이메일 형식이 올바르지 않습니다.';
+    // 종료일 필수 검사
+    if (!formData.endDate) {
+      errors.endDate = '종료일자는 필수 입력 항목입니다.';
+    }
+    
+    // 보험 시작일 필수 검사
+    if (!formData.insuranceStartDate) {
+      errors.insuranceStartDate = '보험시작일자는 필수 입력 항목입니다.';
+    }
+    
+    // 보험 종료일 필수 검사
+    if (!formData.insuranceEndDate) {
+      errors.insuranceEndDate = '보험종료일자는 필수 입력 항목입니다.';
     }
     
     // 날짜 유효성 검사
@@ -212,9 +250,9 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
       errors.insuranceEndDate = '보험종료일자는 보험시작일자 이후로 설정해주세요.';
     }
     
-    // 변경 사유 (선택 사항이지만 권장)
+    // 변경 사유 (필수)
     if (!formData.reason) {
-      errors.reason = '변경 사유를 입력하시면 이력 관리에 도움이 됩니다.';
+      errors.reason = '변경 사유는 필수 입력 항목입니다.';
     }
     
     setFormErrors(errors);
@@ -313,6 +351,9 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 fullWidth
                 size="small"
                 placeholder="2600"
+                required
+                error={!!formErrors.trusteeCode}
+                helperText={formErrors.trusteeCode}
               />
             </Grid>
           </Grid>
@@ -350,6 +391,9 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 fullWidth
                 size="small"
                 placeholder="0103"
+                required
+                error={!!formErrors.subBusinessNumber}
+                helperText={formErrors.subBusinessNumber}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -389,6 +433,8 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 fullWidth
                 size="small"
                 placeholder="도소매,서비스"
+                error={!!formErrors.businessType}
+                helperText={formErrors.businessType}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -400,6 +446,8 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 fullWidth
                 size="small"
                 placeholder="상품대리,기타도급"
+                error={!!formErrors.businessCategory}
+                helperText={formErrors.businessCategory}
               />
             </Grid>
           </Grid>
@@ -422,6 +470,9 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 fullWidth
                 size="small"
                 placeholder="정재현"
+                required
+                error={!!formErrors.managerName}
+                helperText={formErrors.managerName}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -432,6 +483,7 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 onChange={handleFormChange}
                 fullWidth
                 size="small"
+                required
                 error={!!formErrors.email}
                 helperText={formErrors.email}
                 placeholder="mail@mail.com"
@@ -447,6 +499,9 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 size="small"
                 placeholder="010-0000-0000"
                 inputProps={{ maxLength: 13 }}
+                required
+                error={!!formErrors.phoneNumber}
+                helperText={formErrors.phoneNumber}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -459,6 +514,9 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 size="small"
                 placeholder="055-123-4567"
                 inputProps={{ maxLength: 13 }}
+                required
+                error={!!formErrors.storeTelNumber}
+                helperText={formErrors.storeTelNumber}
               />
             </Grid>
           </Grid>
@@ -498,7 +556,8 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                     fullWidth: true,
                     size: "small",
                     error: !!formErrors.endDate,
-                    helperText: formErrors.endDate
+                    helperText: formErrors.endDate,
+                    required: true
                   }
                 }}
               />
@@ -513,7 +572,8 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                     fullWidth: true,
                     size: "small",
                     error: !!formErrors.insuranceStartDate,
-                    helperText: formErrors.insuranceStartDate
+                    helperText: formErrors.insuranceStartDate,
+                    required: true
                   }
                 }}
               />
@@ -528,7 +588,8 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                     fullWidth: true,
                     size: "small",
                     error: !!formErrors.insuranceEndDate,
-                    helperText: formErrors.insuranceEndDate
+                    helperText: formErrors.insuranceEndDate,
+                    required: true
                   }
                 }}
               />
@@ -552,6 +613,7 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
             multiline
             rows={3}
             placeholder="수탁자 변경 사유를 입력해주세요."
+            required
             error={!!formErrors.reason}
             helperText={formErrors.reason}
           />

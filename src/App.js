@@ -49,6 +49,7 @@ const ServiceRequestCreate = React.lazy(() => import('./components/facility/Serv
 const ServiceRequestList = React.lazy(() => import('./components/facility/ServiceRequestList'));
 const FacilityTransfer = React.lazy(() => import('./components/facility/FacilityTransfer'));
 const FacilityHistoryPage = React.lazy(() => import('./components/facility/FacilityHistoryPage'));
+const ContractEventLogPage = React.lazy(() => import('./components/contract/ContractEventLogPage'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -150,6 +151,7 @@ const AppContent = () => {
               <Route path="/service-request/create/:facilityId" element={<ServiceRequestCreate />} />
               <Route path="/service-request/list" element={<ServiceRequestList />} />
               <Route path="/facility-history" element={<FacilityHistoryPage />} />
+              <Route path="/contract-log" element={<ContractEventLogPage />} />
             </Route>
           </Routes>
         </Suspense>

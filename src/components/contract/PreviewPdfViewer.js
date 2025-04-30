@@ -73,8 +73,9 @@ const PreviewPdfViewer = () => {
           const targetPdfId = pdfId || participantData.templatePdfs[0]?.pdfId;
           
           if (targetPdfId) {
-            // 필드 정보 로딩 실행
-            await fetchFields(targetPdfId);
+            // 필드 정보 로딩 실행 - 원본 pdfId 사용 (필드값이 저장된 PDF)
+            const originalPdfId = participantData.templatePdfs[0]?.pdfId;
+            await fetchFields(originalPdfId);
           }
         }
         
@@ -166,8 +167,9 @@ const PreviewPdfViewer = () => {
       setCurrentPdfIndex(index);
       setCurrentPage(1); // 페이지 초기화
       
-      // 필드 정보 로딩 실행
-      await fetchFields(pdfs[index].pdfId);
+      // 필드 정보 로딩 실행 - 원본 pdfId 사용 (필드값이 저장된 PDF)
+      const originalPdfId = pdfs[index].pdfId;
+      await fetchFields(originalPdfId);
     }
   };
   

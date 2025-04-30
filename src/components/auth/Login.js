@@ -63,7 +63,7 @@ const Login = () => {
       login(data.token, data.user);
 
       // 로그인 성공 후 메인 페이지로 이동
-      navigate("/contract-list");
+      navigate("/mypage");
     } catch (error) {
       console.error("로그인 오류:", error);
 

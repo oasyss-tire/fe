@@ -3,62 +3,19 @@ import {
   Box,
   Typography,
   ToggleButtonGroup,
-  ToggleButton,
-  Tabs,
-  Tab,
-  Paper
+  ToggleButton
 } from '@mui/material';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import DrawIcon from '@mui/icons-material/Draw';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
-import ArticleIcon from '@mui/icons-material/Article';
 
 const PdfToolbar = ({ selectedTool, onToolChange }) => {
-  const [tabValue, setTabValue] = React.useState(0); // 0: 관리자, 1: 서명자
-
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
         서명 옵션
       </Typography>
-
-      {/* 서명 주체 선택 탭 */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          mb: 2,
-          '.MuiTabs-indicator': {
-            backgroundColor: '#1976d2',
-          }
-        }}
-      >
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant="fullWidth"
-          sx={{
-            minHeight: '40px',
-            '& .MuiTab-root': {
-              minHeight: '40px',
-              fontSize: '14px',
-              fontWeight: 500,
-              textTransform: 'none',
-              color: '#666',
-              '&.Mui-selected': {
-                color: '#1976d2',
-              }
-            }
-          }}
-        >
-          <Tab label="관리자" />
-          <Tab label="서명자" />
-        </Tabs>
-      </Paper>
 
       <Box sx={{ mb: 2 }}>
         <ToggleButtonGroup

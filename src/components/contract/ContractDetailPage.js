@@ -1102,7 +1102,7 @@ const ContractDetailPage = () => {
             >
               <Box sx={{ display: "grid", rowGap: 3 }}>
                 {/* 템플릿 목록 표시 */}
-                {contract.templates && contract.templates.length > 0 && (
+                {contract.templateMappings && contract.templateMappings.length > 0 && (
                   <Box
                     sx={{
                       display: "grid",
@@ -1114,7 +1114,7 @@ const ContractDetailPage = () => {
                     <Box
                       sx={{ display: "flex", flexDirection: "column", gap: 1 }}
                     >
-                      {contract.templates.map((template, index) => (
+                      {contract.templateMappings.map((template, index) => (
                         <Box
                           key={template.id}
                           sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -1122,7 +1122,7 @@ const ContractDetailPage = () => {
                           <LabelIcon sx={{ color: "#1976d2", fontSize: 20 }} />
 
                           <Typography>
-                            {index + 1}. {template.templateName}
+                            {template.sortOrder}. {template.templateName}
                           </Typography>
                         </Box>
                       ))}
@@ -1183,13 +1183,13 @@ const ContractDetailPage = () => {
             </Paper>
           </Box>
 
-          {/* 서명 참여자 정보 섹션 */}
+          {/* 수탁사업자 정보 섹션 */}
           <Box>
             <Typography
               variant="subtitle1"
               sx={{ fontWeight: 600, color: "#3A3A3A", mb: 2 }}
             >
-              서명 참여자 정보
+              수탁사업자 정보
             </Typography>
             <Paper
               sx={{

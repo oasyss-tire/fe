@@ -24,6 +24,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
+import SignaturePad from 'react-signature-canvas';
 
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -366,135 +367,40 @@ const ContractCorrectionResponsePage = () => {
     setSignatureMode(true);
     setActiveField(fieldId);
     
-    // 캔버스 초기화
-    setTimeout(() => {
-      if (signatureCanvasRef.current) {
-        const canvas = signatureCanvasRef.current;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }, 100);
-  };
-  
-  // 서명 그리기 시작
-  const handleDrawStart = (e) => {
-    if (!signatureMode) return;
-    
-    const canvas = signatureCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = e.type === 'touchstart' ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = e.type === 'touchstart' ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-    
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    setIsDrawing(true);
-    
-    // 이벤트 기본 동작 방지
-    e.preventDefault();
-  };
-  
-  // 서명 그리기
-  const handleDraw = (e) => {
-    if (!isDrawing || !signatureMode) return;
-    
-    const canvas = signatureCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = e.type === 'touchmove' ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = e.type === 'touchmove' ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-    
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = 'black';
-    
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    
-    // 이벤트 기본 동작 방지
-    e.preventDefault();
-  };
-  
-  // 서명 그리기 종료
-  const handleDrawEnd = () => {
-    setIsDrawing(false);
+    // 캔버스 초기화는 SignaturePad 컴포넌트가 마운트된 후 자동으로 처리됩니다
   };
   
   // 서명 캔버스 초기화 함수 추가
   const clearSignatureCanvas = () => {
     if (signatureCanvasRef.current) {
-      const canvas = signatureCanvasRef.current;
+      signatureCanvasRef.current.clear();
+      
+      // 서명 스타일 다시 설정
+      const canvas = signatureCanvasRef.current.getCanvas();
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
     }
   };
   
   // 서명 저장
   const saveSignature = () => {
-    const canvas = signatureCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    // 서명 데이터 추출 (배경 투명하게)
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    // 서명 영역 경계 찾기
-    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
-    for (let y = 0; y < canvas.height; y++) {
-      for (let x = 0; x < canvas.width; x++) {
-        const alpha = data[(y * canvas.width + x) * 4 + 3];
-        if (alpha > 0) {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
-        }
-      }
+    if (!signatureCanvasRef.current || signatureCanvasRef.current.isEmpty()) {
+      return; // 서명이 비어있으면 저장하지 않음
     }
     
-    // 서명이 있는지 확인
-    if (minX === canvas.width) {
-      return; // 스낵바 알림 제거
-    }
-    
-    // 서명 영역에 여백 추가
-    minX = Math.max(0, minX - 10);
-    minY = Math.max(0, minY - 10);
-    maxX = Math.min(canvas.width, maxX + 10);
-    maxY = Math.min(canvas.height, maxY + 10);
-    
-    // 서명 영역만 추출
-    const width = maxX - minX;
-    const height = maxY - minY;
-    
-    // 임시 캔버스 생성
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // 서명 부분만 복사
-    tempCtx.drawImage(
-      canvas,
-      minX, minY, width, height,
-      0, 0, width, height
-    );
-    
-    // 투명 배경으로 저장
-    const signatureDataUrl = tempCanvas.toDataURL('image/png');
+    // 서명 데이터 가져오기 (PNG 포맷, 투명 배경)
+    const signatureDataUrl = signatureCanvasRef.current.toDataURL('image/png');
     handleFieldValueChange(activeField, signatureDataUrl);
     setSignatureMode(false);
     setActiveField(null);
-    
-    // 스낵바 알림 제거
   };
   
   // 서명 취소
   const cancelSignature = () => {
     setSignatureMode(false);
     setActiveField(null);
-    
-    // 스낵바 알림 제거
   };
   
   // 재서명 제출 - 필드별 업데이트 후 최종 완료 처리
@@ -1298,18 +1204,18 @@ const ContractCorrectionResponsePage = () => {
                 mb: 2
               }}
             >
-              <canvas
+              <SignaturePad
                 ref={signatureCanvasRef}
-                width={500}
-                height={200}
-                onMouseDown={handleDrawStart}
-                onMouseMove={handleDraw}
-                onMouseUp={handleDrawEnd}
-                onMouseLeave={handleDrawEnd}
-                onTouchStart={handleDrawStart}
-                onTouchMove={handleDraw}
-                onTouchEnd={handleDrawEnd}
-                style={{ width: '100%', height: '100%', touchAction: 'none' }}
+                canvasProps={{
+                  width: 500,
+                  height: 200,
+                  className: 'signature-canvas'
+                }}
+                dotSize={3} // 점 크기 설정
+                minWidth={3} // 최소 선 굵기
+                maxWidth={5} // 최대 선 굵기 (펜 압력에 따라 달라질 수 있음)
+                velocityFilterWeight={0.5} // 속도에 따른 선 굵기 변화 정도
+                backgroundColor="rgba(255, 255, 255, 0)" // 투명 배경
               />
             </Box>
             

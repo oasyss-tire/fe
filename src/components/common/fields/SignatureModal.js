@@ -1,9 +1,24 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import SignaturePad from 'react-signature-canvas';
 
 const SignatureModal = ({ open, onClose, onSave }) => {
   const sigPadRef = useRef();
+
+  // 컴포넌트가 마운트되거나 다시 열릴 때 서명 패드 설정
+  useEffect(() => {
+    if (open && sigPadRef.current) {
+      // 서명 패드가 열릴 때마다 초기화
+      sigPadRef.current.clear();
+      
+      // 서명 선 스타일 설정
+      const canvas = sigPadRef.current.getCanvas();
+      const ctx = canvas.getContext('2d');
+      ctx.lineWidth = 3; // 선 굵기 설정
+      ctx.lineCap = 'round'; // 선 끝 모양을 둥글게
+      ctx.lineJoin = 'round'; // 선 연결 부분을 둥글게
+    }
+  }, [open]);
 
   const handleSave = () => {
     if (sigPadRef.current.isEmpty()) return;
@@ -14,6 +29,15 @@ const SignatureModal = ({ open, onClose, onSave }) => {
 
   const handleClear = () => {
     sigPadRef.current.clear();
+    
+    // 지운 후에도 선 스타일 유지
+    if (sigPadRef.current) {
+      const canvas = sigPadRef.current.getCanvas();
+      const ctx = canvas.getContext('2d');
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
   };
 
   return (
@@ -53,6 +77,10 @@ const SignatureModal = ({ open, onClose, onSave }) => {
               height: 200,
               className: 'signature-canvas'
             }}
+            dotSize={3} // 점 크기 설정
+            minWidth={3} // 최소 선 굵기
+            maxWidth={5} // 최대 선 굵기 (펜 압력에 따라 달라질 수 있음)
+            velocityFilterWeight={0.5} // 속도에 따른 선 굵기 변화 정도
           />
         </Box>
       </DialogContent>

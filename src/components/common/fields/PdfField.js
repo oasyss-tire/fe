@@ -23,13 +23,13 @@ const fieldStyles = {
   },
   deleteButton: {
     position: 'absolute',
-    right: '-8px',
-    top: '-8px',
-    width: '16px',
-    height: '16px',
+    right: '-6px',
+    top: '-6px',
+    width: '12px',
+    height: '12px',
     borderRadius: '50%',
     backgroundColor: '#fff',
-    border: '2px solid #ef5350',
+    border: '1.5px solid #ef5350',
     color: '#ef5350',
     display: 'flex',
     alignItems: 'center',
@@ -38,7 +38,7 @@ const fieldStyles = {
     opacity: 0,
     transition: 'all 0.2s',
     zIndex: 2,
-    fontSize: '12px',
+    fontSize: '10px',
     padding: 0,
     '&:hover': {
       backgroundColor: '#ef5350',
@@ -94,6 +94,9 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
   const [isEditing, setIsEditing] = useState(false);
   const [inputText, setInputText] = useState('');
   const inputRef = useRef(null);
+  // 드래그 시작 위치를 저장하기 위한 ref 추가
+  const mouseDownPos = useRef({ x: 0, y: 0 });
+  const wasDragged = useRef(false);
 
   useEffect(() => {
     // 필드에 description이 있으면 설정
@@ -102,10 +105,36 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
     }
   }, [field]);
 
+  // 마우스 다운 이벤트 처리
+  const handleMouseDown = (e) => {
+    // 현재 마우스 위치 저장
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
+    wasDragged.current = false;
+    
+    // 드래그 시작 함수 호출
+    onDragStart(e, field.id);
+    
+    // 마우스 업 이벤트를 한 번만 감지하기 위한 이벤트 리스너 추가
+    document.addEventListener('mouseup', handleMouseUp, { once: true });
+  };
+  
+  // 마우스 업 이벤트 처리
+  const handleMouseUp = (e) => {
+    // 마우스 다운 위치와 현재 위치의 차이 계산
+    const dx = Math.abs(e.clientX - mouseDownPos.current.x);
+    const dy = Math.abs(e.clientY - mouseDownPos.current.y);
+    
+    // 위치 차이가 3px 이상이면 드래그로 간주
+    if (dx > 3 || dy > 3) {
+      wasDragged.current = true;
+    }
+  };
+
   const handleClick = (e) => {
     e.stopPropagation();
     
-    if (isDragging) return;
+    // 드래그 중이거나 드래그가 발생했으면 클릭 이벤트 무시
+    if (isDragging || wasDragged.current) return;
     
     if (onFieldClick) {
       onFieldClick(field.id);
@@ -134,7 +163,7 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
           opacity: 1
         }
       }}
-      onMouseDown={(e) => onDragStart(e, field.id)}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
       {/* 필드 내부 콘텐츠 */}
@@ -174,35 +203,9 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
           </>
         )}
         
-        {/* 형식이 있는 경우 - 하단에 형식 정보 표시 */}
-        {hasFormat && (
-          <Typography variant="caption" sx={{ 
-            fontSize: '9px', 
-            color: '#0277bd', 
-            position: 'absolute', 
-            bottom: 0, 
-            left: 0, 
-            right: 0, 
-            textAlign: 'center',
-            fontStyle: 'italic',
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            py: 0.1,
-            height: '14px',
-            lineHeight: '14px'
-          }}>
-            <span style={{ fontSize: '6px', marginRight: '3px' }}>⚙️</span>
-            {field.formatName || field.formatCodeId}
-          </Typography>
-        )}
-        
         {/* 설명이 없는 경우 - 기본 텍스트 표시 */}
-        {!hasDescription && !hasFormat && (
+        {!hasDescription && (
           <span className="text-label" style={fieldStyles.label}>텍스트</span>
-        )}
-        
-        {/* 설명이 없지만 형식은 있는 경우 */}
-        {!hasDescription && hasFormat && (
-          <span className="text-label" style={{...fieldStyles.label, marginBottom: '14px'}}>텍스트</span>
         )}
       </div>
       
@@ -217,6 +220,35 @@ export const SignatureField = ({ field, scale, isDragging, dragTarget, onDragSta
     console.error('SignatureField: field prop is undefined');
     return null;
   }
+  
+  // 드래그 시작 위치를 저장하기 위한 ref 추가
+  const mouseDownPos = useRef({ x: 0, y: 0 });
+  const wasDragged = useRef(false);
+  
+  // 마우스 다운 이벤트 처리
+  const handleMouseDown = (e) => {
+    // 현재 마우스 위치 저장
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
+    wasDragged.current = false;
+    
+    // 드래그 시작 함수 호출
+    onDragStart(e, field.id);
+    
+    // 마우스 업 이벤트를 한 번만 감지하기 위한 이벤트 리스너 추가
+    document.addEventListener('mouseup', handleMouseUp, { once: true });
+  };
+  
+  // 마우스 업 이벤트 처리
+  const handleMouseUp = (e) => {
+    // 마우스 다운 위치와 현재 위치의 차이 계산
+    const dx = Math.abs(e.clientX - mouseDownPos.current.x);
+    const dy = Math.abs(e.clientY - mouseDownPos.current.y);
+    
+    // 위치 차이가 3px 이상이면 드래그로 간주
+    if (dx > 3 || dy > 3) {
+      wasDragged.current = true;
+    }
+  };
   
   return (
     <Box
@@ -236,7 +268,7 @@ export const SignatureField = ({ field, scale, isDragging, dragTarget, onDragSta
           opacity: 1
         }
       }}
-      onMouseDown={(e) => onDragStart(e, field.id)}
+      onMouseDown={handleMouseDown}
     >
       <span className="text-label" style={fieldStyles.label}>서명</span>
       <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>
@@ -250,6 +282,35 @@ export const CheckboxField = ({ field, scale, isDragging, dragTarget, onDragStar
     console.error('CheckboxField: field prop is undefined');
     return null;
   }
+  
+  // 드래그 시작 위치를 저장하기 위한 ref 추가
+  const mouseDownPos = useRef({ x: 0, y: 0 });
+  const wasDragged = useRef(false);
+  
+  // 마우스 다운 이벤트 처리
+  const handleMouseDown = (e) => {
+    // 현재 마우스 위치 저장
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
+    wasDragged.current = false;
+    
+    // 드래그 시작 함수 호출
+    onDragStart(e, field.id);
+    
+    // 마우스 업 이벤트를 한 번만 감지하기 위한 이벤트 리스너 추가
+    document.addEventListener('mouseup', handleMouseUp, { once: true });
+  };
+  
+  // 마우스 업 이벤트 처리
+  const handleMouseUp = (e) => {
+    // 마우스 다운 위치와 현재 위치의 차이 계산
+    const dx = Math.abs(e.clientX - mouseDownPos.current.x);
+    const dy = Math.abs(e.clientY - mouseDownPos.current.y);
+    
+    // 위치 차이가 3px 이상이면 드래그로 간주
+    if (dx > 3 || dy > 3) {
+      wasDragged.current = true;
+    }
+  };
   
   return (
     <Box
@@ -268,7 +329,7 @@ export const CheckboxField = ({ field, scale, isDragging, dragTarget, onDragStar
           opacity: 1
         }
       }}
-      onMouseDown={(e) => onDragStart(e, field.id)}
+      onMouseDown={handleMouseDown}
     >
       <CheckBoxOutlineBlankIcon className="checkbox-icon" sx={fieldStyles.label} />
       <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>
@@ -286,6 +347,9 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
   const [inputText, setInputText] = useState('');
   const [hasInput, setHasInput] = useState(false); // 사용자 입력 여부 추적
   const inputRef = useRef(null);
+  // 드래그 시작 위치를 저장하기 위한 ref 추가
+  const mouseDownPos = useRef({ x: 0, y: 0 });
+  const wasDragged = useRef(false);
   
   // 디버깅을 위한 상태 체크
   useEffect(() => {
@@ -321,10 +385,38 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
     }
   };
   
+  // 마우스 다운 이벤트 처리
+  const handleMouseDown = (e) => {
+    if (isEditing) return;
+    
+    // 현재 마우스 위치 저장
+    mouseDownPos.current = { x: e.clientX, y: e.clientY };
+    wasDragged.current = false;
+    
+    // 드래그 시작 함수 호출
+    onDragStart(e, field.id);
+    
+    // 마우스 업 이벤트를 한 번만 감지하기 위한 이벤트 리스너 추가
+    document.addEventListener('mouseup', handleMouseUp, { once: true });
+  };
+  
+  // 마우스 업 이벤트 처리
+  const handleMouseUp = (e) => {
+    // 마우스 다운 위치와 현재 위치의 차이 계산
+    const dx = Math.abs(e.clientX - mouseDownPos.current.x);
+    const dy = Math.abs(e.clientY - mouseDownPos.current.y);
+    
+    // 위치 차이가 3px 이상이면 드래그로 간주
+    if (dx > 3 || dy > 3) {
+      wasDragged.current = true;
+    }
+  };
+  
   const handleClick = (e) => {
     e.stopPropagation();
     
-    if (isDragging) return;
+    // 드래그 중이거나 드래그가 발생했으면 클릭 이벤트 무시
+    if (isDragging || wasDragged.current) return;
     
     if (field?.isEditMode) {
       setIsEditing(true);
@@ -363,7 +455,7 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
         backgroundColor: fieldBgStyle,
         '& .delete-button': {
           ...fieldStyles.deleteButton,
-          border: '2px solid #f57c00',
+          border: '1.5px solid #f57c00',
           color: '#f57c00',
           '&:hover': {
             backgroundColor: '#f57c00',
@@ -378,11 +470,7 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
           }
         }
       }}
-      onMouseDown={(e) => {
-        if (!isEditing) {
-          onDragStart(e, field.id);
-        }
-      }}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
       {/* 필드 내부 콘텐츠 */}

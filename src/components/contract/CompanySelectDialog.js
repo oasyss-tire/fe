@@ -407,7 +407,7 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
             <Button 
               onClick={handleConfirm}
               variant="contained" 
-              disabled={!selectedCompany}
+              disabled={!selectedCompany || !selectedTrusteeHistory}
               startIcon={<CheckCircleIcon />}
             >
               선택 완료

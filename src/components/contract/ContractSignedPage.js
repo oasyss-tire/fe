@@ -693,6 +693,30 @@ const ContractSignedPage = () => {
               }}
             />
           </Grid>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ mb: 1, color: "#666" }}>
+            하자보증증권 보험시작일
+            </Typography>
+            <Typography variant="body1">
+              {contract.insuranceStartDate || "-"}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ mb: 1, color: "#666" }}>
+            하자보증증권 보험종료일
+            </Typography>
+            <Typography variant="body1">
+              {contract.insuranceEndDate || "-"}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" sx={{ mb: 1, color: "#666" }}>
+              계약 생성일
+            </Typography>
+            <Typography variant="body1">
+              {contract.createdAt ? formatDate(contract.createdAt) : "-"}
+            </Typography>
+          </Grid>
         </Grid>
 
         <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>

@@ -773,43 +773,41 @@ const SignaturePdfViewer = () => {
       if (token) {
         // 비회원 서명의 경우 - 장기 토큰 발급 API 사용
         finalizeResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/complete-signing`, 
+          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/complete-signing?token=${token}`, 
           { method: 'POST' }
         );
       } else {
-        // 로그인한 회원의 경우 - 기존 API 사용
+        // 로그인한 회원의 경우도 complete-signing API 사용하도록 변경
         finalizeResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/sign`, 
+          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/complete-signing`, 
           { method: 'POST' }
         );
       }
       
       if (finalizeResponse.ok) {
-        // 토큰이 있는 비회원의 경우 비회원 결과 페이지로 이동
-        if (token) {
-          const responseData = await finalizeResponse.json();
-          if (responseData.success && responseData.redirectUrl) {
-            // 성공 메시지 변경: 알림 발송 정보 추가
-            alert(
-              '모든 계약서에 대한 서명이 완료되었습니다.\n\n' +
-              '계약 완료 알림 및 조회 링크가 이메일/SMS로 발송되었습니다.\n' +
-              '발송된 링크를 통해 언제든지 계약 내용을 확인하실 수 있습니다.'
-            );
-            
+        const responseData = await finalizeResponse.json();
+        
+        if (responseData.success) {
+          // 서명 완료 메시지 표시
+          alert(
+            '모든 계약서에 대한 서명이 완료되었습니다.\n\n' +
+            '계약 완료 알림 및 조회 링크가 이메일/SMS로 발송되었습니다.\n' +
+            '발송된 링크를 통해 언제든지 계약 내용을 확인하실 수 있습니다.'
+          );
+          
+          // responseData에 redirectUrl이 있으면 해당 URL로 이동 (비회원인 경우)
+          if (responseData.redirectUrl) {
             setTimeout(() => {
               window.location.href = responseData.redirectUrl;
             }, 500);
           } else {
-            // 실패 시 기본 계약 상세 페이지로 이동
+            // 회원인 경우 마이페이지의 계약 탭으로 이동
             setTimeout(() => {
-              window.location.href = `/contract-detail/${contractId}`;
+              window.location.href = `/auth/mypage?from=signing`;
             }, 500);
           }
         } else {
-          // 회원의 경우 계약 상세 페이지로 이동
-          alert('모든 계약서에 대한 서명이 완료되었습니다.\n\n' +
-            '서명이 완료된 계약서의 PDF 열람 암호가 이메일로 발송되었습니다.'
-          );
+          // 실패 시 기본 계약 상세 페이지로 이동
           setTimeout(() => {
             window.location.href = `/contract-detail/${contractId}`;
           }, 500);

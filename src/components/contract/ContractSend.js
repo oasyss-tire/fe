@@ -171,40 +171,6 @@ const ContractSend = () => {
           }
         }
       }
-      
-      fetchCompanyUsers(value);
-    }
-  };
-
-  const fetchCompanyUsers = async (companyId) => {
-    try {
-      const response = await fetch(`http://localhost:8080/api/companies/${companyId}/users`);
-      if (!response.ok) throw new Error('위수탁 업체 사용자 목록 조회 실패');
-      
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        const newParticipants = data.map((user, index) => ({
-          id: index + 1,
-          name: user.userName || '',
-          email: user.email || '',
-          phone: user.phoneNumber || '',
-          sendMethod: '',
-          userId: user.id
-        }));
-        
-        setParticipants(newParticipants);
-        
-      } else {
-        setParticipants([
-          { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
-        ]);
-      }
-    } catch (error) {
-      console.error('위수탁 업체 사용자 목록 조회 중 오류:', error);
-      setParticipants([
-        { id: 1, name: '', email: '', phone: '', sendMethod: '', userId: null }
-      ]);
     }
   };
 
@@ -342,8 +308,6 @@ const ContractSend = () => {
   const handleCloseCompanyDialog = () => setOpenCompanyDialog(false);
 
   const handleSelectCompanyAndTrustee = (company, trusteeHistory) => {
-
-    
     setSelectedCompany(company);
     setSelectedTrusteeHistory(trusteeHistory);
     
@@ -354,8 +318,6 @@ const ContractSend = () => {
     }));
     
     if (trusteeHistory) {
-
-      
       if (trusteeHistory.startDate) {
         const date = new Date(trusteeHistory.startDate);
         date.setHours(0, 0, 0, 0);
@@ -382,20 +344,19 @@ const ContractSend = () => {
       
       // 수탁사업자 정보가 있으면 대표자 정보를 첫 번째 참여자에 설정
       if (trusteeHistory.representativeName) {
+        // 응답에서 받은 userId를 참여자 정보에 설정
         const newParticipant = {
           id: 1,
           name: trusteeHistory.representativeName || '',
           email: trusteeHistory.email || '',
           phone: trusteeHistory.phoneNumber ? formatPhoneNumber(trusteeHistory.phoneNumber) : '',
           sendMethod: 'EMAIL',
-          userId: null
+          userId: trusteeHistory.userId // 수탁사업자의 userId 정보를 참여자에 설정
         };
+        
         
         setParticipants([newParticipant]);
       }
-    } else {
-      // 수탁사업자 정보가 없으면 회사 직원 정보 조회
-      fetchCompanyUsers(company.id);
     }
     
     handleCloseCompanyDialog();
@@ -489,6 +450,7 @@ const ContractSend = () => {
       const orderedTemplateIds = templateOrder
         .sort((a, b) => a.order - b.order)
         .map(item => item.id);
+      
       
       const response = await fetch('http://localhost:8080/api/contracts', {
         method: 'POST',
