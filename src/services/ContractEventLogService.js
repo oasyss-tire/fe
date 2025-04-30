@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = '/api/contract-event-logs';
+const BASE_URL = 'http://localhost:8080/api/contract-event-logs';
 
 /**
  * 계약 이벤트 로그 서비스
@@ -8,7 +8,41 @@ const BASE_URL = '/api/contract-event-logs';
  */
 class ContractEventLogService {
   /**
-   * 특정 계약의 이벤트 로그 조회
+   * 회사 목록 조회 API (이력 관리용)
+   * @param {string} keyword 검색 키워드 (선택)
+   * @returns {Promise} API 응답
+   */
+  getCompaniesForLog(keyword) {
+    return axios.get(`${BASE_URL}/companies`, {
+      params: keyword ? { keyword } : undefined
+    });
+  }
+
+  /**
+   * 특정 회사의 계약 목록 조회 API
+   * @param {number} companyId 회사 ID
+   * @returns {Promise} API 응답
+   */
+  getContractsByCompanyForLog(companyId) {
+    return axios.get(`${BASE_URL}/companies/${companyId}/contracts`);
+  }
+
+  /**
+   * 계약 목록 검색 API (이력 관리용)
+   * @param {string} keyword 검색 키워드 (선택)
+   * @param {string} statusCodeId 계약 상태 코드 (선택)
+   * @returns {Promise} API 응답
+   */
+  searchContractsForLog(keyword, statusCodeId) {
+    const params = {};
+    if (keyword) params.keyword = keyword;
+    if (statusCodeId) params.statusCodeId = statusCodeId;
+    
+    return axios.get(`${BASE_URL}/contracts/search`, { params });
+  }
+
+  /**
+   * 특정 계약에 대한 모든 이벤트 로그 조회
    * @param {number} contractId 계약 ID
    * @returns {Promise} API 응답
    */
