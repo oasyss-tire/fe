@@ -779,830 +779,863 @@ const CompanyCreate = () => {
       )}
 
       {/* 회사 등록 폼 */}
-      <Paper sx={{ 
-        p: 3,
-        borderRadius: 2,
-        boxShadow: 'none',
-        border: '1px solid #EEEEEE'
-      }}>
-        <form onSubmit={handleSubmit}>
-          {/* 기본 정보 섹션 */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-              기본 정보
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
+      <form onSubmit={handleSubmit}>
+        {/* 매장 정보 섹션 */}
+        <Paper sx={{ 
+          p: 3,
+          mb: 3,
+          borderRadius: 2,
+          boxShadow: 'none',
+          border: '1px solid #EEEEEE'
+        }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+            매장 정보
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="매장코드 *"
+                name="storeCode"
+                value={companyData.storeCode}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.storeCode}
+                helperText={errors.storeCode}
+                placeholder="예: S00001"
+              />
+            </Grid>
             
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={8}>
+              <TextField
+                label="매장명 *"
+                name="storeName"
+                value={companyData.storeName}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.storeName}
+                helperText={errors.storeName}
+                placeholder="예: 세종점"
+              />
+            </Grid>
+            
+            {/* 주소 입력 필드 */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
                 <TextField
-                  label="매장코드 *"
-                  name="storeCode"
-                  value={companyData.storeCode}
-                  onChange={handleChange}
+                  label="주소 *"
+                  name="baseAddress"
+                  value={baseAddress}
                   fullWidth
                   size="small"
                   required
-                  error={!!errors.storeCode}
-                  helperText={errors.storeCode}
-                  placeholder="예: S00001"
+                  error={!!errors.baseAddress}
+                  helperText={errors.baseAddress}
+                  placeholder="주소 검색 버튼을 클릭하세요"
+                  InputProps={{
+                    readOnly: true,
+                  }}
                 />
-              </Grid>
-              
-              <Grid item xs={12} md={8}>
-                <TextField
-                  label="매장명 *"
-                  name="storeName"
-                  value={companyData.storeName}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.storeName}
-                  helperText={errors.storeName}
-                  placeholder="예: 세종점"
+                <Button
+                  variant="outlined"
+                  onClick={handleOpenAddressDialog}
+                  startIcon={<SearchIcon />}
+                  sx={{ minWidth: '120px' }}
+                >
+                  주소 검색
+                </Button>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                label="상세 주소 *"
+                name="addressDetail"
+                value={detailAddress}
+                onChange={handleDetailAddressChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.addressDetail}
+                helperText={errors.addressDetail}
+                placeholder="상세 주소를 입력하세요"
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+        
+        {/* 수탁자 정보 섹션 */}
+        <Paper sx={{ 
+          p: 3,
+          mb: 3,
+          borderRadius: 2,
+          boxShadow: 'none',
+          border: '1px solid #EEEEEE'
+        }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+            수탁자 정보
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="수탁사업자명 *"
+                name="trustee"
+                value={companyData.trustee}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.trustee}
+                helperText={errors.trustee}
+                placeholder="예: 타이어 뱅크(본점)"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="수탁코드 *"
+                name="trusteeCode"
+                value={companyData.trusteeCode}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.trusteeCode}
+                helperText={errors.trusteeCode}
+                placeholder="예: 0001"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="사업자번호 *"
+                name="businessNumber"
+                value={companyData.businessNumber}
+                onChange={handleBusinessNumberChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.businessNumber}
+                helperText={errors.businessNumber}
+                placeholder="예: 123-45-67890"
+                inputProps={{
+                  maxLength: 12 // 000-00-00000 형식의 최대 길이
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="종사업장번호 *"
+                name="subBusinessNumber"
+                value={companyData.subBusinessNumber}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.subBusinessNumber}
+                helperText={errors.subBusinessNumber}
+                placeholder="예: 0001"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="상호 *"
+                name="companyName"
+                value={companyData.companyName}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.companyName}
+                helperText={errors.companyName}
+                placeholder="예: 타이어 뱅크(본점)"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="대표자명 *"
+                name="representativeName"
+                value={companyData.representativeName}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.representativeName}
+                helperText={errors.representativeName}
+                placeholder="예: 대표자"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+                <DatePicker
+                  label="계약 시작일자 *"
+                  value={companyData.startDate}
+                  onChange={(date) => handleDateChange('startDate', date)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                      required: true,
+                      error: !!errors.startDate,
+                      helperText: errors.startDate
+                    }
+                  }}
                 />
-              </Grid>
-              
-              {/* 주소 입력 필드 */}
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    label="주소 *"
-                    name="baseAddress"
-                    value={baseAddress}
-                    fullWidth
-                    size="small"
-                    required
-                    error={!!errors.baseAddress}
-                    helperText={errors.baseAddress}
-                    placeholder="주소 검색 버튼을 클릭하세요"
-                    InputProps={{
-                      readOnly: true,
-                    }}
+              </LocalizationProvider>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+                <DatePicker
+                  label="계약 종료일자 *"
+                  value={companyData.endDate}
+                  onChange={(date) => handleDateChange('endDate', date)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                      required: true,
+                      error: !!errors.endDate,
+                      helperText: errors.endDate
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+                <DatePicker
+                  label="하자보증증권 보험시작일자 *"
+                  value={companyData.insuranceStartDate}
+                  onChange={(date) => handleDateChange('insuranceStartDate', date)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                      required: true,
+                      error: !!errors.insuranceStartDate,
+                      helperText: errors.insuranceStartDate
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+                <DatePicker
+                  label="하자보증증권 보험종료일자 *"
+                  value={companyData.insuranceEndDate}
+                  onChange={(date) => handleDateChange('insuranceEndDate', date)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                      required: true,
+                      error: !!errors.insuranceEndDate,
+                      helperText: errors.insuranceEndDate
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={companyData.active}
+                    onChange={handleActiveChange}
+                    color={companyData.active ? "success" : "default"}
                   />
-                  <Button
-                    variant="outlined"
-                    onClick={handleOpenAddressDialog}
-                    startIcon={<SearchIcon />}
-                    sx={{ minWidth: '120px' }}
-                  >
-                    주소 검색
-                  </Button>
+                }
+                label={companyData.active ? "사용" : "미사용"}
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+        
+        {/* 연락처 정보 섹션 */}
+        <Paper sx={{ 
+          p: 3,
+          mb: 3,
+          borderRadius: 2,
+          boxShadow: 'none',
+          border: '1px solid #EEEEEE'
+        }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+            연락처 정보
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="담당자 *"
+                name="managerName"
+                value={companyData.managerName}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.managerName}
+                helperText={errors.managerName}
+                placeholder="예: 홍길동"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="이메일 *"
+                name="email"
+                type="email"
+                value={companyData.email}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.email}
+                helperText={errors.email}
+                placeholder="예: example@example.com"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="담당자 전화번호 *"
+                name="phoneNumber"
+                value={companyData.phoneNumber}
+                onChange={handlePhoneNumberChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.phoneNumber}
+                helperText={errors.phoneNumber}
+                placeholder="예: 010-1234-5678"
+                inputProps={{
+                  maxLength: 13 // 000-0000-0000 형식의 최대 길이
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="매장 전화번호 *"
+                name="storeTelNumber"
+                value={companyData.storeTelNumber}
+                onChange={handleStoreTelNumberChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.storeTelNumber}
+                helperText={errors.storeTelNumber}
+                placeholder="예: 055-123-4567"
+                inputProps={{
+                  maxLength: 13 // 000-000-0000 형식의 최대 길이
+                }}
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+        
+        {/* 사업 정보 섹션 */}
+        <Paper sx={{ 
+          p: 3,
+          mb: 3,
+          borderRadius: 2,
+          boxShadow: 'none',
+          border: '1px solid #EEEEEE'
+        }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+            사업 정보
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="업태"
+                name="businessType"
+                value={companyData.businessType}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                placeholder="예: 도소매,서비스"
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="종목"
+                name="businessCategory"
+                value={companyData.businessCategory}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                placeholder="예: 상품대리,기타도급"
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+        
+        {/* 이미지 업로드 섹션 */}
+        <Paper sx={{ 
+          p: 3,
+          mb: 3,
+          borderRadius: 2,
+          boxShadow: 'none',
+          border: '1px solid #EEEEEE'
+        }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
+            이미지 등록
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+          
+          <Box sx={{ 
+            backgroundColor: '#F8F9FA',
+            borderRadius: 2,
+            border: '1px solid #EEEEEE',
+            p: 3
+          }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={4} lg={2.4}>
+                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+                  정면 사진
+                </Typography>
+                <Box sx={{ 
+                  position: 'relative',
+                  width: '100%',
+                  paddingTop: '100%',
+                  backgroundColor: '#F8F9FA',
+                  borderRadius: 1,
+                  border: '1px dashed #E0E0E0',
+                  overflow: 'hidden'
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageSelect(e, 'frontImage')}
+                    style={{ display: 'none' }}
+                    ref={frontImageRef}
+                    id="frontImage-upload"
+                  />
+                  {imagePreviews.frontImage ? (
+                    <>
+                      <img 
+                        src={imagePreviews.frontImage}
+                        alt="정면 사진"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleImageDelete('frontImage')}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <label htmlFor="frontImage-upload" style={{ cursor: 'pointer' }}>
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1
+                      }}>
+                        <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
+                        <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
+                          클릭하여 업로드
+                        </Typography>
+                      </Box>
+                    </label>
+                  )}
                 </Box>
               </Grid>
               
-              <Grid item xs={12}>
-                <TextField
-                  label="상세 주소 *"
-                  name="addressDetail"
-                  value={detailAddress}
-                  onChange={handleDetailAddressChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.addressDetail}
-                  helperText={errors.addressDetail}
-                  placeholder="상세 주소를 입력하세요"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="수탁사업자명 *"
-                  name="trustee"
-                  value={companyData.trustee}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.trustee}
-                  helperText={errors.trustee}
-                  placeholder="예: 타이어 뱅크(본점)"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="수탁코드 *"
-                  name="trusteeCode"
-                  value={companyData.trusteeCode}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.trusteeCode}
-                  helperText={errors.trusteeCode}
-                  placeholder="예: 0001"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="사업자번호 *"
-                  name="businessNumber"
-                  value={companyData.businessNumber}
-                  onChange={handleBusinessNumberChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.businessNumber}
-                  helperText={errors.businessNumber}
-                  placeholder="예: 123-45-67890"
-                  inputProps={{
-                    maxLength: 12 // 000-00-00000 형식의 최대 길이
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="종사업장번호 *"
-                  name="subBusinessNumber"
-                  value={companyData.subBusinessNumber}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.subBusinessNumber}
-                  helperText={errors.subBusinessNumber}
-                  placeholder="예: 0001"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="상호 *"
-                  name="companyName"
-                  value={companyData.companyName}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.companyName}
-                  helperText={errors.companyName}
-                  placeholder="예: 타이어 뱅크(본점)"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="대표자명 *"
-                  name="representativeName"
-                  value={companyData.representativeName}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.representativeName}
-                  helperText={errors.representativeName}
-                  placeholder="예: 대표자"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                  <DatePicker
-                    label="계약 시작일자 *"
-                    value={companyData.startDate}
-                    onChange={(date) => handleDateChange('startDate', date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: "small",
-                        required: true,
-                        error: !!errors.startDate,
-                        helperText: errors.startDate
-                      }
-                    }}
+              <Grid item xs={12} sm={6} md={4} lg={2.4}>
+                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+                  후면 사진
+                </Typography>
+                <Box sx={{ 
+                  position: 'relative',
+                  width: '100%',
+                  paddingTop: '100%',
+                  backgroundColor: '#F8F9FA',
+                  borderRadius: 1,
+                  border: '1px dashed #E0E0E0',
+                  overflow: 'hidden'
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageSelect(e, 'backImage')}
+                    style={{ display: 'none' }}
+                    ref={backImageRef}
+                    id="backImage-upload"
                   />
-                </LocalizationProvider>
+                  {imagePreviews.backImage ? (
+                    <>
+                      <img 
+                        src={imagePreviews.backImage}
+                        alt="후면 사진"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleImageDelete('backImage')}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <label htmlFor="backImage-upload" style={{ cursor: 'pointer' }}>
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1
+                      }}>
+                        <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
+                        <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
+                          클릭하여 업로드
+                        </Typography>
+                      </Box>
+                    </label>
+                  )}
+                </Box>
               </Grid>
               
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                  <DatePicker
-                    label="계약 종료일자 *"
-                    value={companyData.endDate}
-                    onChange={(date) => handleDateChange('endDate', date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: "small",
-                        required: true,
-                        error: !!errors.endDate,
-                        helperText: errors.endDate
-                      }
-                    }}
+              <Grid item xs={12} sm={6} md={4} lg={2.4}>
+                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+                  좌측면 사진
+                </Typography>
+                <Box sx={{ 
+                  position: 'relative',
+                  width: '100%',
+                  paddingTop: '100%',
+                  backgroundColor: '#F8F9FA',
+                  borderRadius: 1,
+                  border: '1px dashed #E0E0E0',
+                  overflow: 'hidden'
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageSelect(e, 'leftSideImage')}
+                    style={{ display: 'none' }}
+                    ref={leftSideImageRef}
+                    id="leftSideImage-upload"
                   />
-                </LocalizationProvider>
+                  {imagePreviews.leftSideImage ? (
+                    <>
+                      <img 
+                        src={imagePreviews.leftSideImage}
+                        alt="좌측면 사진"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleImageDelete('leftSideImage')}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <label htmlFor="leftSideImage-upload" style={{ cursor: 'pointer' }}>
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1
+                      }}>
+                        <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
+                        <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
+                          클릭하여 업로드
+                        </Typography>
+                      </Box>
+                    </label>
+                  )}
+                </Box>
               </Grid>
               
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                  <DatePicker
-                    label="하자보증증권 보험시작일자 *"
-                    value={companyData.insuranceStartDate}
-                    onChange={(date) => handleDateChange('insuranceStartDate', date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: "small",
-                        required: true,
-                        error: !!errors.insuranceStartDate,
-                        helperText: errors.insuranceStartDate
-                      }
-                    }}
+              <Grid item xs={12} sm={6} md={4} lg={2.4}>
+                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+                  우측면 사진
+                </Typography>
+                <Box sx={{ 
+                  position: 'relative',
+                  width: '100%',
+                  paddingTop: '100%',
+                  backgroundColor: '#F8F9FA',
+                  borderRadius: 1,
+                  border: '1px dashed #E0E0E0',
+                  overflow: 'hidden'
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageSelect(e, 'rightSideImage')}
+                    style={{ display: 'none' }}
+                    ref={rightSideImageRef}
+                    id="rightSideImage-upload"
                   />
-                </LocalizationProvider>
+                  {imagePreviews.rightSideImage ? (
+                    <>
+                      <img 
+                        src={imagePreviews.rightSideImage}
+                        alt="우측면 사진"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleImageDelete('rightSideImage')}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <label htmlFor="rightSideImage-upload" style={{ cursor: 'pointer' }}>
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1
+                      }}>
+                        <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
+                        <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
+                          클릭하여 업로드
+                        </Typography>
+                      </Box>
+                    </label>
+                  )}
+                </Box>
               </Grid>
               
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
-                  <DatePicker
-                    label="하자보증증권 보험종료일자 *"
-                    value={companyData.insuranceEndDate}
-                    onChange={(date) => handleDateChange('insuranceEndDate', date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        size: "small",
-                        required: true,
-                        error: !!errors.insuranceEndDate,
-                        helperText: errors.insuranceEndDate
-                      }
-                    }}
+              <Grid item xs={12} sm={6} md={4} lg={2.4}>
+                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+                  전체 사진
+                </Typography>
+                <Box sx={{ 
+                  position: 'relative',
+                  width: '100%',
+                  paddingTop: '100%',
+                  backgroundColor: '#F8F9FA',
+                  borderRadius: 1,
+                  border: '1px dashed #E0E0E0',
+                  overflow: 'hidden'
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageSelect(e, 'fullImage')}
+                    style={{ display: 'none' }}
+                    ref={fullImageRef}
+                    id="fullImage-upload"
                   />
-                </LocalizationProvider>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={companyData.active}
-                      onChange={handleActiveChange}
-                      color={companyData.active ? "success" : "default"}
-                    />
-                  }
-                  label={companyData.active ? "사용" : "미사용"}
-                />
+                  {imagePreviews.fullImage ? (
+                    <>
+                      <img 
+                        src={imagePreviews.fullImage}
+                        alt="전체 사진"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleImageDelete('fullImage')}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <label htmlFor="fullImage-upload" style={{ cursor: 'pointer' }}>
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1
+                      }}>
+                        <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
+                        <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
+                          클릭하여 업로드
+                        </Typography>
+                      </Box>
+                    </label>
+                  )}
+                </Box>
               </Grid>
             </Grid>
           </Box>
+        </Paper>
+        
+        {/* 버튼 그룹 */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2, 
+          justifyContent: 'center',
+          mt: 4
+        }}>
+          <Button 
+            type="submit"
+            variant="contained" 
+            disabled={isLoading}
+            sx={{ 
+              minWidth: '120px',
+              bgcolor: '#1976d2',
+              '&:hover': { bgcolor: '#1565c0' }
+            }}
+          >
+            {isLoading ? (
+              <>
+                <CircularProgress size={24} sx={{ mr: 1, color: 'white' }} />
+                저장 중...
+              </>
+            ) : '저장'}
+          </Button>
           
-          {/* 연락처 정보 섹션 */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-              연락처 정보
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="담당자 *"
-                  name="managerName"
-                  value={companyData.managerName}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.managerName}
-                  helperText={errors.managerName}
-                  placeholder="예: 홍길동"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="이메일 *"
-                  name="email"
-                  type="email"
-                  value={companyData.email}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.email}
-                  helperText={errors.email}
-                  placeholder="예: example@example.com"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="담당자 전화번호 *"
-                  name="phoneNumber"
-                  value={companyData.phoneNumber}
-                  onChange={handlePhoneNumberChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.phoneNumber}
-                  helperText={errors.phoneNumber}
-                  placeholder="예: 010-1234-5678"
-                  inputProps={{
-                    maxLength: 13 // 000-0000-0000 형식의 최대 길이
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="매장 전화번호 *"
-                  name="storeTelNumber"
-                  value={companyData.storeTelNumber}
-                  onChange={handleStoreTelNumberChange}
-                  fullWidth
-                  size="small"
-                  required
-                  error={!!errors.storeTelNumber}
-                  helperText={errors.storeTelNumber}
-                  placeholder="예: 055-123-4567"
-                  inputProps={{
-                    maxLength: 13 // 000-000-0000 형식의 최대 길이
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </Box>
-          
-          {/* 사업 정보 섹션 */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-              사업 정보
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="업태"
-                  name="businessType"
-                  value={companyData.businessType}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  placeholder="예: 도소매,서비스"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="종목"
-                  name="businessCategory"
-                  value={companyData.businessCategory}
-                  onChange={handleChange}
-                  fullWidth
-                  size="small"
-                  placeholder="예: 상품대리,기타도급"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-          
-          {/* 이미지 업로드 섹션 */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-              이미지 등록
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            
-            <Box sx={{ 
-              backgroundColor: '#F8F9FA',
-              borderRadius: 2,
-              border: '1px solid #EEEEEE',
-              p: 3
-            }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4} lg={2.4}>
-                  <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    정면 사진
-                  </Typography>
-                  <Box sx={{ 
-                    position: 'relative',
-                    width: '100%',
-                    paddingTop: '100%',
-                    backgroundColor: '#F8F9FA',
-                    borderRadius: 1,
-                    border: '1px dashed #E0E0E0',
-                    overflow: 'hidden'
-                  }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageSelect(e, 'frontImage')}
-                      style={{ display: 'none' }}
-                      ref={frontImageRef}
-                      id="frontImage-upload"
-                    />
-                    {imagePreviews.frontImage ? (
-                      <>
-                        <img 
-                          src={imagePreviews.frontImage}
-                          alt="정면 사진"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() => handleImageDelete('frontImage')}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    ) : (
-                      <label htmlFor="frontImage-upload" style={{ cursor: 'pointer' }}>
-                        <Box sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1
-                        }}>
-                          <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
-                          <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
-                            클릭하여 업로드
-                          </Typography>
-                        </Box>
-                      </label>
-                    )}
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4} lg={2.4}>
-                  <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    후면 사진
-                  </Typography>
-                  <Box sx={{ 
-                    position: 'relative',
-                    width: '100%',
-                    paddingTop: '100%',
-                    backgroundColor: '#F8F9FA',
-                    borderRadius: 1,
-                    border: '1px dashed #E0E0E0',
-                    overflow: 'hidden'
-                  }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageSelect(e, 'backImage')}
-                      style={{ display: 'none' }}
-                      ref={backImageRef}
-                      id="backImage-upload"
-                    />
-                    {imagePreviews.backImage ? (
-                      <>
-                        <img 
-                          src={imagePreviews.backImage}
-                          alt="후면 사진"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() => handleImageDelete('backImage')}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    ) : (
-                      <label htmlFor="backImage-upload" style={{ cursor: 'pointer' }}>
-                        <Box sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1
-                        }}>
-                          <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
-                          <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
-                            클릭하여 업로드
-                          </Typography>
-                        </Box>
-                      </label>
-                    )}
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4} lg={2.4}>
-                  <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    좌측면 사진
-                  </Typography>
-                  <Box sx={{ 
-                    position: 'relative',
-                    width: '100%',
-                    paddingTop: '100%',
-                    backgroundColor: '#F8F9FA',
-                    borderRadius: 1,
-                    border: '1px dashed #E0E0E0',
-                    overflow: 'hidden'
-                  }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageSelect(e, 'leftSideImage')}
-                      style={{ display: 'none' }}
-                      ref={leftSideImageRef}
-                      id="leftSideImage-upload"
-                    />
-                    {imagePreviews.leftSideImage ? (
-                      <>
-                        <img 
-                          src={imagePreviews.leftSideImage}
-                          alt="좌측면 사진"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() => handleImageDelete('leftSideImage')}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    ) : (
-                      <label htmlFor="leftSideImage-upload" style={{ cursor: 'pointer' }}>
-                        <Box sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1
-                        }}>
-                          <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
-                          <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
-                            클릭하여 업로드
-                          </Typography>
-                        </Box>
-                      </label>
-                    )}
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4} lg={2.4}>
-                  <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    우측면 사진
-                  </Typography>
-                  <Box sx={{ 
-                    position: 'relative',
-                    width: '100%',
-                    paddingTop: '100%',
-                    backgroundColor: '#F8F9FA',
-                    borderRadius: 1,
-                    border: '1px dashed #E0E0E0',
-                    overflow: 'hidden'
-                  }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageSelect(e, 'rightSideImage')}
-                      style={{ display: 'none' }}
-                      ref={rightSideImageRef}
-                      id="rightSideImage-upload"
-                    />
-                    {imagePreviews.rightSideImage ? (
-                      <>
-                        <img 
-                          src={imagePreviews.rightSideImage}
-                          alt="우측면 사진"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() => handleImageDelete('rightSideImage')}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    ) : (
-                      <label htmlFor="rightSideImage-upload" style={{ cursor: 'pointer' }}>
-                        <Box sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1
-                        }}>
-                          <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
-                          <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
-                            클릭하여 업로드
-                          </Typography>
-                        </Box>
-                      </label>
-                    )}
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4} lg={2.4}>
-                  <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    전체 사진
-                  </Typography>
-                  <Box sx={{ 
-                    position: 'relative',
-                    width: '100%',
-                    paddingTop: '100%',
-                    backgroundColor: '#F8F9FA',
-                    borderRadius: 1,
-                    border: '1px dashed #E0E0E0',
-                    overflow: 'hidden'
-                  }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageSelect(e, 'fullImage')}
-                      style={{ display: 'none' }}
-                      ref={fullImageRef}
-                      id="fullImage-upload"
-                    />
-                    {imagePreviews.fullImage ? (
-                      <>
-                        <img 
-                          src={imagePreviews.fullImage}
-                          alt="전체 사진"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() => handleImageDelete('fullImage')}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    ) : (
-                      <label htmlFor="fullImage-upload" style={{ cursor: 'pointer' }}>
-                        <Box sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1
-                        }}>
-                          <CloudUploadIcon sx={{ color: '#9E9E9E', fontSize: 32 }} />
-                          <Typography variant="caption" sx={{ color: '#9E9E9E' }}>
-                            클릭하여 업로드
-                          </Typography>
-                        </Box>
-                      </label>
-                    )}
-                  </Box>
-                </Grid>
-              </Grid>
-            </Box>
-          </Box>
-          
-          {/* 버튼 그룹 */}
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2, 
-            justifyContent: 'center',
-            mt: 4
-          }}>
-            <Button 
-              type="submit"
-              variant="contained" 
-              disabled={isLoading}
-              sx={{ 
-                minWidth: '120px',
-                bgcolor: '#1976d2',
-                '&:hover': { bgcolor: '#1565c0' }
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <CircularProgress size={24} sx={{ mr: 1, color: 'white' }} />
-                  저장 중...
-                </>
-              ) : '저장'}
-            </Button>
-            
-            <Button 
-              variant="outlined"
-              onClick={() => navigate('/companies')}
-              disabled={isLoading}
-              sx={{ 
-                minWidth: '120px',
-                color: '#666',
-                borderColor: '#666',
-                '&:hover': {
-                  borderColor: '#1976d2',
-                  color: '#1976d2'
-                }
-              }}
-            >
-              취소
-            </Button>
-          </Box>
-        </form>
-      </Paper>
+          <Button 
+            variant="outlined"
+            onClick={() => navigate('/companies')}
+            disabled={isLoading}
+            sx={{ 
+              minWidth: '120px',
+              color: '#666',
+              borderColor: '#666',
+              '&:hover': {
+                borderColor: '#1976d2',
+                color: '#1976d2'
+              }
+            }}
+          >
+            취소
+          </Button>
+        </Box>
+      </form>
       
       {/* 주소 검색 다이얼로그 */}
       <Dialog open={addressDialogOpen} onClose={handleCloseAddressDialog} maxWidth="sm" fullWidth>

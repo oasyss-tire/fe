@@ -447,14 +447,30 @@ const SignaturePdfViewer = () => {
   };
 
   // 확인 텍스트 저장 핸들러
-  const handleConfirmTextSave = async (text) => {
+  const handleConfirmTextSave = async (text, options = null) => {
     try {
       if (!participant?.templatePdfs || !selectedField) return;
       
-      // 입력된 텍스트가 원본 확인 텍스트와 일치하는지 검증
-      if (text !== selectedField.confirmText) {
-        alert('입력한 텍스트가 원본 텍스트와 일치하지 않습니다. 다시 입력해주세요.');
-        return;
+      // options 객체가 제공된 경우 (사용자가 선택한 옵션 정보가 있는 경우)
+      if (options) {
+        // 원본 텍스트와 사용자가 선택한 옵션으로 처리된 텍스트를 직접 비교
+        const { processedText } = options;
+        
+        // 입력 텍스트와 처리된 텍스트 비교 (선택한 옵션이 적용된 텍스트)
+        if (text.trim() !== processedText.trim()) {
+          alert('입력한 텍스트가 원본 텍스트와 일치하지 않습니다. 다시 입력해주세요.');
+          return;
+        }
+      } 
+      // options가 없는 경우 (이전 버전 호환성 유지)
+      else {
+        // 원래 코드처럼 첫 번째 옵션으로 처리
+        const processedConfirmText = processConfirmText(selectedField.confirmText);
+        
+        if (text.trim() !== processedConfirmText.trim()) {
+          alert('입력한 텍스트가 원본 텍스트와 일치하지 않습니다. 다시 입력해주세요.');
+          return;
+        }
       }
       
       const currentTemplate = participant.templatePdfs[currentTemplateIndex];
@@ -480,6 +496,20 @@ const SignaturePdfViewer = () => {
     } catch (error) {
       console.error('Error saving confirm text:', error);
     }
+  };
+
+  // 선택 옵션을 처리하는 함수 추가
+  const processConfirmText = (originalText) => {
+    if (!originalText) return '';
+    
+    // 선택 옵션 패턴: {옵션1/옵션2/...}
+    const optionPattern = /\{([^{}]+)\}/g;
+    
+    // 선택 옵션 패턴에 맞게 치환 (첫 번째 옵션 선택)
+    return originalText.replace(optionPattern, (match, optionsText) => {
+      const options = optionsText.split('/').map(o => o.trim());
+      return options[0]; // 첫 번째 옵션 선택
+    });
   };
 
   // 체크박스 변경 핸들러
@@ -2132,7 +2162,7 @@ const SignaturePdfViewer = () => {
           setConfirmTextModalOpen(false);
           setSelectedField(null);
         }}
-        onSave={handleConfirmTextSave}
+        onSave={(text, options) => handleConfirmTextSave(text, options)}
         field={selectedField}
       />
 

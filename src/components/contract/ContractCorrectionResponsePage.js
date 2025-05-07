@@ -336,6 +336,13 @@ const ContractCorrectionResponsePage = () => {
       return Number(numbersOnly).toLocaleString('ko-KR');
     }
     
+    // 금액(한글) 형식
+    if (formatCodeId === '001004_0004') {
+      // 숫자만 제거 (나머지 문자는 허용)
+      const noNumbers = value.replace(/[0-9]/g, '');
+      return noNumbers;
+    }
+    
     // 다른 형식 코드에 대한 처리가 없으면 원래 값 반환
     return value;
   };
@@ -345,6 +352,7 @@ const ContractCorrectionResponsePage = () => {
     if (formatCodeId === '001004_0001') return 13; // 010-1234-5678
     if (formatCodeId === '001004_0002') return 14; // 123456-1234567
     if (formatCodeId === '001004_0003') return 20; // 최대 19자리 숫자 + 콤마
+    if (formatCodeId === '001004_0004') return 30; // 금액(한글)
     return undefined; // 제한 없음
   };
   
@@ -358,6 +366,9 @@ const ContractCorrectionResponsePage = () => {
     }
     if (formatCodeId === '001004_0003') {
       return '금액 형식 (예: 1,000,000)';
+    }
+    if (formatCodeId === '001004_0004') {
+      return '금액을 한글로 입력해 주세요 (예: 삼백만원, 일억오천만원) - 숫자 입력 불가';
     }
     return null;
   };

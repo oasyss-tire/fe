@@ -29,10 +29,14 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
   // 기본 텍스트 형식의 값 상수로 정의
   const DEFAULT_TEXT_FORMAT = 'default_text';
   
-  // 날짜 관련 형식 코드 ID 상수 정의
-  const YEAR_FORMAT_CODE = '001004_0004';
-  const MONTH_FORMAT_CODE = '001004_0005';
-  const DAY_FORMAT_CODE = '001004_0006';
+  // 모든 형식 코드 ID 상수 정의 
+  const PHONE_FORMAT_CODE = '001004_0001';
+  const RRN_FORMAT_CODE = '001004_0002';
+  const NUMBER_AMOUNT_FORMAT_CODE = '001004_0003';
+  const KOREAN_AMOUNT_FORMAT_CODE = '001004_0004';
+  const YEAR_FORMAT_CODE = '001004_0005';
+  const MONTH_FORMAT_CODE = '001004_0006';
+  const DAY_FORMAT_CODE = '001004_0007';
 
   // field 정보가 변경될 때마다 상태 초기화
   useEffect(() => {
@@ -100,26 +104,31 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
     }
   };
 
-  // 포맷 선택 변경 시 날짜 관련 필드인 경우 자동 설명 텍스트 설정
+  // 포맷 선택 변경 시 해당 형식에 맞는 자동 설명 텍스트 설정
   const handleFormatChange = (e) => {
     const formatValue = e.target.value;
     const previousFormat = selectedFormat;
     setSelectedFormat(formatValue);
     
-    // 날짜 관련 형식이 선택된 경우 자동으로 설명 텍스트 입력
-    if (formatValue === YEAR_FORMAT_CODE) {
+    // 각 형식에 맞는 설명 텍스트 자동 입력
+    if (formatValue === PHONE_FORMAT_CODE) {
+      setDescription('핸드폰 번호');
+    } else if (formatValue === RRN_FORMAT_CODE) {
+      setDescription('주민등록번호');
+    } else if (formatValue === NUMBER_AMOUNT_FORMAT_CODE) {
+      setDescription('금액(숫자)');
+    } else if (formatValue === KOREAN_AMOUNT_FORMAT_CODE) {
+      setDescription('금액(한글)');
+    } else if (formatValue === YEAR_FORMAT_CODE) {
       setDescription('날짜-년도');
     } else if (formatValue === MONTH_FORMAT_CODE) {
       setDescription('날짜-월');
     } else if (formatValue === DAY_FORMAT_CODE) {
       setDescription('날짜-일');
-    } else {
-      // 이전에 날짜 관련 형식이었다면 텍스트 초기화
-      const wasDateFormat = previousFormat === YEAR_FORMAT_CODE || 
-                            previousFormat === MONTH_FORMAT_CODE || 
-                            previousFormat === DAY_FORMAT_CODE;
-      
-      if (wasDateFormat) {
+    } else if (formatValue === DEFAULT_TEXT_FORMAT) {
+      // 기본 텍스트로 변경 시 이전이 특수 형식이었다면 텍스트 초기화
+      const wasSpecialFormat = previousFormat !== DEFAULT_TEXT_FORMAT;
+      if (wasSpecialFormat) {
         setDescription('');
       }
     }

@@ -431,15 +431,6 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
     }
   };
   
-  // 필드 배경색과 테두리 스타일 설정
-  const fieldBgStyle = field?.isEditMode 
-    ? 'rgba(245, 124, 0, 0.05)'
-    : 'rgba(245, 124, 0, 0.08)';
-    
-  const borderStyle = field?.isEditMode 
-    ? '1px dashed #f57c00'
-    : '2px dashed #f57c00';
-  
   // 기본 레이아웃 구성
   return (
     <Box
@@ -451,20 +442,20 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
         height: `${field.height}px`,
         transform: `scale(${scale || 1})`,
         cursor: isDragging && dragTarget === field.id ? 'grabbing' : (isEditing ? 'text' : 'pointer'),
-        border: borderStyle,
-        backgroundColor: fieldBgStyle,
+        border: '2px dashed #1976d2',
+        backgroundColor: 'rgba(25, 118, 210, 0.08)',
         '& .delete-button': {
           ...fieldStyles.deleteButton,
-          border: '1.5px solid #f57c00',
-          color: '#f57c00',
+          border: '1.5px solid #ef5350',
+          color: '#ef5350',
           '&:hover': {
-            backgroundColor: '#f57c00',
+            backgroundColor: '#ef5350',
             color: '#fff'
           }
         },
         '&:hover': {
-          borderColor: '#e65100',
-          boxShadow: '0 0 0 2px rgba(245, 124, 0, 0.1)',
+          borderColor: '#0d47a1',
+          boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',
           '& .delete-button': {
             opacity: 1
           }
@@ -483,8 +474,41 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '4px'
+        padding: 0
       }}>
+        {/* 서명문구 없거나 아직 입력 안 했을 때 - 안내 메시지 표시 */}
+        {!isEditing && !hasInput && (
+          <span className="text-label" style={{ 
+            ...fieldStyles.label,
+            color: '#1976d2',
+            fontSize: '11px'
+          }}>
+            서명문구
+          </span>
+        )}
+        
+        {/* 서명문구 있고 편집 중이 아닐 때 - 입력한 텍스트만 표시 */}
+        {!isEditing && hasInput && (
+          <div style={{
+            fontSize: '11px',
+            color: '#1976d2',
+            overflow: 'hidden',
+            textAlign: 'center',
+            width: '100%',
+            height: '100%',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            lineHeight: '1.1',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {inputText}
+          </div>
+        )}
+        
         {/* 편집 모드 입력 필드 */}
         {isEditing && field?.isEditMode && (
           <MuiTextField
@@ -501,12 +525,14 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
             InputProps={{
               disableUnderline: true,
               style: {
-                fontSize: '12px',
-                padding: '2px',
-                color: '#e65100',
-                fontWeight: 'normal',
+                fontSize: '11px',
+                padding: 0,
+                color: '#1976d2',
+                fontWeight: 'bold',
                 textAlign: 'center',
-                minHeight: '100%'
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center'
               }
             }}
             sx={{
@@ -516,85 +542,11 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
                 height: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                padding: 0
               }
             }}
           />
-        )}
-        
-        {/* 서명문구 있고 편집 중이 아닐 때 - 입력한 텍스트만 표시 */}
-        {!isEditing && hasInput && (
-          <Typography variant="body2" sx={{ 
-            fontSize: '14px',
-            color: '#e65100', 
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitLineClamp: 6,
-            WebkitBoxOrient: 'vertical',
-            textAlign: 'center',
-            width: '100%',
-            height: '100%',
-            py: 0.5,
-            fontWeight: 'bold',
-            cursor: 'pointer'
-          }}>
-            {inputText}
-          </Typography>
-        )}
-        
-        {/* 서명문구 없거나 아직 입력 안 했을 때 - 헤더와 안내 메시지 표시 */}
-        {!isEditing && !hasInput && (
-          <>
-            {/* 헤더 레이블 */}
-            <Typography variant="caption" sx={{ 
-              fontSize: '11px', 
-              color: '#f57c00', 
-              position: 'absolute', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              textAlign: 'center',
-              fontWeight: 'bold',
-              backgroundColor: 'rgba(255, 255, 255, 0.4)',
-              py: 0.2,
-              height: '18px',
-              lineHeight: '18px',
-              zIndex: 1
-            }}>
-              {field?.isEditMode ? '서명문구 영역' : '서명문구'}
-            </Typography>
-            
-            {/* 하단 안내 메시지 */}
-            <Typography variant="body2" sx={{ 
-              fontSize: '10px',
-              color: '#999', 
-              fontStyle: 'italic',
-              textAlign: 'center',
-              position: 'absolute',
-              bottom: 2,
-              left: 0,
-              right: 0
-            }}>
-              {field?.isEditMode ? '클릭하여 서명문구 입력' : '클릭하여 입력하세요'}
-            </Typography>
-          </>
-        )}
-        
-        {/* 입력 완료 표시 */}
-        {!isEditing && !field?.isEditMode && field?.value && (
-          <Typography variant="body2" sx={{ 
-            fontSize: '10px',
-            color: '#4CAF50', 
-            fontStyle: 'normal',
-            textAlign: 'center',
-            position: 'absolute',
-            bottom: 2,
-            left: 0,
-            right: 0
-          }}>
-            ✓ 입력 완료
-          </Typography>
         )}
       </div>
       
@@ -607,7 +559,7 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
             onMouseDown={(e) => onResizeStart(e, field.id)} 
             style={{
               ...fieldStyles.resizeHandle,
-              border: '1px solid #f57c00'
+              border: '1px solid #1976d2'
             }} 
           />
         </>

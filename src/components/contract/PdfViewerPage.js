@@ -386,10 +386,19 @@ const PdfViewerPage = () => {
         // 기본 높이값 계산 (30/scale) - 텍스트 필드와 동일하게 설정
         const defaultHeight = 30 / scale;
         
+        // 현재 필드에 텍스트가 있는지 확인
+        const hasContent = field.confirmText && field.confirmText.trim() !== '';
+        
+        // 텍스트 내용이 있는 경우 텍스트 길이에 따라 최소 높이 계산
+        // 더 작은 글꼴 크기(11px)에 맞게 계수 조정
+        const contentBasedMinHeight = hasContent ? 
+          Math.max(defaultHeight, Math.ceil(field.confirmText.length / 25) * 12 / scale) : 
+          defaultHeight;
+        
         return {
           ...field,
           width: Math.max(100, resizeStartPos.current.width + dx),
-          height: Math.max(defaultHeight, resizeStartPos.current.height + dy) // 최소 높이를 30/scale로 유지
+          height: Math.max(contentBasedMinHeight, resizeStartPos.current.height + dy) // 텍스트 길이 기반 높이 적용
         };
       }
       return field;
@@ -549,7 +558,6 @@ const PdfViewerPage = () => {
 
   // 따라쓰기 텍스트 업데이트 함수 수정
   const handleConfirmTextInput = (fieldId, inputText) => {
-    
     // 관리자 모드에서는 confirmText를 업데이트, 사용자 모드에서는 value를 업데이트
     setConfirmTextFields(prev => 
       prev.map(field => {
@@ -558,7 +566,8 @@ const PdfViewerPage = () => {
             // 관리자 모드: confirmText 업데이트
             return { ...field, confirmText: inputText };
           } else {
-            // 사용자 모드: value 업데이트
+            // 사용자 모드: value 업데이트 (선택 옵션이 적용된 텍스트)
+            // 이제 inputText는 이미 선택 옵션이 적용된 최종 텍스트임
             return { ...field, value: inputText };
           }
         }
@@ -713,10 +722,8 @@ const PdfViewerPage = () => {
                       selectedTool === 'signature' ? '60px' :
                       selectedTool === 'confirmText' ? '50px' : '30px',
               border: '1px dashed',
-              borderColor: selectedTool === 'signature' ? '#f44336' :
-                          selectedTool === 'confirmText' ? '#f57c00' : '#1976d2',
-              backgroundColor: selectedTool === 'signature' ? 'rgba(244, 67, 54, 0.1)' :
-                              selectedTool === 'confirmText' ? 'rgba(245, 124, 0, 0.1)' : 'rgba(25, 118, 210, 0.1)',
+              borderColor: '#1976d2',
+              backgroundColor: 'rgba(25, 118, 210, 0.1)',
               pointerEvents: 'none',
               zIndex: 1000,
               transform: 'translate(-50%, -50%)',
@@ -729,7 +736,7 @@ const PdfViewerPage = () => {
               <CheckBoxOutlineBlankIcon sx={{ fontSize: '16px', color: 'rgba(25, 118, 210, 0.6)' }} />
             )}
             {selectedTool === 'confirmText' && (
-              <Typography variant="caption" sx={{ fontSize: '8px', color: 'rgba(245, 124, 0, 0.8)', p: 1 }}>
+              <Typography variant="caption" sx={{ fontSize: '8px', color: 'rgba(25, 118, 210, 0.8)', p: 1 }}>
                 서명문구 필드
               </Typography>
             )}

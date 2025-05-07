@@ -44,14 +44,21 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
       return Number(numbersOnly).toLocaleString('ko-KR');
     }
     
-    // 날짜-년도 형식 (4자리)
+    // 금액(한글) 형식
     if (formatCodeId === '001004_0004') {
+      // 숫자만 제거 (나머지 문자는 허용)
+      const noNumbers = value.replace(/[0-9]/g, '');
+      return noNumbers;
+    }
+    
+    // 날짜-년도 형식 (4자리)
+    if (formatCodeId === '001004_0005') {
       // 4자리로 제한
       return numbersOnly.slice(0, 4);
     }
     
     // 날짜-월 형식 (2자리)
-    if (formatCodeId === '001004_0005') {
+    if (formatCodeId === '001004_0006') {
       const month = numbersOnly.slice(0, 2);
       // 유효한 월 범위(1~12) 확인
       if (month.length > 0) {
@@ -66,7 +73,7 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
     }
     
     // 날짜-일 형식 (2자리)
-    if (formatCodeId === '001004_0006') {
+    if (formatCodeId === '001004_0007') {
       const day = numbersOnly.slice(0, 2);
       // 유효한 일 범위(1~31) 확인
       if (day.length > 0) {
@@ -112,9 +119,10 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
     if (field?.formatCodeId === '001004_0001') return 13; // 010-1234-5678
     if (field?.formatCodeId === '001004_0002') return 14; // 123456-1234567
     if (field?.formatCodeId === '001004_0003') return 20; // 최대 19자리 숫자 + 콤마
-    if (field?.formatCodeId === '001004_0004') return 4;  // 년도(YYYY)
-    if (field?.formatCodeId === '001004_0005') return 2;  // 월(MM)
-    if (field?.formatCodeId === '001004_0006') return 2;  // 일(DD)
+    if (field?.formatCodeId === '001004_0004') return 30; // 금액(한글)
+    if (field?.formatCodeId === '001004_0005') return 4;  // 년도(YYYY)
+    if (field?.formatCodeId === '001004_0006') return 2;  // 월(MM)
+    if (field?.formatCodeId === '001004_0007') return 2;  // 일(DD)
     return undefined; // 제한 없음
   };
 
@@ -135,12 +143,15 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
       return '금액 형식 (예: 1,000,000)';
     }
     if (field?.formatCodeId === '001004_0004') {
-      return '연도 입력 (예: 2025)';
+      return '금액을 한글로 입력해 주세요 (예: 삼백만원, 일억오천만원) - 숫자 입력 불가';
     }
     if (field?.formatCodeId === '001004_0005') {
-      return '월 입력 (01~12)';
+      return '연도 입력 (예: 2025)';
     }
     if (field?.formatCodeId === '001004_0006') {
+      return '월 입력 (01~12)';
+    }
+    if (field?.formatCodeId === '001004_0007') {
       return '일 입력 (01~31)';
     }
     return null;
@@ -150,9 +161,9 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
 
   // 입력 타입 결정 (날짜 관련 필드는 숫자만 입력)
   const getInputType = () => {
-    if (field?.formatCodeId === '001004_0004' || 
-        field?.formatCodeId === '001004_0005' || 
-        field?.formatCodeId === '001004_0006') {
+    if (field?.formatCodeId === '001004_0005' || 
+        field?.formatCodeId === '001004_0006' || 
+        field?.formatCodeId === '001004_0007') {
       return 'number';
     }
     return 'text';
@@ -201,8 +212,8 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
           type={getInputType()}
           inputProps={{
             maxLength: getMaxLength(),
-            min: field?.formatCodeId === '001004_0005' ? 1 : field?.formatCodeId === '001004_0006' ? 1 : undefined,
-            max: field?.formatCodeId === '001004_0005' ? 12 : field?.formatCodeId === '001004_0006' ? 31 : undefined
+            min: field?.formatCodeId === '001004_0006' ? 1 : field?.formatCodeId === '001004_0007' ? 1 : undefined,
+            max: field?.formatCodeId === '001004_0006' ? 12 : field?.formatCodeId === '001004_0007' ? 31 : undefined
           }}
           sx={{ 
             '& .MuiOutlinedInput-root': {

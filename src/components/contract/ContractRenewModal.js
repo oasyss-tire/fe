@@ -20,6 +20,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { ko } from 'date-fns/locale';
 import { addYears, format, isAfter, parseISO, addDays } from 'date-fns';
+import { sendContractEmail } from '../../services/EmailService';
+import { sendContractSMS } from '../../services/SMSService';
 
 const ContractRenewModal = ({ open, onClose, contract, company, onSuccess }) => {
 
@@ -152,6 +154,57 @@ const ContractRenewModal = ({ open, onClose, contract, company, onSuccess }) => 
       }
 
       const result = await response.json();
+      
+      // 알림 메시지 기본 설정
+      let message = '재계약이 성공적으로 신청되었습니다.';
+      
+      // 생성된 계약 정보에 대해 이메일 및 SMS 발송 (ContractSend.js와 동일한 방식)
+      if (result.id && result.participants && result.participants.length > 0) {
+        try {
+          // 계약 제목 준비 (API 응답, 회사 정보 활용)
+          const contractTitle = result.title || `${company?.storeName || ''} - 재계약`;
+          
+          // 이메일과 SMS 발송 요청을 병렬로 처리 (계약 제목 명시적 전달)
+          const [emailResult, smsResult] = await Promise.all([
+            sendContractEmail(result.id, result.participants, contractTitle),
+            sendContractSMS(result.id, result.participants, {
+              title: contractTitle,
+              createdBy: result.createdBy || '관리자'
+            })
+          ]);
+          
+          // 알림 메시지 구성
+          const notifications = [];
+          
+          if (emailResult.emailCount > 0) {
+            notifications.push(
+              emailResult.success 
+                ? `이메일 발송 완료 (${emailResult.emailCount}명)` 
+                : `이메일 발송 실패 (${emailResult.error})`
+            );
+          }
+          
+          if (smsResult.smsCount > 0) {
+            notifications.push(
+              smsResult.success 
+                ? `알림톡 발송 완료 (${smsResult.smsCount}명)` 
+                : `알림톡 발송 실패 (${smsResult.error})`
+            );
+          }
+          
+          if (notifications.length > 0) {
+            message += '\n' + notifications.join('\n');
+          }
+        } catch (notifyError) {
+          console.error('알림 발송 중 오류:', notifyError);
+          message += '\n알림 발송 중 오류가 발생했습니다.';
+        }
+      } else {
+        message += '\n서명 참여자 정보가 없습니다.';
+      }
+      
+      // 성공 메시지 표시
+      alert(message);
       
       // 성공 시 콜백 호출
       if (onSuccess) {

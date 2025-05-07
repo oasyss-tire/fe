@@ -509,7 +509,7 @@ const ContractSend = () => {
       const contractData = await response.json();
 
       const [emailResult, smsResult] = await Promise.all([
-        sendContractEmail(contractData.id, contractData.participants),
+        sendContractEmail(contractData.id, contractData.participants, contractData.title),
         sendContractSMS(contractData.id, contractData.participants, contractInfo)
       ]);
 

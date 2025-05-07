@@ -3,12 +3,15 @@ import {
   Box,
   Typography,
   ToggleButtonGroup,
-  ToggleButton
+  ToggleButton,
+  Tooltip,
+  IconButton
 } from '@mui/material';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import DrawIcon from '@mui/icons-material/Draw';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const PdfToolbar = ({ selectedTool, onToolChange }) => {
   return (
@@ -82,7 +85,33 @@ const PdfToolbar = ({ selectedTool, onToolChange }) => {
             {selectedTool === 'text' && '텍스트를 입력할 위치를 PDF 문서에서 클릭하세요.'}
             {selectedTool === 'signature' && '서명/도장을 넣을 위치를 PDF 문서에서 클릭하세요.'}
             {selectedTool === 'checkbox' && '체크박스를 넣을 위치를 PDF 문서에서 클릭하세요.'}
-            {selectedTool === 'confirmText' && '서명문구 필드를 넣을 위치를 PDF 문서에서 클릭하세요.'}
+            {selectedTool === 'confirmText' && (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <span>서명문구 필드를 넣을 위치를 PDF 문서에서 클릭하세요.</span>
+                </Box>
+                <Box sx={{ 
+                  mt: 2, 
+                  p: 1.5, 
+                  bgcolor: '#FFF3E0', 
+                  borderRadius: 1,
+                  border: '1px solid #FFE0B2'
+                }}>
+                  <Typography variant="caption" sx={{ color: '#E65100', fontWeight: 500, display: 'block', mb: 1 }}>
+                    서명문구 작성 문법 안내
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#E65100', display: 'block', mb: 0.5 }}>
+                    • 선택 옵션 문법: {'{옵션1/옵션2/옵션3}'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#E65100', display: 'block', mb: 0.5 }}>
+                    • 예시 1: 본인은 {'{A타입/B타입}'} 약관에 동의합니다.
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#E65100', display: 'block' }}>
+                    • 예시 2: {'{개인/법인}'} 계약자 서명
+                  </Typography>
+                </Box>
+              </Box>
+            )}
           </Typography>
         )}
       </Box>

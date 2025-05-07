@@ -1,4 +1,4 @@
-export const sendContractEmail = async (contractId, participants) => {
+export const sendContractEmail = async (contractId, participants, contractTitle = '계약서 서명') => {
   try {
     const emailParticipants = participants.filter(p => p.notifyType === 'EMAIL');
     let emailCount = 0;
@@ -16,7 +16,8 @@ export const sendContractEmail = async (contractId, participants) => {
           participantId: participant.id,
           to: participant.email,
           name: participant.name,
-          contractTitle: participant.contract?.title || '계약서 서명',
+          // 계약 제목 우선순위: participant.contract?.title > 함수에 전달된 contractTitle > 기본값
+          contractTitle: participant.contract?.title || contractTitle || '계약서 서명',
           baseUrl: baseUrl
         })
       });
