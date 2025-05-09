@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Box, Typography, TextField as MuiTextField } from '@mui/material';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import ConfirmTextInputModal from './ConfirmTextInputModal';
@@ -13,6 +13,7 @@ const fieldStyles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    willChange: 'transform, left, top',
     '&:hover': {
       borderColor: '#0d47a1',
       boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',
@@ -68,7 +69,7 @@ const fieldStyles = {
     userSelect: 'none'
   },
   confirmText: {
-    color: '#f57c00',
+    color: '#1976d2',
     fontSize: '12px',
     opacity: 0.7,
     pointerEvents: 'none',
@@ -85,7 +86,7 @@ const fieldStyles = {
   }
 };
 
-export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete, onFieldClick }) => {
+export const TextField = memo(({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete, onFieldClick }) => {
   if (!field) {
     console.error('TextField: field prop is undefined');
     return null;
@@ -94,12 +95,10 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
   const [isEditing, setIsEditing] = useState(false);
   const [inputText, setInputText] = useState('');
   const inputRef = useRef(null);
-  // 드래그 시작 위치를 저장하기 위한 ref 추가
   const mouseDownPos = useRef({ x: 0, y: 0 });
   const wasDragged = useRef(false);
 
   useEffect(() => {
-    // 필드에 description이 있으면 설정
     if (field.description) {
       setInputText(field.description);
     }
@@ -107,6 +106,10 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
 
   // 마우스 다운 이벤트 처리
   const handleMouseDown = (e) => {
+    // 이벤트 버블링 방지 - 테스트를 위해 주석 처리
+    // e.stopPropagation();
+ 
+    
     // 현재 마우스 위치 저장
     mouseDownPos.current = { x: e.clientX, y: e.clientY };
     wasDragged.current = false;
@@ -120,6 +123,7 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
   
   // 마우스 업 이벤트 처리
   const handleMouseUp = (e) => {
+
     // 마우스 다운 위치와 현재 위치의 차이 계산
     const dx = Math.abs(e.clientX - mouseDownPos.current.x);
     const dy = Math.abs(e.clientY - mouseDownPos.current.y);
@@ -143,18 +147,20 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
 
   // 필드에 설명이 있는지 여부 확인
   const hasDescription = field.description && field.description.trim() !== '';
-  // 필드에 형식이 있는지 여부 확인
-  const hasFormat = field.formatCodeId && field.formatCodeId.trim() !== '';
+  
+  // transform 속성을 사용하여 하드웨어 가속 활용
+  // 성능 향상을 위해 백분율로 변환된 CSS 값을 미리 계산
+  const left = `${field.relativeX * 100}%`;
+  const top = `${field.relativeY * 100}%`;
+  const width = `${field.relativeWidth * 100}%`;
+  const height = `${field.relativeHeight * 100}%`;
   
   return (
     <Box
+      id={field.id}
       sx={{
         ...fieldStyles.base,
-        left: `${field.x}px`,
-        top: `${field.y}px`,
-        width: `${field.width}px`,
-        height: `${field.height}px`,
-        transform: `scale(${scale || 1})`,
+        left, top, width, height,
         cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'pointer',
         '& .delete-button': {
           ...fieldStyles.deleteButton
@@ -178,10 +184,8 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
         alignItems: 'center',
         padding: '4px'
       }}>
-        {/* 설명이 있는 경우 - 상단에 레이블로 표시 */}
-        {hasDescription && (
+        {hasDescription ? (
           <>
-            {/* 헤더 레이블 */}
             <Typography variant="caption" sx={{ 
               fontSize: '11px', 
               color: '#1976d2', 
@@ -199,12 +203,8 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
             }}>
               {field.description}
             </Typography>
-            
           </>
-        )}
-        
-        {/* 설명이 없는 경우 - 기본 텍스트 표시 */}
-        {!hasDescription && (
+        ) : (
           <span className="text-label" style={fieldStyles.label}>텍스트</span>
         )}
       </div>
@@ -213,9 +213,9 @@ export const TextField = ({ field, scale, isDragging, dragTarget, onDragStart, o
       <div className="resize-handle" onMouseDown={(e) => onResizeStart(e, field.id)} style={fieldStyles.resizeHandle} />
     </Box>
   );
-};
+});
 
-export const SignatureField = ({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete }) => {
+export const SignatureField = memo(({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete }) => {
   if (!field) {
     console.error('SignatureField: field prop is undefined');
     return null;
@@ -227,6 +227,9 @@ export const SignatureField = ({ field, scale, isDragging, dragTarget, onDragSta
   
   // 마우스 다운 이벤트 처리
   const handleMouseDown = (e) => {
+    // 이벤트 버블링 방지 - 테스트를 위해 주석 처리
+    // e.stopPropagation();
+    
     // 현재 마우스 위치 저장
     mouseDownPos.current = { x: e.clientX, y: e.clientY };
     wasDragged.current = false;
@@ -250,34 +253,48 @@ export const SignatureField = ({ field, scale, isDragging, dragTarget, onDragSta
     }
   };
   
+  // A4 비율 적용 (정사각형으로 보이도록)
+  // 가로:세로 = 1:1.414 비율이므로, 동일한 화면 크기가 되려면 높이를 너비의 0.707배(1/1.414)로 설정
+  const aspectRatio = 841.89 / 595.28; // A4 비율 (약 1.414)
+  
+  // 너비는 그대로 사용하고, 높이를 비율에 맞게 조정
+  const width = field.relativeWidth;
+  const height = width / aspectRatio; // 화면상 정사각형이 되도록 비율 적용
+  
+  console.log('SignatureField 렌더링:', { 
+    id: field.id, 
+    원본너비: field.relativeWidth, 
+    원본높이: field.relativeHeight, 
+    조정된높이: height,
+    적용된비율: aspectRatio,
+    정사각형_비율적용: `너비 ${width} × 높이 ${height} = 화면상 정사각형`
+  });
+  
   return (
     <Box
+      id={field.id}
       sx={{
         ...fieldStyles.base,
-        left: `${field.x}px`,
-        top: `${field.y}px`,
-        width: `${field.width}px`,
-        height: `${field.height}px`,
-        minHeight: '20px',
-        transform: `scale(${scale || 1})`,
-        cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'grab',
+        left: `${field.relativeX * 100}%`,
+        top: `${field.relativeY * 100}%`,
+        width: `${width * 100}%`,
+        height: `${height * 100}%`,
+        borderColor: '#1976d2', // 파란색으로 변경
+        cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'pointer',
         '& .delete-button': {
           ...fieldStyles.deleteButton
-        },
-        '&:hover .delete-button': {
-          opacity: 1
         }
       }}
       onMouseDown={handleMouseDown}
     >
-      <span className="text-label" style={fieldStyles.label}>서명</span>
+      <span style={{ ...fieldStyles.label, color: '#1976d2' }}>서명</span>
       <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>
       <div className="resize-handle" onMouseDown={(e) => onResizeStart(e, field.id)} style={fieldStyles.resizeHandle} />
     </Box>
   );
-};
+});
 
-export const CheckboxField = ({ field, scale, isDragging, dragTarget, onDragStart, onDelete }) => {
+export const CheckboxField = memo(({ field, scale, isDragging, dragTarget, onDragStart, onDelete }) => {
   if (!field) {
     console.error('CheckboxField: field prop is undefined');
     return null;
@@ -289,6 +306,9 @@ export const CheckboxField = ({ field, scale, isDragging, dragTarget, onDragStar
   
   // 마우스 다운 이벤트 처리
   const handleMouseDown = (e) => {
+    // 이벤트 버블링 방지 - 테스트를 위해 주석 처리
+    // e.stopPropagation();
+    
     // 현재 마우스 위치 저장
     mouseDownPos.current = { x: e.clientX, y: e.clientY };
     wasDragged.current = false;
@@ -312,32 +332,36 @@ export const CheckboxField = ({ field, scale, isDragging, dragTarget, onDragStar
     }
   };
   
+  // A4 비율 적용 (정사각형으로 보이도록)
+  const aspectRatio = 841.89 / 595.28; // A4 비율 (약 1.414)
+  
+  // 너비는 그대로 사용하고, 높이를 비율에 맞게 조정
+  const width = field.relativeWidth;
+  const height = width / aspectRatio; // 화면상 정사각형이 되도록 비율 적용
+  
   return (
     <Box
+      id={field.id}
       sx={{
         ...fieldStyles.base,
-        left: `${field.x}px`,
-        top: `${field.y}px`,
-        width: '20px',
-        height: '20px',
-        transform: `scale(${scale || 1})`,
-        cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'grab',
+        left: `${field.relativeX * 100}%`,
+        top: `${field.relativeY * 100}%`,
+        width: `${width * 100}%`,
+        height: `${height * 100}%`,
+        cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'pointer',
         '& .delete-button': {
           ...fieldStyles.deleteButton
-        },
-        '&:hover .delete-button': {
-          opacity: 1
         }
       }}
       onMouseDown={handleMouseDown}
     >
-      <CheckBoxOutlineBlankIcon className="checkbox-icon" sx={fieldStyles.label} />
+      <CheckBoxOutlineBlankIcon sx={{ color: 'rgba(25, 118, 210, 0.7)', fontSize: '16px' }} />
       <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>
     </Box>
   );
-};
+});
 
-export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete, onInputSave, onFieldClick }) => {
+export const ConfirmTextField = memo(({ field, scale, isDragging, dragTarget, onDragStart, onResizeStart, onDelete, onInputSave, onFieldClick }) => {
   if (!field) {
     console.error('ConfirmTextField: field prop is undefined');
     return null;
@@ -345,49 +369,45 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
   
   const [isEditing, setIsEditing] = useState(false);
   const [inputText, setInputText] = useState('');
-  const [hasInput, setHasInput] = useState(false); // 사용자 입력 여부 추적
   const inputRef = useRef(null);
-  // 드래그 시작 위치를 저장하기 위한 ref 추가
-  const mouseDownPos = useRef({ x: 0, y: 0 });
-  const wasDragged = useRef(false);
   
-  // 디버깅을 위한 상태 체크
   useEffect(() => {
-  }, [field, inputText, hasInput]);
-  
-  // 필드 데이터에서 초기값 설정
-  useEffect(() => {
-    if (field?.confirmText) {
-      setInputText(field.confirmText);
-      setHasInput(true);
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
     }
-  }, [field]);
+  }, [isEditing]);
   
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+    if (e.key === 'Enter') {
       handleInputComplete();
     }
   };
   
   const handleInputChange = (e) => {
-    const newText = e.target.value;
-    setInputText(newText);
-    setHasInput(newText.trim() !== ''); // 입력 여부 업데이트
+    setInputText(e.target.value);
   };
   
   const handleInputComplete = () => {
-    if (isEditing) {
-      if (field?.isEditMode && onInputSave) {
-        onInputSave(inputText);
-      }
-      setIsEditing(false);
+    if (onInputSave) {
+      onInputSave(inputText);
     }
+    setIsEditing(false);
   };
+  
+  // 드래그 시작 위치를 저장하기 위한 ref 추가
+  const mouseDownPos = useRef({ x: 0, y: 0 });
+  const wasDragged = useRef(false);
   
   // 마우스 다운 이벤트 처리
   const handleMouseDown = (e) => {
-    if (isEditing) return;
+    if (isEditing) {
+      e.stopPropagation();
+      return;
+    }
+    
+    // 이벤트 버블링 방지 - 테스트를 위해 주석 처리
+    // e.stopPropagation();
+
     
     // 현재 마우스 위치 저장
     mouseDownPos.current = { x: e.clientX, y: e.clientY };
@@ -402,6 +422,7 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
   
   // 마우스 업 이벤트 처리
   const handleMouseUp = (e) => {
+
     // 마우스 다운 위치와 현재 위치의 차이 계산
     const dx = Math.abs(e.clientX - mouseDownPos.current.x);
     const dy = Math.abs(e.clientY - mouseDownPos.current.y);
@@ -418,152 +439,50 @@ export const ConfirmTextField = ({ field, scale, isDragging, dragTarget, onDragS
     // 드래그 중이거나 드래그가 발생했으면 클릭 이벤트 무시
     if (isDragging || wasDragged.current) return;
     
-    if (field?.isEditMode) {
-      setIsEditing(true);
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 10);
-      return;
-    }
-    
     if (onFieldClick) {
       onFieldClick();
     }
   };
   
-  // 기본 레이아웃 구성
+  // 성능 향상을 위해 백분율로 변환된 CSS 값을 미리 계산
+  const left = `${field.relativeX * 100}%`;
+  const top = `${field.relativeY * 100}%`;
+  const width = `${field.relativeWidth * 100}%`;
+  const height = `${field.relativeHeight * 100}%`;
+  
   return (
     <Box
+      id={field.id}
       sx={{
         ...fieldStyles.base,
-        left: `${field.x}px`,
-        top: `${field.y}px`,
-        width: `${field.width}px`,
-        height: `${field.height}px`,
-        transform: `scale(${scale || 1})`,
-        cursor: isDragging && dragTarget === field.id ? 'grabbing' : (isEditing ? 'text' : 'pointer'),
+        left, top, width, height,
         border: '2px dashed #1976d2',
+        cursor: isDragging && dragTarget === field.id ? 'grabbing' : 'pointer',
         backgroundColor: 'rgba(25, 118, 210, 0.08)',
         '& .delete-button': {
           ...fieldStyles.deleteButton,
-          border: '1.5px solid #ef5350',
-          color: '#ef5350',
-          '&:hover': {
-            backgroundColor: '#ef5350',
-            color: '#fff'
-          }
         },
-        '&:hover': {
-          borderColor: '#0d47a1',
-          boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',
-          '& .delete-button': {
-            opacity: 1
-          }
-        }
+        borderColor: field.confirmText ? '#1976d2' : '#1976d2'
       }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
-      {/* 필드 내부 콘텐츠 */}
-      <div style={{ 
-        width: '100%', 
-        height: '100%', 
-        overflow: 'hidden',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 0
-      }}>
-        {/* 서명문구 없거나 아직 입력 안 했을 때 - 안내 메시지 표시 */}
-        {!isEditing && !hasInput && (
-          <span className="text-label" style={{ 
-            ...fieldStyles.label,
-            color: '#1976d2',
-            fontSize: '11px'
-          }}>
-            서명문구
-          </span>
-        )}
-        
-        {/* 서명문구 있고 편집 중이 아닐 때 - 입력한 텍스트만 표시 */}
-        {!isEditing && hasInput && (
-          <div style={{
-            fontSize: '11px',
-            color: '#1976d2',
-            overflow: 'hidden',
-            textAlign: 'center',
-            width: '100%',
-            height: '100%',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            lineHeight: '1.1',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            {inputText}
-          </div>
-        )}
-        
-        {/* 편집 모드 입력 필드 */}
-        {isEditing && field?.isEditMode && (
-          <MuiTextField
-            inputRef={inputRef}
-            variant="standard"
-            fullWidth
-            multiline
-            value={inputText}
-            onChange={handleInputChange}
-            onBlur={handleInputComplete}
-            onKeyDown={handleKeyDown}
-            placeholder="이 영역에 서명문구를 입력하세요"
-            autoFocus
-            InputProps={{
-              disableUnderline: true,
-              style: {
-                fontSize: '11px',
-                padding: 0,
-                color: '#1976d2',
-                fontWeight: 'bold',
-                textAlign: 'center',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center'
-              }
-            }}
-            sx={{
-              width: '100%',
-              height: '100%',
-              '& .MuiInputBase-root': {
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0
-              }
-            }}
-          />
-        )}
-      </div>
-      
-      {/* 삭제/리사이즈 버튼 */}
-      {!isEditing && (
-        <>
-          <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>
-          <div 
-            className="resize-handle" 
-            onMouseDown={(e) => onResizeStart(e, field.id)} 
-            style={{
-              ...fieldStyles.resizeHandle,
-              border: '1px solid #1976d2'
-            }} 
-          />
-        </>
+      {field.confirmText ? (
+        <Typography variant="caption" sx={fieldStyles.confirmText}>
+          {field.confirmText}
+        </Typography>
+      ) : (
+        <Typography variant="caption" sx={{ ...fieldStyles.confirmText, color: '#1976d2' }}>
+          서명문구 입력
+        </Typography>
       )}
+      
+      <button className="delete-button" onClick={(e) => onDelete(e, field.id)}>×</button>
+      <div 
+        className="resize-handle" 
+        onMouseDown={(e) => onResizeStart(e, field.id)} 
+        style={{ ...fieldStyles.resizeHandle, borderColor: field.confirmText ? '#1976d2' : '#1976d2' }}
+      />
     </Box>
   );
-}; 
+}); 

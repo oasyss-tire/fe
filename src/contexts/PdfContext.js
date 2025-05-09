@@ -1,16 +1,60 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 export const PdfContext = createContext();
 
-export const PdfProvider = ({ children }) => {
-  const [pdfFile, setPdfFile] = useState(null);
-  const [fileName, setFileName] = useState('');
-  const [pdfId, setPdfId] = useState(null);
-  const [savedFields, setSavedFields] = useState([]);
-  const [contractId, setContractId] = useState(null);
+export const PdfProvider = ({ 
+  children, 
+  pdfFile: initialPdfFile = null,
+  pdfUrl: initialPdfUrl = null, 
+  fileName: initialFileName = '', 
+  pdfId: initialPdfId = null, 
+  savedFields: initialSavedFields = [],
+  saveFields: customSaveFields = null,
+  contractId: initialContractId = null
+}) => {
+  const [pdfFile, setPdfFile] = useState(initialPdfFile);
+  const [pdfUrl, setPdfUrl] = useState(initialPdfUrl);
+  const [fileName, setFileName] = useState(initialFileName);
+  const [pdfId, setPdfId] = useState(initialPdfId);
+  const [savedFields, setSavedFields] = useState(initialSavedFields);
+  const [contractId, setContractId] = useState(initialContractId);
+
+  // props가 변경될 때 상태 업데이트
+  useEffect(() => {
+    console.log('PdfContext - props 변경됨:', { 
+      initialPdfFile: initialPdfFile ? `${initialPdfFile.name} (${initialPdfFile.size} bytes)` : 'null',
+      initialPdfUrl: initialPdfUrl ? 'URL 존재' : 'null',
+      initialFileName, 
+      initialPdfId
+    });
+    
+    if (initialPdfFile) setPdfFile(initialPdfFile);
+    if (initialPdfUrl) setPdfUrl(initialPdfUrl);
+    if (initialFileName) setFileName(initialFileName);
+    if (initialPdfId) setPdfId(initialPdfId);
+    if (initialSavedFields.length > 0) setSavedFields(initialSavedFields);
+    if (initialContractId) setContractId(initialContractId);
+  }, [initialPdfFile, initialPdfUrl, initialFileName, initialPdfId, initialSavedFields, initialContractId]);
 
   const saveFields = async (fields) => {
+    // 사용자 정의 saveFields 함수가 있으면 먼저 실행
+    if (customSaveFields) {
+      try {
+        await customSaveFields(fields);
+      } catch (error) {
+        console.error('사용자 정의 필드 저장 중 오류:', error);
+        throw error;
+      }
+      // 사용자 정의 함수가 있는 경우 내장 함수 실행 안 함
+      return;
+    }
+    
     try {
+      console.log('PdfContext - saveFields 실행:', { 
+        pdfId, 
+        fieldsCount: fields.length
+      });
+      
       const requestData = {
         pdfId: pdfId,
         fields: fields.map(field => ({
@@ -29,7 +73,6 @@ export const PdfProvider = ({ children }) => {
         }))
       };
 
-
       const response = await fetch('http://localhost:8080/api/contract-pdf/fields', {
         method: 'POST',
         headers: {
@@ -47,6 +90,7 @@ export const PdfProvider = ({ children }) => {
       setSavedFields(fields);
     } catch (error) {
       console.error('필드 저장 중 오류 발생:', error);
+      throw error;
     }
   };
 
@@ -88,7 +132,9 @@ export const PdfProvider = ({ children }) => {
   return (
     <PdfContext.Provider value={{ 
       pdfFile, 
-      setPdfFile, 
+      setPdfFile,
+      pdfUrl,
+      setPdfUrl,
       fileName, 
       setFileName,
       pdfId,

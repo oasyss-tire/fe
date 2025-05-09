@@ -1,12 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, Box, Alert } from '@mui/material';
 
 const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => {
   const [text, setText] = useState(initialValue);
+  const [error, setError] = useState('');
+  const [isValid, setIsValid] = useState(true);
 
   useEffect(() => {
     setText(initialValue);
-  }, [initialValue]);
+    validateInput(initialValue);
+  }, [initialValue, field]);
+
+  // 입력값 유효성 검사 함수
+  const validateInput = (value) => {
+    // 주민등록번호 유효성 검사
+    if (field?.formatCodeId === '001004_0002') {
+      // 숫자만 추출 (하이픈 제외)
+      const numbersOnly = value.replace(/\D/g, '');
+      
+      // 주민등록번호는 13자리여야 함
+      if (numbersOnly.length > 0 && numbersOnly.length !== 13) {
+        setError('주민등록번호는 13자리(하이픈 포함 14자리)여야 합니다.');
+        setIsValid(false);
+        return false;
+      } else if (numbersOnly.length === 0) {
+        setError('');
+        setIsValid(true);
+        return true;
+      }
+    }
+    
+    // 핸드폰 번호 유효성 검사
+    if (field?.formatCodeId === '001004_0001') {
+      const numbersOnly = value.replace(/\D/g, '');
+      if (numbersOnly.length > 0 && numbersOnly.length !== 11) {
+        setError('핸드폰 번호는 11자리(하이픈 포함 13자리)여야 합니다.');
+        setIsValid(false);
+        return false;
+      }
+    }
+    
+    setError('');
+    setIsValid(true);
+    return true;
+  };
 
   // 입력 형식에 따른 포맷팅 함수
   const formatInputValue = (value, formatCodeId) => {
@@ -99,18 +136,27 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
     if (field?.formatCodeId) {
       const formattedValue = formatInputValue(inputValue, field.formatCodeId);
       setText(formattedValue);
+      
+      // 유효성 검사 실행
+      validateInput(formattedValue);
     } else {
       setText(inputValue);
+      validateInput(inputValue);
     }
   };
 
   const handleSave = () => {
-    onSave(text);
-    setText('');
+    // 저장 전 유효성 다시 확인
+    if (validateInput(text)) {
+      onSave(text);
+      setText('');
+      setError('');
+    }
   };
 
   const handleClose = () => {
     setText('');
+    setError('');
     onClose();
   };
 
@@ -210,6 +256,7 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
           value={text}
           onChange={handleInputChange}
           type={getInputType()}
+          error={!!error}
           inputProps={{
             maxLength: getMaxLength(),
             min: field?.formatCodeId === '001004_0006' ? 1 : field?.formatCodeId === '001004_0007' ? 1 : undefined,
@@ -218,17 +265,25 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
           sx={{ 
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: '#E0E0E0',
+                borderColor: error ? '#f44336' : '#E0E0E0',
               },
               '&:hover fieldset': {
-                borderColor: '#BDBDBD',
+                borderColor: error ? '#f44336' : '#BDBDBD',
               },
               '&.Mui-focused fieldset': {
-                borderColor: '#3182F6',
+                borderColor: error ? '#f44336' : '#3182F6',
               },
             },
           }}
         />
+        
+        {error && (
+          <Box sx={{ mt: 1 }}>
+            <Alert severity="error" sx={{ py: 0, fontSize: '0.75rem' }}>
+              {error}
+            </Alert>
+          </Box>
+        )}
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'flex-end' }}>
         <Button 
@@ -247,6 +302,7 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
         <Button 
           onClick={handleSave} 
           variant="contained"
+          disabled={!isValid || (field?.formatCodeId === '001004_0002' && text.replace(/\D/g, '').length !== 13)}
           sx={{ 
             bgcolor: '#3182F6', 
             '&:hover': {

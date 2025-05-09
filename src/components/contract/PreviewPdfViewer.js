@@ -238,18 +238,25 @@ const PreviewPdfViewer = () => {
             {/* 서명 문구 텍스트 */}
             {field.value ? (
               <Typography variant="body2" sx={{ 
-                fontSize: '14px',
+                fontSize: '12px',
+                lineHeight: 1.2,
                 color: '#e65100', 
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 6,
-                WebkitBoxOrient: 'vertical',
+                overflow: 'auto',
                 textAlign: 'center',
                 width: '100%',
                 height: '100%',
-                fontWeight: 'bold',
-                padding: '2px 4px'
+                fontWeight: 800,
+                padding: '2px 4px',
+                "&::-webkit-scrollbar": {
+                  width: "4px",
+                  height: "4px"
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: "rgba(230, 81, 0, 0.3)",
+                  borderRadius: "4px"
+                },
+                wordBreak: 'break-word',
+                whiteSpace: 'pre-wrap'
               }}>
                 {field.value}
               </Typography>

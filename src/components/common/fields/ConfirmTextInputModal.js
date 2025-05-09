@@ -201,34 +201,54 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
       setCursorPosition(e.target.selectionStart || 0);
     }
     
-    // 타이핑 중임을 표시
-    setValidationDelay(true);
-    
-    // 기존 타이머 취소
-    if (typingTimerRef.current) {
-      clearTimeout(typingTimerRef.current);
-    }
-    
-    // 타이핑이 잠시 멈추면 검증 수행 (500ms 딜레이)
-    typingTimerRef.current = setTimeout(() => {
-      setValidationDelay(false);
-      
-      // 편집 모드인 경우 항상 유효함
-      if (field?.isEditMode) {
+    // 편집 모드에서는 즉시 버튼 활성화를 위한 처리
+    if (field?.isEditMode) {
+      // 입력 텍스트가 있으면 항상 유효함
+      if (newValue.trim()) {
         setIsMatch(true);
         setError('');
+        setValidationDelay(false);
       } else {
-        validateInput(newValue);
-        
-        // 즉시 isMatch 상태 확인 및 업데이트
-        const textToCompare = optionGroups.length > 0 ? processedText : field?.confirmText || '';
-        const normalizedInput = newValue.trim();
-        const normalizedTarget = textToCompare.trim();
-        const exactMatch = normalizedInput === normalizedTarget;
-        
-        setIsMatch(exactMatch);
+        setError('서명문구를 입력해주세요.');
+        setIsMatch(false);
+        setValidationDelay(false);
       }
-    }, 500);
+      return; // 편집 모드는 아래 로직 실행 안 함
+    }
+    
+    // 여기서부터는 사용자 모드 로직
+    // 타이핑 중임을 표시
+    setValidationDelay(false); // 기존 true를 false로 변경
+    
+    // 선택 옵션이 있는 경우, 처리된 텍스트와 비교
+    const textToCompare = optionGroups.length > 0 ? processedText : field?.confirmText || '';
+    
+    // 양쪽 공백을 제거하고 비교
+    const normalizedInput = newValue.trim();
+    const normalizedTarget = textToCompare.trim();
+    
+    // 완전 일치 여부 확인
+    const exactMatch = normalizedInput === normalizedTarget;
+    
+    // 현재 입력한 부분이 올바른지 확인
+    const currentCharCorrect = normalizedInput.length > 0 && 
+      normalizedInput.length <= normalizedTarget.length && 
+      normalizedTarget.substring(0, normalizedInput.length) === normalizedInput;
+    
+    // 오류 및 일치 상태 즉시 업데이트
+    if (!currentCharCorrect && normalizedInput.length > 0) {
+      setError('입력한 내용이 서명문구와 일치하지 않습니다.');
+      setIsMatch(false);
+    } else {
+      setError('');
+      setIsMatch(exactMatch); // 완전히 일치하면 true, 아니면 false
+    }
+    
+    // 기존 타이머 취소 (더 이상 필요 없음)
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
   };
   
   // 입력 검증 함수에 로그 추가
@@ -306,17 +326,24 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
 
   // 저장 핸들러 수정
   const handleSave = () => {
+    // 중복 클릭 방지를 위해 버튼 상태를 즉시 비활성화 처리
+    const isSaving = true;
+    
     try {
       // 편집 모드 - 원본 텍스트 저장
       if (field?.isEditMode) {
+        console.log('편집 모드에서 서명문구 저장 시도:', inputText);
+        
         if (!inputText.trim()) {
           setError('서명문구를 입력해주세요.');
           return;
         }
         
         if (onUpdate) {
+          console.log('onUpdate 함수 호출:', inputText.trim());
+          // 입력된 텍스트를 부모 컴포넌트에 전달
           onUpdate(inputText.trim());
-          // onClose 호출은 onUpdate 내부에서 처리
+          return; // 함수 즉시 종료
         } else {
           onClose();
         }
@@ -337,29 +364,31 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
       const normalizedInput = inputText.trim();
       const normalizedTarget = textToCompare.trim();
       
-      // 직접 비교한 결과 저장 (isMatch 상태에 의존하지 않음)
+      // 직접 비교한 결과 저장
       const exactMatch = normalizedInput === normalizedTarget;
       
       // 최종 일치 여부 확인
       if (!exactMatch) {
-        setIsMatch(false);
         setError('입력한 문구가 원본 서명문구와 일치하지 않습니다.');
         return;
       }
       
-      // 일치하면 저장 진행
+      // 일치하면 저장 진행 - 즉시 onSave 호출
       if (onSave) {
-        // 입력 텍스트와 함께 처리 정보도 전달
-        onSave(normalizedInput, {
-          selectedOptions,       // 선택한 옵션 정보
-          processedText,         // 처리된 텍스트
-          originalText: field.confirmText  // 원본 텍스트
-        });
-        // onClose 호출은 onSave 내부에서 처리
+        // 이벤트 버블링 중지와 네이티브 이벤트 중지로 추가 클릭 방지
+        setTimeout(() => {
+          // 입력 텍스트와 함께 처리 정보도 전달
+          onSave(normalizedInput, {
+            selectedOptions,       // 선택한 옵션 정보
+            processedText,         // 처리된 텍스트
+            originalText: field.confirmText  // 원본 텍스트
+          });
+        }, 0);
       } else {
         onClose();
       }
     } catch (err) {
+      console.error('서명문구 저장 중 오류:', err);
       setError('오류가 발생했습니다. 다시 시도해주세요.');
     }
   };
@@ -435,16 +464,37 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
     );
   };
 
-  // 컴포넌트 내 추가 useEffect - processedText 변경 시 입력 텍스트와 비교하여 isMatch 업데이트
+  // 컴포넌트 내 추가 useEffect - 초기 마운트와 processedText 변경 시 검증 수행
   useEffect(() => {
     if (!field?.isEditMode && processedText && inputText) {
       const normalizedInput = inputText.trim();
       const normalizedProcessed = processedText.trim();
       const exactMatch = normalizedInput === normalizedProcessed;
       
-      setIsMatch(exactMatch);
+      // 일치하면 즉시 isMatch 업데이트
+      if (exactMatch) {
+        setIsMatch(true);
+        setError('');
+      }
     }
-  }, [processedText, field?.isEditMode]);
+  }, [processedText, field?.isEditMode, inputText]);
+
+  // 포커스 이동 시에도 다시 검증
+  const handleFocus = () => {
+    if (!field?.isEditMode && inputText) {
+      const textToCompare = optionGroups.length > 0 ? processedText : field?.confirmText || '';
+      const normalizedInput = inputText.trim();
+      const normalizedTarget = textToCompare.trim();
+      
+      // 완전 일치 여부 확인
+      const exactMatch = normalizedInput === normalizedTarget;
+      
+      if (exactMatch) {
+        setIsMatch(true);
+        setError('');
+      }
+    }
+  };
 
   return (
     <Dialog
@@ -488,10 +538,10 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
         {/* 편집 모드 */}
         {field?.isEditMode && (
           <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+            <Typography variant="body2" sx={{ mb: 1, mt: 1, fontWeight: 500 }}>
               사용자가 입력할 서명문구를 입력해주세요
             </Typography>
-            <Typography variant="caption" sx={{ display: 'block', mb: 1, color: '#0277bd' }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 2, color: '#0277bd' }}>
               <span style={{ marginRight: '4px' }}>ℹ️</span>
               선택 옵션은 {'{옵션1/옵션2}'} 형식으로 입력하세요. 예: {'{A타입/B타입}'}
             </Typography>
@@ -605,6 +655,9 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
                 onSelect={handleCursorChange}
                 onKeyUp={handleCursorChange}
                 onMouseUp={handleCursorChange}
+                onFocus={handleFocus}
+                onBlur={handleFocus}
+                onClick={handleFocus}
                 multiline
                 minRows={3}
                 maxRows={5}
@@ -763,12 +816,19 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
           취소
         </Button>
         <Button 
-          onClick={handleSave}
+          onClick={(e) => {
+            e.preventDefault();
+            // 이벤트 전파 중지로 버블링 방지
+            e.stopPropagation();
+            // 즉시 실행
+            handleSave();
+          }}
+          type="button" 
           variant="contained"
           disabled={
-            validationDelay || 
-            !inputText || 
-            (!field?.isEditMode && !isMatch)
+            // 편집 모드: 입력만 있으면 활성화
+            // 사용자 모드: 정확히 일치해야 활성화
+            field?.isEditMode ? !inputText.trim() : !isMatch
           }
           sx={{ 
             bgcolor: '#3182F6', 
@@ -783,15 +843,7 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
             px: 3
           }}
         >
-          {(() => {
-            // 디버그용 - 버튼 텍스트에 상태 표시
-            const textToCompare = optionGroups.length > 0 ? processedText : field?.confirmText || '';
-            const normalizedInput = inputText.trim();
-            const normalizedTarget = textToCompare.trim();
-            const exactMatch = normalizedInput === normalizedTarget;
-            
-            return "확인";
-          })()}
+          확인
         </Button>
       </DialogActions>
     </Dialog>

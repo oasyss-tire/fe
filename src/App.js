@@ -50,6 +50,7 @@ const ServiceRequestList = React.lazy(() => import('./components/facility/Servic
 const FacilityTransfer = React.lazy(() => import('./components/facility/FacilityTransfer'));
 const FacilityHistoryPage = React.lazy(() => import('./components/facility/FacilityHistoryPage'));
 const ContractEventLogPage = React.lazy(() => import('./components/contract/ContractEventLogPage'));
+const EditTemplatePage = React.lazy(() => import('./components/contract/EditTemplatePage'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -70,7 +71,7 @@ const AppContent = () => {
   const location = useLocation();
   
   const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer', '/login', '/signup', '/contract-correction-request',
-    '/contract-correction-request/:contractId/participant/:participantId', '/correction-request', '/contract-preview'];
+    '/contract-correction-request/:contractId/participant/:participantId', '/correction-request', '/contract-preview', '/edit-template'];
   const shouldHideSidebar = hideSidebarPaths.some(path => 
     location.pathname.includes(path)
   );
@@ -152,6 +153,7 @@ const AppContent = () => {
               <Route path="/service-request/list" element={<ServiceRequestList />} />
               <Route path="/facility-history" element={<FacilityHistoryPage />} />
               <Route path="/contract-log" element={<ContractEventLogPage />} />
+              <Route path="/edit-template/:templateId" element={<EditTemplatePage />} />
             </Route>
           </Routes>
         </Suspense>

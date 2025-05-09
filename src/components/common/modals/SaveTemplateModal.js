@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -9,9 +9,15 @@ import {
   Box
 } from '@mui/material';
 
-const SaveTemplateModal = ({ open, onClose, onSave }) => {
-  const [templateName, setTemplateName] = useState('');
-  const [description, setDescription] = useState('');
+const SaveTemplateModal = ({ open, onClose, onSave, initialTemplateName = '', initialDescription = '', isEditing = false }) => {
+  const [templateName, setTemplateName] = useState(initialTemplateName);
+  const [description, setDescription] = useState(initialDescription);
+
+  // 초기값이 변경될 때 상태 업데이트
+  useEffect(() => {
+    setTemplateName(initialTemplateName);
+    setDescription(initialDescription);
+  }, [initialTemplateName, initialDescription, open]);
 
   const handleSave = () => {
     if (!templateName.trim()) {
@@ -19,8 +25,6 @@ const SaveTemplateModal = ({ open, onClose, onSave }) => {
       return;
     }
     onSave({ templateName, description });
-    setTemplateName('');
-    setDescription('');
   };
 
   return (
@@ -44,7 +48,7 @@ const SaveTemplateModal = ({ open, onClose, onSave }) => {
         fontSize: '1rem', 
         fontWeight: 600 
       }}>
-        템플릿 저장
+        {isEditing ? '템플릿 수정' : '템플릿 저장'}
       </DialogTitle>
       <DialogContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 ,mt: 2}}>
@@ -113,15 +117,12 @@ const SaveTemplateModal = ({ open, onClose, onSave }) => {
             '&:hover': {
               bgcolor: '#1565C0',
             },
-            '&.Mui-disabled': {
-              bgcolor: 'rgba(49, 130, 246, 0.3)',
-            },
             fontWeight: 500,
             boxShadow: 'none',
             px: 2
           }}
         >
-          저장
+          {isEditing ? '수정' : '저장'}
         </Button>
       </DialogActions>
     </Dialog>

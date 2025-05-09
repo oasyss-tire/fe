@@ -120,11 +120,11 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
     } else if (formatValue === KOREAN_AMOUNT_FORMAT_CODE) {
       setDescription('금액(한글)');
     } else if (formatValue === YEAR_FORMAT_CODE) {
-      setDescription('날짜-년도');
+      setDescription('년');
     } else if (formatValue === MONTH_FORMAT_CODE) {
-      setDescription('날짜-월');
+      setDescription('월');
     } else if (formatValue === DAY_FORMAT_CODE) {
-      setDescription('날짜-일');
+      setDescription('일');
     } else if (formatValue === DEFAULT_TEXT_FORMAT) {
       // 기본 텍스트로 변경 시 이전이 특수 형식이었다면 텍스트 초기화
       const wasSpecialFormat = previousFormat !== DEFAULT_TEXT_FORMAT;

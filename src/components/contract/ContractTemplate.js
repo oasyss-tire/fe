@@ -196,14 +196,23 @@ const ContractTemplate = () => {
     window.open(`http://localhost:8080/api/contract-pdf/download/${pdfId}`, '_blank');
   };
 
-  const handleMenuClick = (event, item) => {
+  const handleMenuClick = (event, templateId) => {
     setAnchorEl(event.currentTarget);
-    setSelectedTemplateId(item);
+    setSelectedTemplateId(templateId);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedTemplateId(null);
+  };
+  
+  // 템플릿 수정 처리
+  const handleEditTemplate = () => {
+    if (selectedTemplateId) {
+      // 템플릿 수정 페이지로 이동
+      navigate(`/edit-template/${selectedTemplateId}`);
+    }
+    handleMenuClose();
   };
 
   // 템플릿 미리보기 처리
@@ -491,9 +500,7 @@ const ContractTemplate = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleMenuClose}>수정</MenuItem>
-        <MenuItem onClick={handleMenuClose}>삭제</MenuItem>
-        <MenuItem onClick={handleMenuClose}>복사</MenuItem>
+        <MenuItem onClick={handleEditTemplate}>수정</MenuItem>
       </Menu>
     </Box>
   );

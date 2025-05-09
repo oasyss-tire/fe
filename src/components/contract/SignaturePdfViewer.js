@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Paper, Stepper, Step, StepLabel, Menu, MenuItem, Chip, IconButton } from '@mui/material';
+import { Box, Typography, Checkbox, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Paper, Stepper, Step, StepLabel, Menu, MenuItem, Chip, IconButton, CircularProgress } from '@mui/material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -1936,7 +1936,7 @@ const SignaturePdfViewer = () => {
               loading || 
               (participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length)
             }
-            startIcon={<SaveIcon />}
+            startIcon={loading ? null : <SaveIcon />}
             fullWidth
             sx={{
               px: 4,
@@ -1947,11 +1947,27 @@ const SignaturePdfViewer = () => {
               },
               borderRadius: '8px',
               fontSize: '1rem',
-              mb: 1.5
+              mb: 1.5,
+              position: 'relative' // 추가: CircularProgress 절대 위치 지정을 위함
             }}
           >
             {participant?.templatePdfs && completedTemplates.length === participant?.templatePdfs?.length ? 
-              '서명 완료됨' : loading ? '처리중...' : '서명 완료'}
+              '서명 완료됨' : loading ? 
+              (
+                <>
+                  <CircularProgress 
+                    size={24}
+                    sx={{
+                      color: 'white',
+                      position: 'absolute',
+                      left: 'calc(50% - 70px)',
+                      top: '50%',
+                      marginTop: '-12px'
+                    }}
+                  />
+                  처리중...
+                </>
+              ) : '서명 완료'}
           </Button>
         </Box>
       </Box>
