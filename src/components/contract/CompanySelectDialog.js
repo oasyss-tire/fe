@@ -25,14 +25,19 @@ import {
   Stepper,
   Step,
   StepLabel,
-  StepButton
+  StepButton,
+  Pagination
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon
+  ArrowForward as ArrowForwardIcon,
+  FirstPage as FirstPageIcon,
+  LastPage as LastPageIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 
 /**
@@ -41,6 +46,7 @@ import {
 const CompanySelectDialog = ({ open, onClose, onSelect }) => {
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
+  const [displayCompanies, setDisplayCompanies] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -51,6 +57,11 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
   const [isLoadingHistories, setIsLoadingHistories] = useState(false);
   
   const [activeStep, setActiveStep] = useState(0);
+  
+  // 페이징 상태 추가
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const [totalPages, setTotalPages] = useState(0);
 
   // 업체 목록 조회
   useEffect(() => {
@@ -67,6 +78,9 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
         const data = await response.json();
         setCompanies(data);
         setFilteredCompanies(data);
+        
+        // 페이징 처리
+        updatePageData(data, 1);
       } catch (error) {
         console.error('위수탁 업체 목록 조회 오류:', error);
         setError(error.message);
@@ -77,8 +91,20 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
     
     if (open) {
       fetchCompanies();
+      setCurrentPage(1);
     }
   }, [open]);
+  
+  // 페이징 데이터 업데이트 함수
+  const updatePageData = (data, page) => {
+    const totalItems = data.length;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    setTotalPages(totalPages);
+    
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalItems);
+    setDisplayCompanies(data.slice(startIndex, endIndex));
+  };
 
   // 검색어 변경 시 업체 필터링
   const handleSearchChange = (e) => {
@@ -87,6 +113,8 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
     
     if (!term.trim()) {
       setFilteredCompanies(companies);
+      updatePageData(companies, 1);
+      setCurrentPage(1);
       return;
     }
     
@@ -98,6 +126,14 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
     );
     
     setFilteredCompanies(filtered);
+    updatePageData(filtered, 1);
+    setCurrentPage(1);
+  };
+  
+  // 페이지 변경 핸들러
+  const handlePageChange = (event, newPage) => {
+    setCurrentPage(newPage);
+    updatePageData(filteredCompanies, newPage);
   };
 
   // 업체 선택 핸들러
@@ -145,6 +181,7 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
     setSelectedTrusteeHistory(null);
     setTrusteeHistories([]);
     setActiveStep(0);
+    setCurrentPage(1);
     onClose();
   };
 
@@ -238,6 +275,8 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
                         onClick={() => {
                           setSearchTerm('');
                           setFilteredCompanies(companies);
+                          updatePageData(companies, 1);
+                          setCurrentPage(1);
                         }}
                       >
                         <CloseIcon fontSize="small" />
@@ -262,41 +301,132 @@ const CompanySelectDialog = ({ open, onClose, onSelect }) => {
                 검색 결과가 없습니다
               </Box>
             ) : (
-              <TableContainer component={Paper} sx={{ flexGrow: 1, boxShadow: 'none' }}>
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell padding="checkbox" width="50px"></TableCell>
-                      <TableCell>매장코드</TableCell>
-                      <TableCell>점번</TableCell>
-                      <TableCell>매장명</TableCell>
-                      <TableCell>주소</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredCompanies.map((company) => (
-                      <TableRow 
-                        key={company.id}
-                        hover
-                        onClick={() => handleSelectCompany(company)}
-                        selected={selectedCompany?.id === company.id}
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        <TableCell padding="checkbox">
-                          <Radio 
-                            checked={selectedCompany?.id === company.id} 
-                            onChange={() => handleSelectCompany(company)}
-                          />
-                        </TableCell>
-                        <TableCell>{company.storeCode || '-'}</TableCell>
-                        <TableCell>{company.storeNumber || '-'}</TableCell>
-                        <TableCell>{company.storeName || '-'}</TableCell>
-                        <TableCell>{company.address || '-'}</TableCell>
+              <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                <TableContainer component={Paper} sx={{ flexGrow: 1, boxShadow: 'none' }}>
+                  <Table stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell padding="checkbox" width="50px"></TableCell>
+                        <TableCell>매장코드</TableCell>
+                        <TableCell>점번</TableCell>
+                        <TableCell>매장명</TableCell>
+                        <TableCell>주소</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {displayCompanies.map((company) => (
+                        <TableRow 
+                          key={company.id}
+                          hover
+                          onClick={() => handleSelectCompany(company)}
+                          selected={selectedCompany?.id === company.id}
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Radio 
+                              checked={selectedCompany?.id === company.id} 
+                              onChange={() => handleSelectCompany(company)}
+                            />
+                          </TableCell>
+                          <TableCell>{company.storeCode || '-'}</TableCell>
+                          <TableCell>{company.storeNumber || '-'}</TableCell>
+                          <TableCell>{company.storeName || '-'}</TableCell>
+                          <TableCell>{company.address || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                
+                {/* 페이지네이션 추가 */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  py: 1.5,
+                  px: 2,
+                  borderTop: '1px solid #EEEEEE',
+                  backgroundColor: '#F9F9FA',
+                }}>
+                  <Typography variant="caption" sx={{ color: '#666' }}>
+                    전체 {filteredCompanies.length}건 중 {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredCompanies.length)}건 표시
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <IconButton 
+                      disabled={currentPage === 1}
+                      onClick={(e) => handlePageChange(e, 1)}
+                      size="small"
+                      sx={{ mx: 0.3 }}
+                    >
+                      <FirstPageIcon 
+                        fontSize="small"
+                        sx={{ 
+                          color: currentPage === 1 ? '#ccc' : '#666'
+                        }} 
+                      />
+                    </IconButton>
+                    <IconButton 
+                      disabled={currentPage === 1}
+                      onClick={(e) => handlePageChange(e, currentPage - 1)}
+                      size="small"
+                      sx={{ mx: 0.3 }}
+                    >
+                      <ChevronLeftIcon
+                        fontSize="small"
+                        sx={{ 
+                          color: currentPage === 1 ? '#ccc' : '#666'
+                        }} 
+                      />
+                    </IconButton>
+                    
+                    <Box 
+                      sx={{ 
+                        mx: 1, 
+                        px: 2,
+                        minWidth: '80px', 
+                        textAlign: 'center',
+                        border: '1px dashed #ddd',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '28px'
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ color: '#666' }}>
+                        {currentPage} / {totalPages || 1}
+                      </Typography>
+                    </Box>
+                    
+                    <IconButton 
+                      disabled={currentPage >= totalPages}
+                      onClick={(e) => handlePageChange(e, currentPage + 1)}
+                      size="small"
+                      sx={{ mx: 0.3 }}
+                    >
+                      <ChevronRightIcon
+                        fontSize="small"
+                        sx={{ 
+                          color: currentPage >= totalPages ? '#ccc' : '#666'
+                        }} 
+                      />
+                    </IconButton>
+                    <IconButton 
+                      disabled={currentPage >= totalPages}
+                      onClick={(e) => handlePageChange(e, totalPages)}
+                      size="small"
+                      sx={{ mx: 0.3 }}
+                    >
+                      <LastPageIcon
+                        fontSize="small"
+                        sx={{ 
+                          color: currentPage >= totalPages ? '#ccc' : '#666'
+                        }} 
+                      />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </Box>
             )}
           </Box>
         )}
