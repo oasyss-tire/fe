@@ -5,10 +5,7 @@ import { PdfProvider } from '../../contexts/PdfContext';
 import PdfViewerPage from './PdfViewerPage';
 import SaveTemplateModal from '../common/modals/SaveTemplateModal';
 
-// 디버깅 로그 추가 함수
-const debugLog = (msg, data) => {
-  console.log(`[EditTemplatePage] ${msg}`, data);
-};
+
 
 const EditTemplatePage = () => {
   const { templateId } = useParams();
@@ -29,21 +26,19 @@ const EditTemplatePage = () => {
     const fetchTemplate = async () => {
       try {
         setLoading(true);
-        console.log('템플릿 정보 불러오기 시작...');
+
         
         // 템플릿 정보 가져오기
         const response = await fetch(`http://localhost:8080/api/contract-pdf/templates/${templateId}`);
         if (!response.ok) throw new Error('템플릿 정보를 불러오는데 실패했습니다.');
         
         const data = await response.json();
-        console.log('템플릿 정보 로드 성공:', data);
-        console.log('템플릿 데이터 pdfId:', data.pdfId);
-        console.log('템플릿 데이터 originalPdfId:', data.originalPdfId);
+
         setTemplate(data);
         
         // 템플릿 필드 정보 로드
         if (data.fields && data.fields.length > 0) {
-          console.log('템플릿 필드 원본 데이터:', data.fields);
+  
           
           // 상대 좌표 그대로 유지하며, 필요한 속성만 추가
           const formattedFields = data.fields.map(field => ({
@@ -60,26 +55,24 @@ const EditTemplatePage = () => {
             // id가 없는 경우 fieldName을 id로 사용
             id: field.id || field.fieldName
           }));
-          
-          console.log('변환된 필드 데이터:', formattedFields);
+
           setSavedFields(formattedFields);
         }
         
-        // PDF 파일 불러오기
-        console.log(`PDF 파일 로드 시도: http://localhost:8080/api/contract-pdf/view/${data.pdfId}`);
+
         
         // 올바른 PDF ID 결정
         const pdfIdForLoad = data.originalPdfId || data.pdfId;
-        console.log('PDF 로드에 사용할 ID:', pdfIdForLoad);
+
         
         const pdfResponse = await fetch(`http://localhost:8080/api/contract-pdf/view/${pdfIdForLoad}`);
         if (!pdfResponse.ok) {
           console.error('PDF 로드 실패 - 상태:', pdfResponse.status, pdfResponse.statusText);
           throw new Error(`PDF 파일을 불러오는데 실패했습니다. (${pdfResponse.status})`);
         }
-        console.log('PDF 응답 성공:', pdfResponse.status, pdfResponse.statusText);
+
         const blob = await pdfResponse.blob();
-        console.log('PDF Blob 생성 성공, 크기:', blob.size, 'bytes');
+ 
         const url = URL.createObjectURL(blob);
         setPdfUrl(url);
         setFileName(data.fileName);
@@ -102,9 +95,7 @@ const EditTemplatePage = () => {
   const handleSaveFields = async (fields) => {
     try {
       setLoading(true);
-      
-      console.log('새로 수정된 fields:', fields);
-      
+
       // 기존 템플릿 필드와 매핑
       const existingFieldsMap = {};
       if (template && template.fields) {
@@ -119,8 +110,7 @@ const EditTemplatePage = () => {
           }
         });
       }
-      
-      console.log('기존 필드 매핑:', existingFieldsMap);
+
       
       // API 요청을 위한 필드 데이터 준비
       const apiFields = fields.map(field => {
@@ -168,21 +158,12 @@ const EditTemplatePage = () => {
           ...(field.formatCodeId ? { formatCodeId: field.formatCodeId } : {})
         };
         
-        console.log('필드 변환:', {
-          원본ID: field.id,
-          기존필드매칭: existingField ? '있음' : '없음',
-          최종ID: apiField.id,
-          최종fieldId: apiField.fieldId,
-          최종fieldName: apiField.fieldName
-        });
         
         return apiField;
       });
-      
-      console.log('API 요청에 사용할 필드 데이터:', apiFields);
+
       
       // 1. 템플릿 필드 업데이트 API 호출
-      console.log('필드 수정 API 호출 시작...');
       const fieldsResponse = await fetch(`http://localhost:8080/api/contract-pdf/update-template-fields/${templateId}`, {
         method: 'PUT',
         headers: {
@@ -198,8 +179,7 @@ const EditTemplatePage = () => {
         console.error('필드 수정 API 오류:', fieldsResponse.status);
         throw new Error('템플릿 필드 수정에 실패했습니다.');
       }
-      
-      console.log('필드 수정 API 호출 성공');
+
       
       // 필드 저장이 성공하면 수정된 필드 정보를 저장하고 템플릿 정보 편집 모달 표시
       setUpdatedFields(apiFields);
@@ -217,8 +197,7 @@ const EditTemplatePage = () => {
   const handleUpdateTemplateInfo = async (templateInfo) => {
     try {
       setLoading(true);
-      
-      console.log('기본 정보 수정 API 호출 시작...', templateInfo);
+
       const response = await fetch(`http://localhost:8080/api/contract-pdf/update-template-info/${templateId}`, {
         method: 'PUT',
         headers: {
@@ -234,8 +213,7 @@ const EditTemplatePage = () => {
         console.error('기본 정보 수정 API 오류:', response.status);
         throw new Error('템플릿 정보 수정에 실패했습니다.');
       }
-      
-      console.log('기본 정보 수정 API 호출 성공');
+
       alert('템플릿이 성공적으로 수정되었습니다.');
       
       // 템플릿 목록 페이지로 이동
@@ -266,11 +244,6 @@ const EditTemplatePage = () => {
     );
   }
 
-  debugLog('렌더링 상태:', { 
-    pdfFile: pdfFile ? `${pdfFile.name} (${pdfFile.size} bytes)` : 'null',
-    template: template ? `${template.templateName}` : 'null',
-    savedFields: savedFields.length
-  });
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>

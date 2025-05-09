@@ -261,14 +261,7 @@ export const SignatureField = memo(({ field, scale, isDragging, dragTarget, onDr
   const width = field.relativeWidth;
   const height = width / aspectRatio; // 화면상 정사각형이 되도록 비율 적용
   
-  console.log('SignatureField 렌더링:', { 
-    id: field.id, 
-    원본너비: field.relativeWidth, 
-    원본높이: field.relativeHeight, 
-    조정된높이: height,
-    적용된비율: aspectRatio,
-    정사각형_비율적용: `너비 ${width} × 높이 ${height} = 화면상 정사각형`
-  });
+
   
   return (
     <Box

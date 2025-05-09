@@ -332,7 +332,7 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
     try {
       // 편집 모드 - 원본 텍스트 저장
       if (field?.isEditMode) {
-        console.log('편집 모드에서 서명문구 저장 시도:', inputText);
+
         
         if (!inputText.trim()) {
           setError('서명문구를 입력해주세요.');
@@ -340,7 +340,7 @@ const ConfirmTextInputModal = ({ open, onClose, onSave, onUpdate, field }) => {
         }
         
         if (onUpdate) {
-          console.log('onUpdate 함수 호출:', inputText.trim());
+
           // 입력된 텍스트를 부모 컴포넌트에 전달
           onUpdate(inputText.trim());
           return; // 함수 즉시 종료

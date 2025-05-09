@@ -86,14 +86,9 @@ const PdfViewerPage = ({ isEditMode = false }) => {
   // 서명 필드 상태 변경 감지
   useEffect(() => {
     if (signatureFields.length > 0) {
-      console.log('서명 필드 상태 변경:', signatureFields);
       // 각 필드의 정사각형 여부 확인
       signatureFields.forEach(field => {
-        console.log(`서명 필드 ${field.id} 비율:`, {
-          너비: field.relativeWidth,
-          높이: field.relativeHeight,
-          정사각형여부: field.relativeWidth === field.relativeHeight
-        });
+
       });
     }
   }, [signatureFields]);
@@ -101,14 +96,10 @@ const PdfViewerPage = ({ isEditMode = false }) => {
   // 체크박스 필드 상태 변경 감지
   useEffect(() => {
     if (checkboxFields.length > 0) {
-      console.log('체크박스 필드 상태 변경:', checkboxFields);
+
       // 각 필드의 정사각형 여부 확인
       checkboxFields.forEach(field => {
-        console.log(`체크박스 필드 ${field.id} 비율:`, {
-          너비: field.relativeWidth,
-          높이: field.relativeHeight,
-          정사각형여부: field.relativeWidth === field.relativeHeight
-        });
+
       });
     }
   }, [checkboxFields]);
@@ -308,13 +299,6 @@ const PdfViewerPage = ({ isEditMode = false }) => {
       relativeHeight = TEXT_FIELD_HEIGHT; // 미리보기와 동일한 높이 비율
     }
 
-    console.log('필드 생성 - 크기 값:', { 
-      타입: selectedTool, 
-      너비: relativeWidth, 
-      높이: relativeHeight, 
-      적용된비율: aspectRatio,
-      정사각형_비율적용: `너비 ${relativeWidth} × 높이 ${relativeHeight} = 화면상 정사각형`
-    });
 
     const newField = {
       id: `${selectedTool}-${Date.now()}`,
@@ -327,7 +311,6 @@ const PdfViewerPage = ({ isEditMode = false }) => {
       type: selectedTool
     };
 
-    console.log('새 필드 생성:', newField);
 
     if (selectedTool === 'text') {
       setTextFields(prev => [...prev, newField]);
@@ -335,10 +318,8 @@ const PdfViewerPage = ({ isEditMode = false }) => {
       setTextDescriptionModalOpen(true);
     } else if (selectedTool === 'signature') {
       setSignatureFields(prev => [...prev, newField]);
-      console.log('서명 필드 추가 후:', [...signatureFields, newField]);
     } else if (selectedTool === 'checkbox') {
       setCheckboxFields(prev => [...prev, newField]);
-      console.log('체크박스 필드 추가 후:', [...checkboxFields, newField]);
     } else if (selectedTool === 'confirmText') {
       // confirmText 필드는 즉시 추가하고 빈 값으로 시작
       const confirmField = {
@@ -760,18 +741,17 @@ const PdfViewerPage = ({ isEditMode = false }) => {
 
   // 따라쓰기 텍스트 업데이트 함수 수정
   const handleConfirmTextInput = (fieldId, inputText) => {
-    console.log('서명문구 입력 처리:', { fieldId, inputText });
+
     
     // 관리자 모드에서는 confirmText를 업데이트, 사용자 모드에서는 value를 업데이트
     setConfirmTextFields(prev => {
       const updatedFields = prev.map(field => {
         if (field.id === fieldId) {
           if (field.isEditMode) {
-            console.log('관리자 모드: confirmText 업데이트', inputText);
+
             // 관리자 모드: confirmText 업데이트
             return { ...field, confirmText: inputText };
           } else {
-            console.log('사용자 모드: value 업데이트', inputText);
             // 사용자 모드: value 업데이트 (선택 옵션이 적용된 텍스트)
             return { ...field, value: inputText };
           }
@@ -779,7 +759,6 @@ const PdfViewerPage = ({ isEditMode = false }) => {
         return field;
       });
       
-      console.log('업데이트된 서명문구 필드:', updatedFields);
       return updatedFields;
     });
   };
@@ -1123,7 +1102,7 @@ const PdfViewerPage = ({ isEditMode = false }) => {
         open={confirmTextModalOpen}
         onClose={handleCloseConfirmTextModal}
         onSave={(inputText, extraData) => {
-          console.log('ConfirmTextInputModal onSave 호출:', { inputText, extraData, activeConfirmFieldId });
+
           if (activeConfirmFieldId) {
             handleConfirmTextInput(activeConfirmFieldId, inputText);
           }
@@ -1131,7 +1110,6 @@ const PdfViewerPage = ({ isEditMode = false }) => {
           setConfirmTextModalOpen(false);
         }}
         onUpdate={(originalText) => {
-          console.log('ConfirmTextInputModal onUpdate 호출:', { originalText, activeConfirmFieldId });
           if (activeConfirmFieldId) {
             handleConfirmTextInput(activeConfirmFieldId, originalText);
           }

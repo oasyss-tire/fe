@@ -14,7 +14,12 @@ import {
   Stack,
   Divider,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -51,6 +56,10 @@ const UserDetailPage = () => {
   });
   const [companies, setCompanies] = useState([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+  
+  // 비밀번호 초기화 관련 상태
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // 세션 스토리지에 저장된 사용자 정보 콘솔에 출력 (디버깅용)
   const sessionUser = JSON.parse(sessionStorage.getItem('user') || '{}');
@@ -181,6 +190,48 @@ const UserDetailPage = () => {
   const handleActiveChange = (e) => {
     const newActive = e.target.checked;
     setUser({ ...user, active: newActive });
+  };
+  
+  // 비밀번호 초기화 다이얼로그 열기
+  const handleOpenResetPasswordDialog = () => {
+    setResetPasswordDialogOpen(true);
+  };
+
+  // 비밀번호 초기화 다이얼로그 닫기
+  const handleCloseResetPasswordDialog = () => {
+    setResetPasswordDialogOpen(false);
+  };
+
+  // 비밀번호 초기화 요청 처리
+  const handleResetPassword = async () => {
+    setIsResettingPassword(true);
+    setError(null);
+    try {
+      // 인증 토큰 가져오기
+      const token = sessionStorage.getItem('token');
+      
+      const response = await fetch(`http://localhost:8080/api/users/${user.id}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '비밀번호 초기화에 실패했습니다.');
+      }
+
+      const data = await response.json();
+      setSuccess(data.message || '비밀번호가 초기화되었습니다.');
+      setResetPasswordDialogOpen(false);
+    } catch (error) {
+      console.error('비밀번호 초기화 오류:', error);
+      setError(error.message);
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -463,9 +514,29 @@ const UserDetailPage = () => {
 
           {/* 비밀번호 변경 섹션 */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-              비밀번호 변경
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+                비밀번호 변경
+              </Typography>
+              
+              {/* 관리자용 비밀번호 초기화 버튼 */}
+              {isAdmin && !isSelfEdit && (
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  size="small"
+                  onClick={handleOpenResetPasswordDialog}
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    borderRadius: '4px',
+                    textTransform: 'none',
+                    fontWeight: 500
+                  }}
+                >
+                  비밀번호 초기화
+                </Button>
+              )}
+            </Box>
             <Divider sx={{ mb: 3 }} />
             
             <Stack spacing={3}>
@@ -566,6 +637,63 @@ const UserDetailPage = () => {
           </Box>
         </form>
       </Paper>
+      
+      {/* 비밀번호 초기화 확인 다이얼로그 */}
+      <Dialog
+        open={resetPasswordDialogOpen}
+        onClose={handleCloseResetPasswordDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+            width: '400px',
+            maxWidth: '95vw'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #F0F0F0', 
+          py: 2, 
+          px: 3, 
+          fontSize: '1rem', 
+          fontWeight: 600 
+        }}>
+          비밀번호 초기화 확인
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, pt: 2 }}>
+          <DialogContentText sx={{ color: '#333', fontSize: '0.9rem', mb: 1 ,mt: 1 }}>
+            정말로 <strong>{user.userName}</strong>님의 비밀번호를 초기화하시겠습니까?
+          </DialogContentText>
+          <DialogContentText sx={{ color: '#555', fontSize: '0.85rem' }}>
+            초기화된 비밀번호는 <strong>tb0000!@</strong> 입니다.
+            사용자에게 초기화된 비밀번호를 안내해주세요.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0' }}>
+          <Button 
+            onClick={handleCloseResetPasswordDialog}
+            color="inherit"
+            sx={{ 
+              color: '#666',
+              fontSize: '0.85rem'
+            }}
+          >
+            취소
+          </Button>
+          <Button 
+            onClick={handleResetPassword}
+            color="error"
+            variant="contained"
+            disabled={isResettingPassword}
+            sx={{ 
+              fontSize: '0.85rem',
+              fontWeight: 500
+            }}
+          >
+            {isResettingPassword ? '처리 중...' : '초기화'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -32,7 +32,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   Visibility as VisibilityIcon,
   ViewModule as ViewModuleIcon,
-  ViewList as ViewListIcon
+  ViewList as ViewListIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 
 // 탭 패널 컴포넌트
@@ -60,6 +61,9 @@ const UserMyPage = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth(); // AuthContext에서 현재 로그인한 사용자 정보 가져오기
 
+  // 수정 모드 상태 추가
+  const [isEditMode, setIsEditMode] = useState(false);
+  
   // 탭 상태 추가
   const [tabValue, setTabValue] = useState(0);
   const [viewMode, setViewMode] = useState('table');
@@ -136,6 +140,11 @@ const UserMyPage = () => {
   const handlePhoneNumberChange = (e) => {
     const formattedNumber = formatPhoneNumber(e.target.value);
     setUser({ ...user, phoneNumber: formattedNumber });
+  };
+
+  // 수정 모드 전환 핸들러
+  const handleEditModeToggle = () => {
+    setIsEditMode(true);
   };
 
   // 사용자 정보 가져오기
@@ -298,6 +307,9 @@ const UserMyPage = () => {
           confirmPassword: ''
         });
         
+        // 수정 모드 종료
+        setIsEditMode(false);
+        
         // 업데이트된 사용자 정보 다시 불러오기
         const updatedUserResponse = await fetch(`http://localhost:8080/api/users/${user.id}`, {
           headers: {
@@ -442,9 +454,28 @@ const UserMyPage = () => {
             <form onSubmit={handleSubmit}>
               {/* 기본 정보 섹션 */}
               <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A', mb: 2 }}>
-                  기본 정보
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+                    기본 정보
+                  </Typography>
+                  
+                  {/* 수정 모드 전환 버튼 (편집 모드가 아닐 때만 표시) */}
+                  {!isEditMode && (
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      startIcon={<EditIcon />}
+                      onClick={handleEditModeToggle}
+                      sx={{ 
+                        fontSize: '0.75rem',
+                        textTransform: 'none'
+                      }}
+                    >
+                      수정
+                    </Button>
+                  )}
+                </Box>
                 <Divider sx={{ mb: 3 }} />
                 
                 <Stack spacing={3}>
@@ -467,6 +498,10 @@ const UserMyPage = () => {
                       fullWidth
                       size="small"
                       required
+                      disabled={!isEditMode}
+                      InputProps={{
+                        sx: !isEditMode ? { bgcolor: '#f5f5f5' } : {}
+                      }}
                     />
                   </Box>
                   
@@ -478,6 +513,10 @@ const UserMyPage = () => {
                       onChange={(e) => setUser({ ...user, email: e.target.value })}
                       fullWidth
                       size="small"
+                      disabled={!isEditMode}
+                      InputProps={{
+                        sx: !isEditMode ? { bgcolor: '#f5f5f5' } : {}
+                      }}
                     />
                     
                     <TextField
@@ -489,6 +528,10 @@ const UserMyPage = () => {
                       size="small"
                       inputProps={{
                         maxLength: 13 // 최대 길이 (010-0000-0000)
+                      }}
+                      disabled={!isEditMode}
+                      InputProps={{
+                        sx: !isEditMode ? { bgcolor: '#f5f5f5' } : {}
                       }}
                     />
                   </Box>
@@ -541,6 +584,10 @@ const UserMyPage = () => {
                     helperText={passwordErrors.currentPassword}
                     fullWidth
                     size="small"
+                    disabled={!isEditMode}
+                    InputProps={{
+                      sx: !isEditMode ? { bgcolor: '#f5f5f5' } : {}
+                    }}
                   />
                   
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
@@ -563,6 +610,10 @@ const UserMyPage = () => {
                       helperText={passwordErrors.newPassword}
                       fullWidth
                       size="small"
+                      disabled={!isEditMode}
+                      InputProps={{
+                        sx: !isEditMode ? { bgcolor: '#f5f5f5' } : {}
+                      }}
                     />
 
                     <TextField
@@ -582,48 +633,80 @@ const UserMyPage = () => {
                       helperText={passwordErrors.confirmPassword}
                       fullWidth
                       size="small"
+                      disabled={!isEditMode}
+                      InputProps={{
+                        sx: !isEditMode ? { bgcolor: '#f5f5f5' } : {}
+                      }}
                     />
                   </Box>
                 </Stack>
               </Box>
 
-              {/* 버튼 그룹 */}
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 2, 
-                justifyContent: 'center',
-                mt: 4
-              }}>
-                <Button 
-                  type="submit"
-                  variant="contained" 
-                  disabled={isLoading}
-                  sx={{ 
-                    minWidth: '120px',
-                    bgcolor: '#1976d2',
-                    '&:hover': { bgcolor: '#1565c0' }
-                  }}
-                >
-                  {isLoading ? '저장 중...' : '저장'}
-                </Button>
-                
-                <Button 
-                  variant="outlined"
-                  onClick={() => navigate('/')}
-                  disabled={isLoading}
-                  sx={{ 
-                    minWidth: '120px',
-                    color: '#666',
-                    borderColor: '#666',
-                    '&:hover': {
-                      borderColor: '#1976d2',
-                      color: '#1976d2'
-                    }
-                  }}
-                >
-                  돌아가기
-                </Button>
-              </Box>
+              {/* 버튼 그룹 - 수정 모드일 때만 표시 */}
+              {isEditMode && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 2, 
+                  justifyContent: 'center',
+                  mt: 4
+                }}>
+                  <Button 
+                    type="submit"
+                    variant="contained" 
+                    disabled={isLoading}
+                    sx={{ 
+                      minWidth: '120px',
+                      bgcolor: '#1976d2',
+                      '&:hover': { bgcolor: '#1565c0' }
+                    }}
+                  >
+                    {isLoading ? '저장 중...' : '저장'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outlined"
+                    onClick={() => {
+                      setIsEditMode(false);
+                      // 폼 상태 초기화
+                      const fetchUserData = async () => {
+                        const token = sessionStorage.getItem('token');
+                        const response = await fetch(`http://localhost:8080/api/users/${authUser.id}`, {
+                          headers: {
+                            'Authorization': token ? `Bearer ${token}` : ''
+                          }
+                        });
+                        if (response.ok) {
+                          const data = await response.json();
+                          setUser(data);
+                        }
+                      };
+                      fetchUserData();
+                      setPasswordData({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                      });
+                      setPasswordErrors({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                      });
+                    }}
+                    disabled={isLoading}
+                    sx={{ 
+                      minWidth: '120px',
+                      color: '#666',
+                      borderColor: '#666',
+                      '&:hover': {
+                        borderColor: '#1976d2',
+                        color: '#1976d2'
+                      }
+                    }}
+                  >
+                    취소
+                  </Button>
+                </Box>
+              )}
             </form>
           </Box>
         </TabPanel>

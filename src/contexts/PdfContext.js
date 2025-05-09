@@ -21,12 +21,7 @@ export const PdfProvider = ({
 
   // props가 변경될 때 상태 업데이트
   useEffect(() => {
-    console.log('PdfContext - props 변경됨:', { 
-      initialPdfFile: initialPdfFile ? `${initialPdfFile.name} (${initialPdfFile.size} bytes)` : 'null',
-      initialPdfUrl: initialPdfUrl ? 'URL 존재' : 'null',
-      initialFileName, 
-      initialPdfId
-    });
+
     
     if (initialPdfFile) setPdfFile(initialPdfFile);
     if (initialPdfUrl) setPdfUrl(initialPdfUrl);
@@ -50,10 +45,6 @@ export const PdfProvider = ({
     }
     
     try {
-      console.log('PdfContext - saveFields 실행:', { 
-        pdfId, 
-        fieldsCount: fields.length
-      });
       
       const requestData = {
         pdfId: pdfId,
