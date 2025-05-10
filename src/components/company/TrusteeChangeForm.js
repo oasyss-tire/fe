@@ -299,8 +299,7 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
         insuranceEndDate: formData.insuranceEndDate ? formatDateForServer(formData.insuranceEndDate) : null
       };
       
-      
-      // 부모 컴포넌트의 onSave 함수 호출
+      // 부모 컴포넌트의 onSave 함수 호출 (새로고침은 부모 컴포넌트에서 처리)
       await onSave(formattedData);
       
     } catch (error) {

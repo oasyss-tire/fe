@@ -514,6 +514,12 @@ const CompanyDetail = () => {
         setSuccessMessage(null);
       }, 3000);
       
+      // 페이지 즉시 새로고침
+      window.location.reload();
+      
+      // 성공 응답 반환
+      return { success: true, data: updatedCompany };
+      
     } catch (error) {
       console.error('수탁자 변경 오류:', error);
       setError(error.message || '수탁자 변경에 실패했습니다.');
@@ -522,6 +528,9 @@ const CompanyDetail = () => {
       setTimeout(() => {
         setError(null);
       }, 3000);
+      
+      // 실패 응답 반환
+      return { success: false, error: error.message };
     } finally {
       setIsSubmitting(false);
     }
@@ -1791,7 +1800,12 @@ const CompanyDetail = () => {
             취소
           </Button>
           <Button 
-            onClick={() => document.getElementById('trustee-change-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
+            onClick={() => {
+              // 폼 제출 이벤트 발생
+              document.getElementById('trustee-change-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+              // 즉시 페이지 새로고침
+              window.location.reload();
+            }}
             variant="contained"
             disabled={isSubmitting}
           >
