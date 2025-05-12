@@ -40,24 +40,24 @@ const Signup = () => {
   
   const navigate = useNavigate();
 
-  // 회사 목록 불러오기
+  // 수탁업체 목록 불러오기
   useEffect(() => {
     fetchCompanies();
   }, []);
 
-  // 회사 목록 가져오기
+  // 수탁업체 목록 가져오기
   const fetchCompanies = async () => {
     setIsLoadingCompanies(true);
     try {
       const response = await fetch('http://localhost:8080/api/companies');
       if (!response.ok) {
-        throw new Error('회사 목록을 불러오는데 실패했습니다.');
+        throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
       }
       const data = await response.json();
       setCompanies(data);
     } catch (error) {
-      console.error('회사 목록 조회 오류:', error);
-      setApiError('회사 목록을 불러오는데 실패했습니다.');
+      console.error('수탁업체 목록 조회 오류:', error);
+      setApiError('수탁업체 목록을 불러오는데 실패했습니다.');
     } finally {
       setIsLoadingCompanies(false);
     }
@@ -219,7 +219,7 @@ const Signup = () => {
         
       case 'companyId':
         if (!value) {
-          newErrors.companyId = '회사를 선택해주세요.';
+          newErrors.companyId = '수탁업체를 선택해주세요.';
         } else {
           newErrors.companyId = '';
         }
@@ -302,7 +302,7 @@ const Signup = () => {
     }
     
     if (!formData.companyId) {
-      newErrors.companyId = '회사를 선택해주세요.';
+      newErrors.companyId = '수탁업체를 선택해주세요.';
       isValid = false;
     }
     
@@ -562,12 +562,12 @@ const Signup = () => {
           </FormControl>
 
           <FormControl fullWidth margin="normal" error={!!errors.companyId}>
-            <InputLabel>회사 *</InputLabel>
+            <InputLabel>수탁업체 *</InputLabel>
             <Select
               value={formData.companyId}
               onChange={handleChange}
               name="companyId"
-              label="회사 *"
+              label="수탁업체 *"
               disabled={isLoadingCompanies}
               required
             >

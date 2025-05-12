@@ -75,7 +75,7 @@ const CompanyCreate = () => {
   const [baseAddress, setBaseAddress] = useState('');
   const [detailAddress, setDetailAddress] = useState('');
   
-  // 회사 정보 상태
+  // 수탁업체 정보 상태
   const [companyData, setCompanyData] = useState({
     storeCode: '',
     storeName: '',
@@ -528,7 +528,7 @@ const CompanyCreate = () => {
       let response;
       
       if (hasImages) {
-        // FormData 생성 및 회사 데이터 추가
+        // FormData 생성 및 수탁업체 데이터 추가
         const formData = new FormData();
         formData.append('company', new Blob([JSON.stringify(finalCompanyData)], { type: 'application/json' }));
         
@@ -549,7 +549,7 @@ const CompanyCreate = () => {
           formData.append('fullImage', images.fullImage);
         }
         
-        // 이미지를 포함한 회사 생성 요청
+        // 이미지를 포함한 수탁업체 생성 요청
         response = await fetch('http://localhost:8080/api/companies', {
           method: 'POST',
           headers: {
@@ -558,7 +558,7 @@ const CompanyCreate = () => {
           body: formData
         });
       } else {
-        // 이미지 없이 회사 데이터만 전송
+        // 이미지 없이 수탁업체 데이터만 전송
         response = await fetch('http://localhost:8080/api/companies', {
           method: 'POST',
           headers: {
@@ -574,7 +574,7 @@ const CompanyCreate = () => {
       
       if (!response.ok) {
         // 백엔드에서 보낸 오류 메시지 확인
-        let errorMessage = data.message || '회사 등록에 실패했습니다.';
+        let errorMessage = data.message || '수탁업체 등록에 실패했습니다.';
         
         // 특정 오류 케이스 처리
         if (errorMessage.includes('이미 사용 중인 매장코드')) {
@@ -641,21 +641,21 @@ const CompanyCreate = () => {
       }
       
       // 성공 메시지를 스낵바로 표시
-      setSnackbarMessage('회사가 성공적으로 등록되었습니다.');
+      setSnackbarMessage('수탁업체가 성공적으로 등록되었습니다.');
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
       
       // 성공 알림 표시
       alert('업체 등록이 완료되었습니다.');
       
-      // 회사 목록 페이지로 이동
+      // 수탁업체 목록 페이지로 이동
       navigate('/companies');
       
     } catch (error) {
-      console.error('회사 등록 오류:', error);
+      console.error('수탁업체 등록 오류:', error);
       
       // 오류 메시지 설정
-      const errorMessage = error.message || '회사 등록 중 오류가 발생했습니다.';
+      const errorMessage = error.message || '수탁업체 등록 중 오류가 발생했습니다.';
       setError(errorMessage);
       
       // 오류 메시지를 스낵바로 표시
@@ -778,7 +778,7 @@ const CompanyCreate = () => {
         </Alert>
       )}
 
-      {/* 회사 등록 폼 */}
+      {/* 수탁업체 등록 폼 */}
       <form onSubmit={handleSubmit}>
         {/* 매장 정보 섹션 */}
         <Paper sx={{ 

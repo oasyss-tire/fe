@@ -136,7 +136,7 @@ const FacilitiesRegister = () => {
     fetchCodes();
   }, []);
   
-  // 회사 목록 조회
+  // 수탁업체 목록 조회
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -149,15 +149,15 @@ const FacilitiesRegister = () => {
           const data = await response.json();
           setCompanies(data);
           
-          // 본사 정보 찾기 (ID가 1인 회사)
+          // 본사 정보 찾기 (ID가 1인 수탁업체)
           const hq = data.find(company => company.id === 1);
           if (hq) {
             setHeadquarters(hq);
           }
         }
       } catch (error) {
-        console.error('회사 목록 조회 실패:', error);
-        showSnackbar('회사 목록을 불러오는데 실패했습니다.', 'error');
+        console.error('수탁업체 목록 조회 실패:', error);
+        showSnackbar('수탁업체 목록을 불러오는데 실패했습니다.', 'error');
       }
     };
 
@@ -215,11 +215,11 @@ const FacilitiesRegister = () => {
     }
   };
 
-  // 회사 선택 이벤트 핸들러
+  // 수탁업체 선택 이벤트 핸들러
   const handleCompanyChange = (e) => {
     const companyId = parseInt(e.target.value, 10);
     
-    // 선택된 회사 찾기
+    // 선택된 수탁업체 찾기
     const selectedCompany = companies.find(company => company.id === companyId);
     
     if (selectedCompany) {

@@ -212,13 +212,13 @@ const ContractList = () => {
       setSelectedContract(contract);
       
       // 수정: with-trustee API에서는 company 객체가 별도로 없고 계약 객체에 통합되어 있음
-      // 회사 정보를 직접 생성하여 설정
+      // 수탁업체 정보를 직접 생성하여 설정
       const companyInfo = {
         id: contract.companyId,
         storeName: contract.storeName || contract.companyName,
         trustee: contract.trustee,
         companyName: contract.companyName,
-        // 필요한 다른 회사 관련 필드들 추가
+        // 필요한 다른 수탁업체 관련 필드들 추가
         businessNumber: contract.businessNumber,
         representativeName: contract.representativeName
       };

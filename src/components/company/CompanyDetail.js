@@ -66,7 +66,7 @@ const CompanyDetail = () => {
   const handleOpenTrusteeDialog = () => setOpenTrusteeDialog(true);
   const handleCloseTrusteeDialog = () => setOpenTrusteeDialog(false);
 
-  // 회사 정보 조회 함수
+  // 수탁업체 정보 조회 함수
   const fetchCompanyData = async () => {
     setIsLoading(true);
     setError(null);
@@ -82,7 +82,7 @@ const CompanyDetail = () => {
       });
       
       if (!response.ok) {
-        throw new Error('회사 정보를 불러오는데 실패했습니다.');
+        throw new Error('수탁업체 정보를 불러오는데 실패했습니다.');
       }
       
       const data = await response.json();
@@ -114,8 +114,8 @@ const CompanyDetail = () => {
       });
       
     } catch (error) {
-      console.error('회사 정보 조회 오류:', error);
-      setError(error.message || '회사 정보를 불러오는데 실패했습니다.');
+      console.error('수탁업체 정보 조회 오류:', error);
+      setError(error.message || '수탁업체 정보를 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -375,7 +375,7 @@ const CompanyDetail = () => {
     }
   };
 
-  // 회사 정보 수정 제출 핸들러
+  // 수탁업체 정보 수정 제출 핸들러
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -404,7 +404,7 @@ const CompanyDetail = () => {
         // FormData 객체 생성
         const formDataObj = new FormData();
         
-        // 회사 정보를 JSON 문자열로 변환하여 추가
+        // 수탁업체 정보를 JSON 문자열로 변환하여 추가
         formDataObj.append('company', new Blob([JSON.stringify(formattedData)], { type: 'application/json' }));
         
         // 이미지 파일 추가
@@ -414,7 +414,7 @@ const CompanyDetail = () => {
         if (imageFiles.rightSideImage) formDataObj.append('rightSideImage', imageFiles.rightSideImage);
         if (imageFiles.fullImage) formDataObj.append('fullImage', imageFiles.fullImage);
         
-        // 회사 정보와 이미지 함께 수정 API 호출
+        // 수탁업체 정보와 이미지 함께 수정 API 호출
         const response = await fetch(`http://localhost:8080/api/companies/${companyId}/with-images`, {
           method: 'PUT',
           headers: {
@@ -424,14 +424,14 @@ const CompanyDetail = () => {
         });
         
         if (!response.ok) {
-          throw new Error('회사 정보 수정에 실패했습니다.');
+          throw new Error('수탁업체 정보 수정에 실패했습니다.');
         }
         
         const updatedCompany = await response.json();
         setCompany(updatedCompany);
         
       } else {
-        // 이미지 없이 회사 정보만 수정 API 호출
+        // 이미지 없이 수탁업체 정보만 수정 API 호출
         const response = await fetch(`http://localhost:8080/api/companies/${companyId}`, {
           method: 'PUT',
           headers: {
@@ -442,14 +442,14 @@ const CompanyDetail = () => {
         });
         
         if (!response.ok) {
-          throw new Error('회사 정보 수정에 실패했습니다.');
+          throw new Error('수탁업체 정보 수정에 실패했습니다.');
         }
         
         const updatedCompany = await response.json();
         setCompany(updatedCompany);
       }
       
-      setSuccessMessage('회사 정보가 성공적으로 수정되었습니다.');
+      setSuccessMessage('수탁업체 정보가 성공적으로 수정되었습니다.');
       
       // 이미지 파일 및 미리보기 초기화
       setImageFiles({
@@ -476,8 +476,8 @@ const CompanyDetail = () => {
       setIsEditing(false);
       
     } catch (error) {
-      console.error('회사 정보 수정 오류:', error);
-      setError(error.message || '회사 정보 수정에 실패했습니다.');
+      console.error('수탁업체 정보 수정 오류:', error);
+      setError(error.message || '수탁업체 정보 수정에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }

@@ -538,8 +538,8 @@ const FacilityHistoryPage = () => {
                 <TableCell width={200} sx={{ px: 2 }}>시설물 정보</TableCell>
                 <TableCell width={100} sx={{ px: 2 }}>유형</TableCell>
                 <TableCell width={150} sx={{ px: 2 }}>변경 전/후 상태</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>출발 회사</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>도착 회사</TableCell>
+                <TableCell width={120} sx={{ px: 2 }}>출발 수탁업체</TableCell>
+                <TableCell width={120} sx={{ px: 2 }}>도착 수탁업체</TableCell>
                 <TableCell width={120} sx={{ px: 2 }}>처리일자</TableCell>
                 <TableCell width={100} sx={{ px: 2 }}>처리자</TableCell>
                 <TableCell width={150} sx={{ px: 2 }}>비고</TableCell>
@@ -836,8 +836,10 @@ const FacilityHistoryPage = () => {
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="시설물 이동 이력" {...a11yProps(0)} />
+          {/* 임시 비활성화
           <Tab label="자산 회계 이력" {...a11yProps(1)} />
           <Tab label="감가상각 이력" {...a11yProps(2)} />
+          */}
         </Tabs>
       </Paper>
 
@@ -846,12 +848,14 @@ const FacilityHistoryPage = () => {
       <TabPanel value={tabValue} index={0}>
         {renderFacilityTransactionTable()}
       </TabPanel>
+      {/* 임시 비활성화
       <TabPanel value={tabValue} index={1}>
         {renderVoucherTransactionTable()}
       </TabPanel>
       <TabPanel value={tabValue} index={2}>
         {renderDepreciationHistoryTable()}
       </TabPanel>
+      */}
 
       <Snackbar
         open={snackbar.open}

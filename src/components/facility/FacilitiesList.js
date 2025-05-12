@@ -20,7 +20,9 @@ import {
   Pagination,
   CircularProgress,
   Snackbar,
-  Alert
+  Alert,
+  Tabs,
+  Tab
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -28,21 +30,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-
-// 시설물 유형 코드 맵핑
-const facilityTypeMap = {
-  '002001_0001': { name: '리프트', index: 0 },
-  '002001_0002': { name: '탈부착기', index: 1 },
-  '002001_0003': { name: '밸런스기', index: 2 },
-  '002001_0004': { name: '얼라이먼트', index: 3 },
-  '002001_0005': { name: '타이어호텔', index: 4 },
-  '002001_0006': { name: '에어메이트', index: 5 },
-  '002001_0007': { name: '콤프레샤', index: 6 },
-  '002001_0008': { name: '비드부스터', index: 7 },
-  '002001_0009': { name: '체인리프트', index: 8 },
-  '002001_0010': { name: '전기시설', index: 9 },
-  '002001_0011': { name: '기타설비', index: 10 }
-};
+import FacilityTypeList from './FacilityTypeList';
 
 // 시설물 상태 코드 맵핑
 const statusColorMap = {
@@ -53,21 +41,56 @@ const statusColorMap = {
   '002003_0006': 'success'  // AS 완료
 };
 
+// 시설물별 조회 컴포넌트 (임시 - 나중에 별도 파일로 분리 가능)
+const FacilityTypeView = () => {
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h6" sx={{ mb: 3 }}>
+        시설물별 조회 (준비 중)
+      </Typography>
+      <Paper sx={{ p: 5, textAlign: 'center' }}>
+        <Typography variant="body1" color="textSecondary">
+          시설물별 조회 기능은 개발 중입니다.
+        </Typography>
+      </Paper>
+    </Box>
+  );
+};
+
+// 탭 패널 컴포넌트
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`facility-tabpanel-${index}`}
+      aria-labelledby={`facility-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
 const FacilitiesList = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [facilityTypesLoading, setFacilityTypesLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [facilities, setFacilities] = useState([]);
+  const [facilityTypes, setFacilityTypes] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
   const [selectedFacilities, setSelectedFacilities] = useState([]);
   const [viewAllFacilities, setViewAllFacilities] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [statistics, setStatistics] = useState({
-    totalRequests: 145,
-    completedRequests: 142,
-    pendingRequests: 69
-  });
+  const [tabValue, setTabValue] = useState(0); // 탭 상태 추가
 
   // 알림 상태
   const [snackbar, setSnackbar] = useState({
@@ -76,8 +99,8 @@ const FacilitiesList = () => {
     severity: 'info'
   });
 
-  // 각 회사별 시설물 유형 개수 매핑 (2차원 배열)
-  const [facilityCountMatrix, setFacilityCountMatrix] = useState([]);
+  // 각 수탁업체별 시설물 유형 개수 매핑 (2차원 배열)
+  const [facilityCountMatrix, setFacilityCountMatrix] = useState({});
   
   // 페이지네이션
   const [page, setPage] = useState(0);
@@ -85,11 +108,49 @@ const FacilitiesList = () => {
 
   // 초기 데이터 로딩
   useEffect(() => {
+    fetchFacilityTypes();
     fetchCompanies();
-    fetchFacilities();
   }, []);
 
-  // 회사 목록 조회
+  // 시설물 유형 코드 조회 후 시설물 목록 조회
+  useEffect(() => {
+    if (facilityTypes.length > 0) {
+      fetchFacilities();
+    }
+  }, [facilityTypes]);
+
+  // 탭 변경 핸들러
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  // 시설물 유형 코드 조회
+  const fetchFacilityTypes = async () => {
+    setFacilityTypesLoading(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/codes/groups/002001/codes/active', {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('시설물 유형 코드를 불러오는데 실패했습니다.');
+      }
+
+      const data = await response.json();
+      // sortOrder 기준으로 정렬
+      const sortedData = data.sort((a, b) => a.sortOrder - b.sortOrder);
+      setFacilityTypes(sortedData);
+    } catch (error) {
+      console.error('시설물 유형 코드 조회 실패:', error);
+      showSnackbar('시설물 유형 코드를 불러오는데 실패했습니다.', 'error');
+    } finally {
+      setFacilityTypesLoading(false);
+    }
+  };
+
+  // 수탁업체 목록 조회
   const fetchCompanies = async () => {
     setLoading(true);
     try {
@@ -100,14 +161,14 @@ const FacilitiesList = () => {
       });
 
       if (!response.ok) {
-        throw new Error('회사 목록을 불러오는데 실패했습니다.');
+        throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
       }
 
       const data = await response.json();
       setCompanies(data);
     } catch (error) {
-      console.error('회사 목록 조회 실패:', error);
-      showSnackbar('회사 목록을 불러오는데 실패했습니다.', 'error');
+      console.error('수탁업체 목록 조회 실패:', error);
+      showSnackbar('수탁업체 목록을 불러오는데 실패했습니다.', 'error');
     } finally {
       setLoading(false);
     }
@@ -141,28 +202,31 @@ const FacilitiesList = () => {
     }
   };
 
-  // 회사별, 시설물 유형별 개수 매트릭스 생성
+  // 수탁업체별, 시설물 유형별 개수 매트릭스 생성
   const createFacilityMatrix = (facilities) => {
-    // 1. 회사별 맵 생성
+    // 1. 수탁업체별 맵 생성
     const companyMap = {};
     
-    // 2. 각 회사마다 시설물 유형별 개수 계산
+    // 2. 각 수탁업체마다 시설물 유형별 개수 계산
     facilities.forEach(facility => {
       const locationCompanyId = facility.locationCompanyId;
       const typeCode = facility.facilityTypeCode;
       
       if (!companyMap[locationCompanyId]) {
-        companyMap[locationCompanyId] = Array(Object.keys(facilityTypeMap).length).fill(0);
+        companyMap[locationCompanyId] = {};
       }
       
-      const typeIndex = facilityTypeMap[typeCode]?.index || 0;
-      companyMap[locationCompanyId][typeIndex] += 1; // 각 시설물마다 1개씩 카운트
+      if (!companyMap[locationCompanyId][typeCode]) {
+        companyMap[locationCompanyId][typeCode] = 0;
+      }
+      
+      companyMap[locationCompanyId][typeCode] += 1; // 각 시설물마다 1개씩 카운트
     });
     
     setFacilityCountMatrix(companyMap);
   };
 
-  // 특정 회사, 특정 시설물 유형 선택 시 해당 시설물 목록 필터링
+  // 특정 수탁업체, 특정 시설물 유형 선택 시 해당 시설물 목록 필터링
   const handleCellClick = (companyId, typeCode) => {
     setSelectedCompany(companyId);
     setSelectedType(typeCode);
@@ -222,7 +286,6 @@ const FacilitiesList = () => {
   const filteredCompanies = searchKeyword
     ? companies.filter(company => 
         company.storeName.includes(searchKeyword) || 
-        company.storeNumber.includes(searchKeyword) ||
         company.phoneNumber.includes(searchKeyword)
       )
     : companies;
@@ -250,123 +313,18 @@ const FacilitiesList = () => {
     }
   };
 
-  return (
-    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
-      {/* 상단 헤더 */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        mb: 3 
-      }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          시설물 관리
-        </Typography>
+  // 특정 수탁업체, 특정 유형의 고장/수리중 상태 시설물이 있는지 확인
+  const hasFailed = (companyId, typeCode) => {
+    return facilities.some(
+      f => f.locationCompanyId === companyId && 
+           f.facilityTypeCode === typeCode && 
+           ['002003_0002', '002003_0003'].includes(f.statusCode)
+    );
+  };
 
-        {/* 통계 카드 */}
-        <Box sx={{ 
-          display: 'flex',
-          gap: 1.5,
-          backgroundColor: '#E8F3FF',
-          p: 1.5,
-          borderRadius: 1
-        }}>
-          <Box sx={{ 
-            px: 2.5, 
-            py: 1, 
-            backgroundColor: '#E8F3FF', 
-            borderRadius: 1,
-            minWidth: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <Typography 
-              variant="caption" 
-              color="text.secondary" 
-              sx={{ 
-                fontSize: '0.75rem',
-                mb: 0.5 
-              }}
-            >
-              당월 요청
-            </Typography>
-            <Typography 
-              color="primary" 
-              sx={{ 
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                lineHeight: 1 
-              }}
-            >
-              {statistics.totalRequests}
-            </Typography>
-          </Box>
-          <Box sx={{ 
-            px: 2.5, 
-            py: 1, 
-            backgroundColor: '#E8F3FF', 
-            borderRadius: 1,
-            minWidth: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <Typography 
-              variant="caption" 
-              color="text.secondary" 
-              sx={{ 
-                fontSize: '0.75rem',
-                mb: 0.5 
-              }}
-            >
-              당월 완료
-            </Typography>
-            <Typography 
-              color="primary" 
-              sx={{ 
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                lineHeight: 1
-              }}
-            >
-              {statistics.completedRequests}
-            </Typography>
-          </Box>
-          <Box sx={{ 
-            px: 2.5, 
-            py: 1, 
-            backgroundColor: '#E8F3FF', 
-            borderRadius: 1,
-            minWidth: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <Typography 
-              variant="caption" 
-              color="text.secondary" 
-              sx={{ 
-                fontSize: '0.75rem',
-                mb: 0.5 
-              }}
-            >
-              전체 대기 수
-            </Typography>
-            <Typography 
-              color="primary" 
-              sx={{ 
-                fontSize: '1.125rem',
-                fontWeight: 600,
-                lineHeight: 1
-              }}
-            >
-              {statistics.pendingRequests}
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
-
+  // 매장별 조회 컴포넌트 렌더링
+  const renderCompanyView = () => (
+    <>
       {/* 검색 및 도구 바 */}
       <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'flex-end' }}>
         <Box sx={{ flex: 1 }}>
@@ -374,7 +332,7 @@ const FacilitiesList = () => {
             매장 검색
           </Typography>
           <TextField
-            placeholder="매장명, 점번 검색"
+            placeholder="매장명, 전화번호 검색"
             size="small"
             value={searchKeyword}
             onChange={handleSearchChange}
@@ -416,7 +374,7 @@ const FacilitiesList = () => {
       </Box>
 
       {/* 메인 테이블 */}
-      {loading ? (
+      {(loading || facilityTypesLoading) ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
           <CircularProgress />
         </Box>
@@ -426,22 +384,28 @@ const FacilitiesList = () => {
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>No.</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>점번</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>매장명</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>매장전화</TableCell>
-                  {Object.values(facilityTypeMap).sort((a, b) => a.index - b.index).map(type => (
-                    <TableCell key={type.name} align="center" sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>
-                      {type.name}
+                  {facilityTypes.map(type => (
+                    <TableCell 
+                      key={type.codeId} 
+                      align="center" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        backgroundColor: '#F8F9FA',
+                        padding: '6px 8px', // 패딩 줄임
+                      }}
+                    >
+
+                        {type.codeName}
+
                     </TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredCompanies.map((company, index) => (
+                {filteredCompanies.map((company) => (
                   <TableRow key={company.id} hover>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{company.storeNumber}</TableCell>
                     <TableCell 
                       onClick={() => handleStoreNameClick(company.id)}
                       sx={{ 
@@ -455,25 +419,22 @@ const FacilitiesList = () => {
                       {company.storeName}
                     </TableCell>
                     <TableCell>{company.phoneNumber}</TableCell>
-                    {Object.entries(facilityTypeMap).sort((a, b) => a[1].index - b[1].index).map(([typeCode, type]) => {
-                      const count = facilityCountMatrix[company.id]?.[type.index] || 0;
-                      const hasFailed = facilities.some(
-                        f => f.locationCompanyId === company.id && 
-                             f.facilityTypeCode === typeCode && 
-                             ['002003_0002', '002003_0003'].includes(f.statusCode)
-                      );
+                    {facilityTypes.map(type => {
+                      const count = facilityCountMatrix[company.id]?.[type.codeId] || 0;
+                      const hasFailedStatus = hasFailed(company.id, type.codeId);
                       
                       return (
                         <TableCell 
-                          key={`${company.id}-${typeCode}`} 
+                          key={`${company.id}-${type.codeId}`} 
                           align="center"
-                          onClick={() => handleCellClick(company.id, typeCode)}
+                          onClick={() => handleCellClick(company.id, type.codeId)}
                           sx={{ 
                             cursor: 'pointer',
-                            backgroundColor: hasFailed ? '#ffebee' : (count > 0 ? '#f1f8e9' : 'inherit'),
+                            backgroundColor: hasFailedStatus ? '#ffebee' : (count > 0 ? '#f1f8e9' : 'inherit'),
                             '&:hover': {
                               backgroundColor: '#e3f2fd',
-                            }
+                            },
+                            padding: '6px 8px', // 패딩 줄임
                           }}
                         >
                           {count}
@@ -498,7 +459,7 @@ const FacilitiesList = () => {
             <Typography variant="body2" color="textSecondary">
               {companies.find(c => c.id === selectedCompany)?.storeName} 
               {!viewAllFacilities && selectedType && (
-                ` - ${facilityTypeMap[selectedType]?.name}`
+                ` - ${facilityTypes.find(t => t.codeId === selectedType)?.codeName}`
               )} 
               ({selectedFacilities.length}개)
             </Typography>
@@ -508,7 +469,6 @@ const FacilitiesList = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>No.</TableCell>
                   <TableCell>매장명</TableCell>
                   <TableCell>시설구분</TableCell>
                   <TableCell>품목</TableCell>
@@ -525,7 +485,7 @@ const FacilitiesList = () => {
               <TableBody>
                 {selectedFacilities.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} align="center">
+                    <TableCell colSpan={11} align="center">
                       선택된 시설물이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -537,7 +497,6 @@ const FacilitiesList = () => {
                       onClick={() => handleViewFacility(facility.facilityId)}
                       sx={{ cursor: 'pointer' }}
                     >
-                      <TableCell>{index + 1}</TableCell>
                       <TableCell>{facility.locationStoreName}</TableCell>
                       <TableCell>{facility.facilityTypeName}</TableCell>
                       <TableCell>{facility.brandName}</TableCell>
@@ -602,6 +561,43 @@ const FacilitiesList = () => {
           )}
         </Paper>
       )}
+    </>
+  );
+
+  return (
+    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+      {/* 상단 헤더 */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 3 
+      }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+          시설물 관리
+        </Typography>
+      </Box>
+
+      {/* 탭 네비게이션 */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+        >
+          <Tab label="매장별 조회" id="facility-tab-0" aria-controls="facility-tabpanel-0" />
+          <Tab label="시설물별 조회" id="facility-tab-1" aria-controls="facility-tabpanel-1" />
+        </Tabs>
+      </Box>
+
+      {/* 탭 컨텐츠 */}
+      <TabPanel value={tabValue} index={0}>
+        {renderCompanyView()}
+      </TabPanel>
+      <TabPanel value={tabValue} index={1}>
+        <FacilityTypeList />
+      </TabPanel>
 
       {/* 알림 스낵바 */}
       <Snackbar

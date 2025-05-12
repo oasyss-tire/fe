@@ -76,7 +76,7 @@ const UserDetailPage = () => {
   // 권한 및 상태 수정 가능 여부 확인
   const canEditRoleAndStatus = isAdmin; // 관리자만 권한과 상태 수정 가능
 
-  // 회사 목록 가져오기
+  // 수탁업체 목록 가져오기
   useEffect(() => {
     if (isAdmin) {
       fetchCompanies();
@@ -93,12 +93,12 @@ const UserDetailPage = () => {
         }
       });
       if (!response.ok) {
-        throw new Error('회사 목록을 불러오는데 실패했습니다.');
+        throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
       }
       const data = await response.json();
       setCompanies(data);
     } catch (error) {
-      console.error('회사 목록 조회 오류:', error);
+      console.error('수탁업체 목록 조회 오류:', error);
     } finally {
       setIsLoadingCompanies(false);
     }
@@ -134,7 +134,7 @@ const UserDetailPage = () => {
     setUser({ ...user, phoneNumber: formattedNumber });
   };
 
-  // 회사 변경 핸들러
+  // 수탁업체 변경 핸들러
   const handleCompanyChange = (e) => {
     const companyId = e.target.value;
     const selectedCompany = companies.find(c => c.id === companyId);
@@ -439,11 +439,11 @@ const UserDetailPage = () => {
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                 {isAdmin ? (
                   <FormControl fullWidth size="small">
-                    <InputLabel>회사</InputLabel>
+                    <InputLabel>수탁업체</InputLabel>
                     <Select
                       value={user.companyId || ''}
                       onChange={handleCompanyChange}
-                      label="회사"
+                      label="수탁업체"
                       disabled={isLoadingCompanies}
                     >
                       {isLoadingCompanies ? (
@@ -459,8 +459,8 @@ const UserDetailPage = () => {
                   </FormControl>
                 ) : (
                   <TextField
-                    label="회사"
-                    value={user.companyName ? `${user.companyName} (${user.storeCode})` : '회사 정보 없음'}
+                    label="수탁업체"
+                    value={user.companyName ? `${user.companyName} (${user.storeCode})` : '수탁업체 정보 없음'}
                     fullWidth
                     disabled
                     size="small"

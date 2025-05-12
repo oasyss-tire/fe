@@ -61,7 +61,7 @@ const CompanyList = () => {
   
   const navigate = useNavigate();
 
-  // 회사 목록 조회 함수 (모든 회사 한 번에 가져오기)
+  // 수탁업체 목록 조회 함수 (모든 수탁업체 한 번에 가져오기)
   const fetchCompanies = async () => {
     setIsLoading(true);
     setError(null);
@@ -80,20 +80,20 @@ const CompanyList = () => {
       });
       
       if (!response.ok) {
-        throw new Error('회사 목록을 불러오는데 실패했습니다.');
+        throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
       }
       
       const data = await response.json();
       
-      // 모든 회사 데이터 저장
+      // 모든 수탁업체 데이터 저장
       setAllCompanies(data);
       
       // 필터링 적용
       applyFilters(data);
 
     } catch (error) {
-      console.error('회사 목록 조회 오류:', error);
-      setError(error.message || '회사 목록을 불러오는데 실패했습니다.');
+      console.error('수탁업체 목록 조회 오류:', error);
+      setError(error.message || '수탁업체 목록을 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
     }

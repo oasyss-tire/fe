@@ -161,7 +161,7 @@ const ContractRenewModal = ({ open, onClose, contract, company, onSuccess }) => 
       // 생성된 계약 정보에 대해 이메일 및 SMS 발송 (ContractSend.js와 동일한 방식)
       if (result.id && result.participants && result.participants.length > 0) {
         try {
-          // 계약 제목 준비 (API 응답, 회사 정보 활용)
+          // 계약 제목 준비 (API 응답, 수탁업체 정보 활용)
           const contractTitle = result.title || `${company?.storeName || ''} - 재계약`;
           
           // 이메일과 SMS 발송 요청을 병렬로 처리 (계약 제목 명시적 전달)

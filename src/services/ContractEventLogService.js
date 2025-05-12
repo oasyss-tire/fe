@@ -8,7 +8,7 @@ const BASE_URL = 'http://localhost:8080/api/contract-event-logs';
  */
 class ContractEventLogService {
   /**
-   * 회사 목록 조회 API (이력 관리용)
+   * 수탁업체 목록 조회 API (이력 관리용)
    * @param {string} keyword 검색 키워드 (선택)
    * @returns {Promise} API 응답
    */
@@ -19,8 +19,8 @@ class ContractEventLogService {
   }
 
   /**
-   * 특정 회사의 계약 목록 조회 API
-   * @param {number} companyId 회사 ID
+   * 특정 수탁업체의 계약 목록 조회 API
+   * @param {number} companyId 수탁업체 ID
    * @returns {Promise} API 응답
    */
   getContractsByCompanyForLog(companyId) {

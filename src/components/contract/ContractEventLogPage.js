@@ -47,7 +47,7 @@ const ContractEventLogPage = () => {
   const [searchApplied, setSearchApplied] = useState(false);
   const [error, setError] = useState(null);
   
-  // 선택된 회사 및 계약 정보
+  // 선택된 수탁업체 및 계약 정보
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
   
@@ -76,7 +76,7 @@ const ContractEventLogPage = () => {
     { value: '001005_0012', label: '참여자 문서 업로드' }
   ];
 
-  // 회사와 계약 선택 처리
+  // 수탁업체와 계약 선택 처리
   const handleSelectCompanyAndContract = (company, contract) => {
     setSelectedCompany(company);
     setSelectedContract(contract);
