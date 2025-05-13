@@ -26,11 +26,15 @@ import {
   DialogContentText,
   DialogActions,
   InputLabel,
-  InputAdornment as MuiInputAdornment
+  InputAdornment as MuiInputAdornment,
+  Grid,
+  IconButton
 } from '@mui/material';
 import { 
   Search as SearchIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  CloudUpload as CloudUploadIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -85,6 +89,11 @@ const ServiceRequestList = () => {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [repairCost, setRepairCost] = useState('');
   const [formattedRepairCost, setFormattedRepairCost] = useState('');
+  
+  // 이미지 업로드 관련 상태 추가
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const [uploadError, setUploadError] = useState('');
   
   // 초기 데이터 로딩
   useEffect(() => {
@@ -333,22 +342,101 @@ const ServiceRequestList = () => {
     fetchRequestDetail(serviceRequestId);
     setRepairCost('');
     setFormattedRepairCost('');
+    // 이미지 상태 초기화 추가
+    setUploadedImages([]);
+    setImagePreviewUrls([]);
+    setUploadError('');
     setCompleteDialogOpen(true);
+  };
+  
+  // 이미지 업로드 핸들러
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    
+    // 파일 유효성 검사
+    const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
+    if (invalidFiles.length > 0) {
+      setUploadError('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+    
+    // 이미지 크기 제한 (5MB)
+    const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      setUploadError('이미지 크기는 5MB 이하여야 합니다.');
+      return;
+    }
+    
+    // 최대 이미지 개수 제한 (4개)
+    if (uploadedImages.length + files.length > 4) {
+      setUploadError('최대 4개까지 이미지를 업로드할 수 있습니다.');
+      return;
+    }
+    
+    setUploadError('');
+    
+    // 새 이미지 추가
+    setUploadedImages(prevImages => [...prevImages, ...files]);
+    
+    // 이미지 미리보기 URL 생성
+    const newImageUrls = files.map(file => URL.createObjectURL(file));
+    setImagePreviewUrls(prevUrls => [...prevUrls, ...newImageUrls]);
+  };
+  
+  // 이미지 삭제 핸들러
+  const handleRemoveImage = (index) => {
+    // 미리보기 URL 해제
+    URL.revokeObjectURL(imagePreviewUrls[index]);
+    
+    // 해당 이미지 삭제
+    setUploadedImages(prevImages => prevImages.filter((_, i) => i !== index));
+    setImagePreviewUrls(prevUrls => prevUrls.filter((_, i) => i !== index));
   };
   
   // AS 요청 완료 제출
   const submitCompletion = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/complete`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      let response;
+      
+      // 이미지가 있는 경우와 없는 경우에 따라 다른 API 호출
+      if (uploadedImages.length > 0) {
+        // FormData 객체 생성
+        const formDataObj = new FormData();
+        
+        // JSON 데이터를 문자열로 변환하여 추가
+        const requestData = {
           cost: parseInt(repairCost, 10) || 0
-        })
-      });
+        };
+        
+        formDataObj.append('request', JSON.stringify(requestData));
+        
+        // 이미지 파일 추가
+        uploadedImages.forEach((file, index) => {
+          formDataObj.append('images', file);
+        });
+        
+        // 이미지를 포함한 API 호출
+        response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/complete-with-images`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            // Content-Type은 FormData를 사용할 때 자동으로 설정됨
+          },
+          body: formDataObj
+        });
+      } else {
+        // 이미지가 없는 경우 기존 API 호출
+        response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/complete`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            cost: parseInt(repairCost, 10) || 0
+          })
+        });
+      }
       
       if (!response.ok) {
         throw new Error('AS 요청 완료 처리에 실패했습니다.');
@@ -830,6 +918,8 @@ const ServiceRequestList = () => {
       <Dialog 
         open={completeDialogOpen} 
         onClose={() => setCompleteDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
       >
         <DialogTitle>AS 완료 처리</DialogTitle>
         <DialogContent>
@@ -856,6 +946,101 @@ const ServiceRequestList = () => {
                 }}
                 sx={{ mb: 2 }}
               />
+              
+              {/* 이미지 업로드 영역 추가 */}
+              <Box sx={{ mb: 2, mt: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>AS 완료 이미지 첨부 (선택)</Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{
+                    borderColor: '#E0E0E0',
+                    color: '#666',
+                    '&:hover': {
+                      borderColor: '#BDBDBD',
+                      bgcolor: '#F5F5F5',
+                    }
+                  }}
+                >
+                  이미지 업로드
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    onChange={handleImageUpload}
+                  />
+                </Button>
+                <Typography variant="caption" color="textSecondary" sx={{ ml: 2, display: 'inline-block' }}>
+                  최대 4개, 파일당 5MB 이하의 이미지만 업로드 가능합니다.
+                </Typography>
+              </Box>
+              
+              {uploadError && (
+                <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+                  {uploadError}
+                </Typography>
+              )}
+              
+              {imagePreviewUrls.length > 0 && (
+                <Box sx={{ 
+                  border: '1px solid #E0E0E0', 
+                  borderRadius: 1, 
+                  p: 2, 
+                  backgroundColor: '#FAFAFA',
+                  mb: 2
+                }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    첨부된 이미지 ({imagePreviewUrls.length}/4)
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {imagePreviewUrls.map((url, index) => (
+                      <Grid item xs={6} sm={3} key={index}>
+                        <Box
+                          sx={{
+                            position: 'relative',
+                            width: '100%',
+                            borderRadius: 1,
+                            overflow: 'hidden',
+                            bgcolor: '#F5F5F5',
+                            border: '1px solid #E0E0E0',
+                            aspectRatio: '1/1',
+                          }}
+                        >
+                          <img
+                            src={url}
+                            alt={`첨부 이미지 ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              bgcolor: 'rgba(255, 255, 255, 0.8)',
+                              '&:hover': {
+                                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                              },
+                            }}
+                            onClick={() => handleRemoveImage(index)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                        <Typography variant="caption" color="textSecondary" noWrap sx={{ display: 'block', mt: 0.5 }}>
+                          {uploadedImages[index].name}
+                        </Typography>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
             </Box>
           )}
         </DialogContent>

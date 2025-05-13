@@ -1411,11 +1411,6 @@ const FacilityTransfer = () => {
                           borderColor: '#E0E0E0',
                         },
                       }}
-                      startAdornment={
-                        operationType === 'move' 
-                          ? <SwapHorizIcon sx={{ mr: 1, color: '#1976d2' }} /> 
-                          : <DeleteForeverIcon sx={{ mr: 1, color: '#d32f2f' }} />
-                      }
                     >
                       <MenuItem value="move">시설물 이동</MenuItem>
                       <MenuItem value="dispose">시설물 폐기</MenuItem>
