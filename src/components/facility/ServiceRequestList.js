@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Box, 
   Typography, 
@@ -34,42 +34,56 @@ import {
   Search as SearchIcon,
   Add as AddIcon,
   CloudUpload as CloudUploadIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parse, isValid, isAfter, isBefore, parseISO } from 'date-fns';
+
+// 커스텀 다이얼로그 컴포넌트
+import ApproveRequestDialog from './ApproveRequestDialog';
+import CompleteRequestDialog from './CompleteRequestDialog';
+import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
 
 // AS 상태 칩 색상 매핑
 const statusColorMap = {
   '002010_0001': 'default', // 접수중
-  '002010_0002': 'warning', // AS 접수완료
-  '002010_0003': 'success'  // AS 수리완료
+  '002010_0002': 'default', // AS 접수완료
+  '002010_0003': 'default'  // AS 수리완료
 };
 
 // 시설물 상태 칩 색상 매핑
 const facilityStatusColorMap = {
-  '002003_0001': 'success', // 사용중 (정상)
-  '002003_0002': 'error',   // 수리중
-  '002003_0005': 'default'  // 폐기
+  '002003_0001': 'default', // 사용중
+  '002003_0002': 'default', // 수리중
+  '002003_0003': 'default', // 폐기
+  '002003_0004': 'default', // 임대중
+  '002003_0005': 'default', // 폐기
+  '002003_0006': 'default'  // 수리 완료
 };
 
 const ServiceRequestList = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [serviceRequests, setServiceRequests] = useState([]);
-  const [serviceTypes, setServiceTypes] = useState([]);
-  const [priorityCodes, setPriorityCodes] = useState([]);
-  const [statusCodes, setStatusCodes] = useState([]);
+  const [allServiceRequests, setAllServiceRequests] = useState([]); // 모든 데이터를 저장할 상태
+  const [serviceStatusCodes, setServiceStatusCodes] = useState([]); // AS 상태 코드 (002010)
+  const [departmentCodes, setDepartmentCodes] = useState([]); // 담당 부서 코드 (003001)
   
   // 검색 필터 상태
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedStatusCode, setSelectedStatusCode] = useState('');
-  const [selectedTypeCode, setSelectedTypeCode] = useState('');
-  const [selectedPriorityCode, setSelectedPriorityCode] = useState('');
+  const [selectedServiceStatusCode, setSelectedServiceStatusCode] = useState(''); // AS 상태 코드
+  const [selectedDepartmentCode, setSelectedDepartmentCode] = useState(''); // 담당 부서 코드
+  
+  // 날짜 필터 상태
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   // 페이지네이션
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   
   // 알림 스낵바
   const [snackbar, setSnackbar] = useState({
@@ -82,59 +96,95 @@ const ServiceRequestList = () => {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [currentRequestId, setCurrentRequestId] = useState(null);
   const [currentRequest, setCurrentRequest] = useState(null);
-  const [expectedCompletionDate, setExpectedCompletionDate] = useState('');
-  const [expectedCompletionHour, setExpectedCompletionHour] = useState('17'); // 기본값 17시로 설정
   
   // 완료 처리 관련 상태
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
-  const [repairCost, setRepairCost] = useState('');
-  const [formattedRepairCost, setFormattedRepairCost] = useState('');
   
-  // 이미지 업로드 관련 상태 추가
-  const [uploadedImages, setUploadedImages] = useState([]);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
-  const [uploadError, setUploadError] = useState('');
+  // 데이터 필터링 처리
+  const filteredServiceRequests = useMemo(() => {
+    // 검색어, AS 상태, 담당 부서에 따라 데이터 필터링
+    return allServiceRequests.filter(request => {
+      // 검색어 필터링 (회사명, 시설물 유형, 브랜드명에서 검색)
+      const matchesKeyword = searchKeyword === '' || 
+        (request.companyName && request.companyName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (request.facilityTypeName && request.facilityTypeName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (request.brandName && request.brandName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (request.serviceRequestId && request.serviceRequestId.toString().includes(searchKeyword));
+
+      // AS 상태 필터링
+      const matchesServiceStatus = selectedServiceStatusCode === '' || 
+        request.serviceStatusCode === selectedServiceStatusCode;
+
+      // 담당 부서 필터링
+      const matchesDepartment = selectedDepartmentCode === '' || 
+        request.departmentTypeCode === selectedDepartmentCode;
+        
+      // 날짜 범위 필터링
+      let matchesDateRange = true;
+      if (isDateFilterActive && startDate && endDate) {
+        const requestDate = request.requestDate ? parseISO(request.requestDate) : null;
+        if (requestDate) {
+          matchesDateRange = 
+            (isBefore(requestDate, new Date(endDate.setHours(23, 59, 59))) || 
+             request.requestDate.split('T')[0] === endDate.toISOString().split('T')[0]) && 
+            (isAfter(requestDate, new Date(startDate.setHours(0, 0, 0))) || 
+             request.requestDate.split('T')[0] === startDate.toISOString().split('T')[0]);
+        } else {
+          matchesDateRange = false;
+        }
+      }
+
+      return matchesKeyword && matchesServiceStatus && matchesDepartment && matchesDateRange;
+    });
+  }, [allServiceRequests, searchKeyword, selectedServiceStatusCode, selectedDepartmentCode, startDate, endDate, isDateFilterActive]);
+
+  // 현재 페이지에 표시할 데이터
+  const paginatedServiceRequests = useMemo(() => {
+    const startIndex = page * 10;
+    const endIndex = startIndex + 10;
+    return filteredServiceRequests.slice(startIndex, endIndex);
+  }, [filteredServiceRequests, page]);
   
   // 초기 데이터 로딩
   useEffect(() => {
     fetchCodes();
-    fetchServiceRequests();
-  }, [page, selectedStatusCode, selectedTypeCode, selectedPriorityCode]);
+    fetchAllServiceRequests();
+  }, []); // 컴포넌트가 마운트될 때만 데이터를 로드
+  
+  // 필터링된 데이터가 변경될 때마다 페이지네이션 정보 업데이트
+  useEffect(() => {
+    setTotalItems(filteredServiceRequests.length);
+    setTotalPages(Math.ceil(filteredServiceRequests.length / 10));
+    
+    // 현재 페이지가 전체 페이지 수보다 크면 첫 페이지로 이동
+    if (page >= Math.ceil(filteredServiceRequests.length / 10)) {
+      setPage(0);
+    }
+  }, [filteredServiceRequests, page]);
   
   // 코드 데이터 로드
   const fetchCodes = async () => {
     try {
-      // AS 유형 코드 조회
-      const serviceTypeResponse = await fetch('http://localhost:8080/api/codes/groups/003001/codes/active', {
+      // AS 상태 코드 조회 (002010)
+      const serviceStatusResponse = await fetch('http://localhost:8080/api/codes/groups/002010/codes/active', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
       });
-      if (serviceTypeResponse.ok) {
-        const data = await serviceTypeResponse.json();
-        setServiceTypes(data);
+      if (serviceStatusResponse.ok) {
+        const data = await serviceStatusResponse.json();
+        setServiceStatusCodes(data);
       }
       
-      // 우선순위 코드 조회
-      const priorityResponse = await fetch('http://localhost:8080/api/codes/groups/003002/codes/active', {
+      // 담당 부서 코드 조회 (003001)
+      const departmentResponse = await fetch('http://localhost:8080/api/codes/groups/003001/codes/active', {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
       });
-      if (priorityResponse.ok) {
-        const data = await priorityResponse.json();
-        setPriorityCodes(data);
-      }
-      
-      // 상태 코드 조회
-      const statusResponse = await fetch('http://localhost:8080/api/codes/groups/003003/codes/active', {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-      if (statusResponse.ok) {
-        const data = await statusResponse.json();
-        setStatusCodes(data);
+      if (departmentResponse.ok) {
+        const data = await departmentResponse.json();
+        setDepartmentCodes(data);
       }
     } catch (error) {
       console.error('코드 조회 에러:', error);
@@ -142,28 +192,14 @@ const ServiceRequestList = () => {
     }
   };
   
-  // AS 접수 목록 조회
-  const fetchServiceRequests = async () => {
+  // 모든 AS 접수 목록 조회 (필터링 없이)
+  const fetchAllServiceRequests = async () => {
     setLoading(true);
     try {
-      // 검색 파라미터 구성
-      let url = `http://localhost:8080/api/service-requests/paged?page=${page}&size=10`;
+      // 페이지네이션 없이 모든 데이터 요청 (또는 백엔드에서 허용하는 최대 크기로 요청)
+      const url = `http://localhost:8080/api/service-requests/paged?page=0&size=1000&sort=serviceRequestId,desc`;
       
-      if (selectedStatusCode) {
-        url += `&statusCode=${selectedStatusCode}`;
-      }
-      
-      if (selectedTypeCode) {
-        url += `&serviceTypeCode=${selectedTypeCode}`;
-      }
-      
-      if (selectedPriorityCode) {
-        url += `&priorityCode=${selectedPriorityCode}`;
-      }
-      
-      if (searchKeyword) {
-        url += `&keyword=${encodeURIComponent(searchKeyword)}`;
-      }
+      console.log("API 요청 URL:", url); // 디버깅용 로그
       
       const response = await fetch(url, {
         headers: {
@@ -176,12 +212,12 @@ const ServiceRequestList = () => {
       }
       
       const data = await response.json();
-      setServiceRequests(data.content || []);
-      setTotalPages(data.totalPages || 1);
+      console.log("API 응답 데이터:", data); // 디버깅용 로그
+      
+      setAllServiceRequests(data.content || []);
     } catch (error) {
       console.error('AS 접수 목록 조회 실패:', error);
       showSnackbar('AS 접수 목록을 불러오는데 실패했습니다.', 'error');
-    
     } finally {
       setLoading(false);
     }
@@ -195,22 +231,18 @@ const ServiceRequestList = () => {
   // 검색 실행
   const handleSearch = () => {
     setPage(0); // 페이지 초기화
-    fetchServiceRequests();
   };
   
   // 상태 필터 변경 처리
-  const handleStatusChange = (e) => {
-    setSelectedStatusCode(e.target.value);
+  const handleServiceStatusChange = (e) => {
+    setSelectedServiceStatusCode(e.target.value);
+    setPage(0); // 페이지 초기화
   };
   
-  // 유형 필터 변경 처리
-  const handleTypeChange = (e) => {
-    setSelectedTypeCode(e.target.value);
-  };
-  
-  // 우선순위 필터 변경 처리
-  const handlePriorityChange = (e) => {
-    setSelectedPriorityCode(e.target.value);
+  // 담당 부서 필터 변경 처리
+  const handleDepartmentChange = (e) => {
+    setSelectedDepartmentCode(e.target.value);
+    setPage(0); // 페이지 초기화
   };
   
   // 페이지 변경 처리
@@ -280,22 +312,12 @@ const ServiceRequestList = () => {
   const handleApproveRequest = (serviceRequestId) => {
     setCurrentRequestId(serviceRequestId);
     fetchRequestDetail(serviceRequestId);
-    
-    // 기본 예상 완료일 설정 (현재로부터 7일 후)
-    const date = new Date();
-    date.setDate(date.getDate() + 7);
-    setExpectedCompletionDate(format(date, 'yyyy-MM-dd'));
-    setExpectedCompletionHour('17'); // 기본값 17시로 설정
-    
     setApproveDialogOpen(true);
   };
   
   // AS 요청 승인 제출
-  const submitApproval = async () => {
+  const submitApproval = async (formattedDateTime) => {
     try {
-      // 날짜와 시간을 결합하여 ISO 형식의 문자열로 변환 (분과 초는 00으로 고정)
-      const formattedDateTime = `${expectedCompletionDate}T${expectedCompletionHour}:00:00`;
-      
       const response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/receive`, {
         method: 'PUT',
         headers: {
@@ -313,26 +335,10 @@ const ServiceRequestList = () => {
       
       showSnackbar('AS 요청이 성공적으로 승인되었습니다.', 'success');
       setApproveDialogOpen(false);
-      fetchServiceRequests(); // 목록 새로고침
+      fetchAllServiceRequests(); // 목록 새로고침
     } catch (error) {
       console.error('AS 요청 승인 실패:', error);
       showSnackbar('AS 요청 승인 처리에 실패했습니다.', 'error');
-    }
-  };
-  
-  // 수리 비용 입력 처리 (천 단위 구분 기호 표시)
-  const handleRepairCostChange = (e) => {
-    // 숫자와 콤마만 허용
-    const value = e.target.value.replace(/[^\d]/g, '');
-    
-    // 최대 1,000조(1,000,000,000,000,000)까지만 허용
-    if (value === '' || (Number(value) <= 1000000000000000 && value.length <= 16)) {
-      setRepairCost(value);
-      
-      // 천 단위 구분 기호 표시
-      setFormattedRepairCost(
-        value === '' ? '' : Number(value).toLocaleString('ko-KR')
-      );
     }
   };
   
@@ -340,78 +346,29 @@ const ServiceRequestList = () => {
   const handleCompleteRequest = (serviceRequestId) => {
     setCurrentRequestId(serviceRequestId);
     fetchRequestDetail(serviceRequestId);
-    setRepairCost('');
-    setFormattedRepairCost('');
-    // 이미지 상태 초기화 추가
-    setUploadedImages([]);
-    setImagePreviewUrls([]);
-    setUploadError('');
     setCompleteDialogOpen(true);
   };
   
-  // 이미지 업로드 핸들러
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    
-    // 파일 유효성 검사
-    const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
-    if (invalidFiles.length > 0) {
-      setUploadError('이미지 파일만 업로드 가능합니다.');
-      return;
-    }
-    
-    // 이미지 크기 제한 (5MB)
-    const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024);
-    if (oversizedFiles.length > 0) {
-      setUploadError('이미지 크기는 5MB 이하여야 합니다.');
-      return;
-    }
-    
-    // 최대 이미지 개수 제한 (4개)
-    if (uploadedImages.length + files.length > 4) {
-      setUploadError('최대 4개까지 이미지를 업로드할 수 있습니다.');
-      return;
-    }
-    
-    setUploadError('');
-    
-    // 새 이미지 추가
-    setUploadedImages(prevImages => [...prevImages, ...files]);
-    
-    // 이미지 미리보기 URL 생성
-    const newImageUrls = files.map(file => URL.createObjectURL(file));
-    setImagePreviewUrls(prevUrls => [...prevUrls, ...newImageUrls]);
-  };
-  
-  // 이미지 삭제 핸들러
-  const handleRemoveImage = (index) => {
-    // 미리보기 URL 해제
-    URL.revokeObjectURL(imagePreviewUrls[index]);
-    
-    // 해당 이미지 삭제
-    setUploadedImages(prevImages => prevImages.filter((_, i) => i !== index));
-    setImagePreviewUrls(prevUrls => prevUrls.filter((_, i) => i !== index));
-  };
-  
   // AS 요청 완료 제출
-  const submitCompletion = async () => {
+  const submitCompletion = async (completionData) => {
     try {
       let response;
       
       // 이미지가 있는 경우와 없는 경우에 따라 다른 API 호출
-      if (uploadedImages.length > 0) {
+      if (completionData.images && completionData.images.length > 0) {
         // FormData 객체 생성
         const formDataObj = new FormData();
         
         // JSON 데이터를 문자열로 변환하여 추가
         const requestData = {
-          cost: parseInt(repairCost, 10) || 0
+          cost: completionData.cost,
+          repairComment: completionData.repairComment
         };
         
         formDataObj.append('request', JSON.stringify(requestData));
         
         // 이미지 파일 추가
-        uploadedImages.forEach((file, index) => {
+        completionData.images.forEach((file) => {
           formDataObj.append('images', file);
         });
         
@@ -433,7 +390,8 @@ const ServiceRequestList = () => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            cost: parseInt(repairCost, 10) || 0
+            cost: completionData.cost,
+            repairComment: completionData.repairComment
           })
         });
       }
@@ -444,11 +402,33 @@ const ServiceRequestList = () => {
       
       showSnackbar('AS 요청이 성공적으로 완료 처리되었습니다.', 'success');
       setCompleteDialogOpen(false);
-      fetchServiceRequests(); // 목록 새로고침
+      fetchAllServiceRequests(); // 목록 새로고침
     } catch (error) {
       console.error('AS 요청 완료 처리 실패:', error);
       showSnackbar('AS 요청 완료 처리에 실패했습니다.', 'error');
     }
+  };
+  
+  // 날짜 필터 변경 처리
+  const handleDateChange = (start, end) => {
+    setStartDate(start);
+    setEndDate(end);
+    setIsDateFilterActive(true);
+    setPage(0); // 페이지 초기화
+  };
+  
+  // 날짜 필터 초기화
+  const handleResetDateFilter = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setIsDateFilterActive(false);
+    setPage(0); // 페이지 초기화
+  };
+  
+  // 날짜 필터 적용
+  const handleApplyDateFilter = () => {
+    setShowDatePicker(false);
+    // 날짜는 이미 handleDateChange에서 설정됨
   };
   
   return (
@@ -500,7 +480,7 @@ const ServiceRequestList = () => {
                 lineHeight: 1 
               }}
             >
-              {serviceRequests.length} 건
+              {allServiceRequests.length} 건
             </Typography>
           </Box>
           <Box sx={{ 
@@ -531,7 +511,7 @@ const ServiceRequestList = () => {
                 lineHeight: 1 
               }}
             >
-              {serviceRequests.filter(req => req.statusCode === '003003_0001' || req.statusCode === '003003_0002').length} 건
+              {allServiceRequests.filter(req => req.serviceStatusCode !== '002010_0003').length} 건
             </Typography>
           </Box>
           <Box sx={{ 
@@ -562,21 +542,21 @@ const ServiceRequestList = () => {
                 lineHeight: 1 
               }}
             >
-              {serviceRequests.filter(req => req.statusCode === '003003_0004').length} 건
+              {allServiceRequests.filter(req => req.serviceStatusCode === '002010_0003').length} 건
             </Typography>
           </Box>
         </Box>
       </Box>
       
       {/* 검색 및 필터 도구 바 */}
-      <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end' }}>
+      <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end', justifyContent: 'space-between' }}>
         {/* 검색어 필드 */}
         <Box sx={{ flex: 1, minWidth: '200px' }}>
           <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
             검색
           </Typography>
           <TextField
-            placeholder="접수번호, 시설물, 매장명 검색"
+            placeholder="매장명, 시설물 유형, 품목 검색"
             value={searchKeyword}
             onChange={handleSearchChange}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -600,94 +580,100 @@ const ServiceRequestList = () => {
           />
         </Box>
         
-        {/* 상태 필터 */}
-        <Box sx={{ minWidth: '150px' }}>
-          <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-            상태
-          </Typography>
-          <FormControl 
-            fullWidth 
-            size="small"
-            sx={{ backgroundColor: 'white' }}
-          >
-            <Select
-              value={selectedStatusCode}
-              onChange={handleStatusChange}
-              displayEmpty
-              sx={{
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E0E0E0',
-                },
-              }}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {/* AS 상태 필터 */}
+          <Box sx={{ width: '150px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              AS 상태
+            </Typography>
+            <FormControl 
+              fullWidth 
+              size="small"
+              sx={{ backgroundColor: 'white' }}
             >
-              <MenuItem value="">모든 상태</MenuItem>
-              {statusCodes.map(status => (
-                <MenuItem key={status.codeId} value={status.codeId}>
-                  {status.codeName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        
-        {/* 유형 필터 */}
-        <Box sx={{ minWidth: '150px' }}>
-          <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-            AS 유형
-          </Typography>
-          <FormControl 
-            fullWidth 
-            size="small"
-            sx={{ backgroundColor: 'white' }}
-          >
-            <Select
-              value={selectedTypeCode}
-              onChange={handleTypeChange}
-              displayEmpty
-              sx={{
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E0E0E0',
-                },
-              }}
+              <Select
+                value={selectedServiceStatusCode}
+                onChange={handleServiceStatusChange}
+                displayEmpty
+                sx={{
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E0E0E0',
+                  },
+                }}
+              >
+                <MenuItem value="">모든 AS 상태</MenuItem>
+                {serviceStatusCodes.map(status => (
+                  <MenuItem key={status.codeId} value={status.codeId}>
+                    {status.codeName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          
+          {/* 담당 부서 필터 */}
+          <Box sx={{ width: '150px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              담당 부서
+            </Typography>
+            <FormControl 
+              fullWidth 
+              size="small"
+              sx={{ backgroundColor: 'white' }}
             >
-              <MenuItem value="">모든 유형</MenuItem>
-              {serviceTypes.map(type => (
-                <MenuItem key={type.codeId} value={type.codeId}>
-                  {type.codeName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        
-        {/* 우선순위 필터 */}
-        <Box sx={{ minWidth: '150px' }}>
-          <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-            우선순위
-          </Typography>
-          <FormControl 
-            fullWidth 
-            size="small"
-            sx={{ backgroundColor: 'white' }}
-          >
-            <Select
-              value={selectedPriorityCode}
-              onChange={handlePriorityChange}
-              displayEmpty
-              sx={{
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E0E0E0',
-                },
+              <Select
+                value={selectedDepartmentCode}
+                onChange={handleDepartmentChange}
+                displayEmpty
+                sx={{
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E0E0E0',
+                  },
+                }}
+              >
+                <MenuItem value="">모든 담당 부서</MenuItem>
+                {departmentCodes.map(dept => (
+                  <MenuItem key={dept.codeId} value={dept.codeId}>
+                    {dept.codeName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          
+          {/* 요청일자 필터 */}
+          <Box sx={{ width: '150px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              요청일자
+            </Typography>
+            <DateRangeButton 
+              startDate={startDate}
+              endDate={endDate}
+              isActive={false}
+              onClick={() => setShowDatePicker(true)}
+              buttonProps={{
+                startIcon: <CalendarIcon fontSize="small" sx={{ color: 'rgba(0, 0, 0, 0.54)' }} />,
+                sx: {
+                  backgroundColor: 'rgba(249, 249, 249, 0.87)',
+                  width: '100%',
+                  height: '40px',
+                  color: 'rgba(30, 30, 30, 0.87)',
+                  borderColor: '#E0E0E0'
+                }
               }}
-            >
-              <MenuItem value="">모든 우선순위</MenuItem>
-              {priorityCodes.map(priority => (
-                <MenuItem key={priority.codeId} value={priority.codeId}>
-                  {priority.codeName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            />
+            <DateRangeCalendar
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={handleDateChange}
+              open={showDatePicker}
+              onClose={() => setShowDatePicker(false)}
+              onApply={handleApplyDateFilter}
+              onReset={handleResetDateFilter}
+            />
+          </Box>
         </Box>
       </Box>
       
@@ -699,56 +685,60 @@ const ServiceRequestList = () => {
       ) : (
         <Box sx={{ mb: 3, overflow: 'auto' }}>
           <TableContainer component={Paper} sx={{ minWidth: '100%' }}>
-            <Table>
+            <Table sx={{ tableLayout: 'fixed' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>No.</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>매장명</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>시설물 항목</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>품목</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>수량</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>사용연한</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>최초설치일</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>시설물 상태</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>요청일자</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>처리</TableCell>
+                  <TableCell sx={{ width: '5%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>No.</TableCell>
+                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>매장명</TableCell>
+                  <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>시설물 유형</TableCell>
+                  <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>품목</TableCell>
+                  <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>담당 부서</TableCell>
+                  <TableCell sx={{ width: '8%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>사용연한</TableCell>
+                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>최초설치일</TableCell>
+                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>AS 상태</TableCell>
+                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>요청일자</TableCell>
+                  <TableCell sx={{ width: '9%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>처리</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {serviceRequests.length === 0 ? (
+                {paginatedServiceRequests.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                       AS 접수 내역이 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  serviceRequests.map((request, index) => (
+                  paginatedServiceRequests.map((request, index) => (
                     <TableRow 
                       key={request.serviceRequestId} 
                       hover
                       onClick={() => handleViewDetails(request.serviceRequestId)}
                       sx={{ cursor: 'pointer' }}
                     >
-                      <TableCell>{page * 10 + index + 1}</TableCell>
-                      <TableCell>{request.companyName}</TableCell>
-                      <TableCell>{request.facilityTypeName}</TableCell>
-                      <TableCell>{request.brandName || '-'}</TableCell>
-                      <TableCell>{request.quantity || '1'}</TableCell>
-                      <TableCell>{request.usefulLifeMonths || '-'}</TableCell>
-                      <TableCell>{formatDate(request.installationDate) || '-'}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ width: '5%' }}>
+                        {/* 전체 아이템 수에서 현재 인덱스를 역순으로 계산 */}
+                        {totalItems - (page * 10 + index)}
+                      </TableCell>
+                      <TableCell sx={{ width: '12%' }}>{request.companyName}</TableCell>
+                      <TableCell sx={{ width: '12%' }}>{request.facilityTypeName}</TableCell>
+                      <TableCell sx={{ width: '12%' }}>{request.brandName || '-'}</TableCell>
+                      <TableCell sx={{ width: '12%' }}>{request.departmentTypeName || '-'}</TableCell>
+                      <TableCell sx={{ width: '8%' }}>{request.usefulLifeMonths || '-'}</TableCell>
+                      <TableCell sx={{ width: '10%' }}>{formatDate(request.installationDate) || '-'}</TableCell>
+                      <TableCell sx={{ width: '10%' }}>
                         <Chip 
-                          label={request.serviceStatusName || request.statusName}
-                          size="small"
-                          color={
-                            request.serviceStatusCode ? 
-                              statusColorMap[request.serviceStatusCode] || 'default' : 
-                              facilityStatusColorMap[request.statusCode] || 'default'
+                          label={
+                            request.serviceStatusCode === '002010_0001' ? 'AS 접수중' : 
+                            request.serviceStatusCode === '002010_0002' ? 'AS 접수완료' : 
+                            request.serviceStatusCode === '002010_0003' ? 'AS 수리완료' : 
+                            '상태 정보 없음'
                           }
+                          size="small"
+                          variant="outlined"
                         />
                       </TableCell>
-                      <TableCell>{formatDate(request.requestDate)}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ width: '10%' }}>{formatDate(request.requestDate)}</TableCell>
+                      <TableCell sx={{ width: '9%' }}>
                         {request.serviceStatusCode === '002010_0001' && !request.isReceived && (
                           <Button 
                             variant="contained" 
@@ -786,7 +776,7 @@ const ServiceRequestList = () => {
           </TableContainer>
           
           {/* 페이지네이션 */}
-          {serviceRequests.length > 0 && (
+          {filteredServiceRequests.length > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
               <Pagination 
                 count={totalPages} 
@@ -811,244 +801,23 @@ const ServiceRequestList = () => {
         </Alert>
       </Snackbar>
       
-      {/* AS 요청 승인 다이얼로그 */}
-      <Dialog 
-        open={approveDialogOpen} 
+      {/* AS 요청 승인 다이얼로그 컴포넌트 */}
+      <ApproveRequestDialog 
+        open={approveDialogOpen}
         onClose={() => setApproveDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>AS 요청 승인</DialogTitle>
-        <DialogContent>
-          {currentRequest && (
-            <Box sx={{ mt: 2 }}>
-              {/* AS 접수 정보 */}
-              <Box sx={{ mb: 3, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                <Typography variant="subtitle2">
-                  매장: <Typography component="span" variant="body2">{currentRequest.companyName}</Typography>
-                </Typography>
-                <Typography variant="subtitle2">
-                  시설물: <Typography component="span" variant="body2">{currentRequest.facilityTypeName}</Typography>
-                </Typography>
-                <Typography variant="subtitle2">
-                  품목: <Typography component="span" variant="body2">{currentRequest.brandName}</Typography>
-                </Typography>
-                <Typography variant="subtitle2">
-                  요청일자: <Typography component="span" variant="body2">{formatDate(currentRequest.requestDate)}</Typography>
-                </Typography>
-                <Typography variant="subtitle2">
-                  위치: <Typography component="span" variant="body2">{currentRequest.currentLocation}</Typography>
-                </Typography>
-                <Typography variant="subtitle2">
-                  요청자: <Typography component="span" variant="body2">{currentRequest.requesterName}</Typography>
-                </Typography>
-                <Typography variant="subtitle2">
-                  상태: <Typography component="span" variant="body2">
-                    <Chip 
-                      label={currentRequest.serviceStatusName || currentRequest.statusName} 
-                      size="small" 
-                      color={
-                        currentRequest.serviceStatusCode ? 
-                          statusColorMap[currentRequest.serviceStatusCode] || 'default' : 
-                          facilityStatusColorMap[currentRequest.statusCode] || 'default'
-                      }
-                    />
-                  </Typography>
-                </Typography>
-              </Box>
-              
-              {/* 요청 내용 */}
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>요청 내용:</Typography>
-              <Paper variant="outlined" sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5' }}>
-                <Typography variant="body2">{currentRequest.requestContent}</Typography>
-              </Paper>
-              
-              {/* 비고 사항 */}
-              {currentRequest.notes && (
-                <>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>비고 사항:</Typography>
-                  <Paper variant="outlined" sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5' }}>
-                    <Typography variant="body2">{currentRequest.notes}</Typography>
-                  </Paper>
-                </>
-              )}
-              
-              {/* 예상 완료일 입력 */}
-              <InputLabel htmlFor="expected-completion-date" sx={{ mb: 1 }}>예상 완료일</InputLabel>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  id="expected-completion-date"
-                  type="date"
-                  fullWidth
-                  size="small"
-                  value={expectedCompletionDate}
-                  onChange={(e) => setExpectedCompletionDate(e.target.value)}
-                  sx={{ flex: 2 }}
-                />
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel id="expected-completion-hour-label">시간</InputLabel>
-                  <Select
-                    labelId="expected-completion-hour-label"
-                    id="expected-completion-hour"
-                    value={expectedCompletionHour}
-                    onChange={(e) => setExpectedCompletionHour(e.target.value)}
-                    label="시간"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => {
-                      const hour = i.toString().padStart(2, '0');
-                      return (
-                        <MenuItem key={hour} value={hour}>
-                          {hour}시
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setApproveDialogOpen(false)}>취소</Button>
-          <Button onClick={submitApproval} variant="contained" color="primary">승인</Button>
-        </DialogActions>
-      </Dialog>
+        currentRequest={currentRequest}
+        onApprove={submitApproval}
+        showSnackbar={showSnackbar}
+      />
       
-      {/* AS 완료 처리 다이얼로그 */}
-      <Dialog 
-        open={completeDialogOpen} 
+      {/* AS 완료 처리 다이얼로그 컴포넌트 */}
+      <CompleteRequestDialog
+        open={completeDialogOpen}
         onClose={() => setCompleteDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>AS 완료 처리</DialogTitle>
-        <DialogContent>
-          {currentRequest && (
-            <Box sx={{ mt: 2, minWidth: '400px' }}>
-              {/* 요청 정보 */}
-              <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                매장: {currentRequest.companyName} | 시설물: {currentRequest.facilityTypeName} ({currentRequest.brandName})
-              </Typography>
-              
-              {/* 수리 비용 입력 */}
-              <InputLabel htmlFor="repair-cost" sx={{ mb: 1 }}>수리 비용</InputLabel>
-              <TextField
-                id="repair-cost"
-                fullWidth
-                size="small"
-                value={formattedRepairCost}
-                onChange={handleRepairCostChange}
-                placeholder="예: 5,000,000"
-                InputProps={{
-                  startAdornment: (
-                    <MuiInputAdornment position="start">₩</MuiInputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
-              
-              {/* 이미지 업로드 영역 추가 */}
-              <Box sx={{ mb: 2, mt: 3 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>AS 완료 이미지 첨부 (선택)</Typography>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<CloudUploadIcon />}
-                  sx={{
-                    borderColor: '#E0E0E0',
-                    color: '#666',
-                    '&:hover': {
-                      borderColor: '#BDBDBD',
-                      bgcolor: '#F5F5F5',
-                    }
-                  }}
-                >
-                  이미지 업로드
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    hidden
-                    onChange={handleImageUpload}
-                  />
-                </Button>
-                <Typography variant="caption" color="textSecondary" sx={{ ml: 2, display: 'inline-block' }}>
-                  최대 4개, 파일당 5MB 이하의 이미지만 업로드 가능합니다.
-                </Typography>
-              </Box>
-              
-              {uploadError && (
-                <Typography variant="body2" color="error" sx={{ mb: 2 }}>
-                  {uploadError}
-                </Typography>
-              )}
-              
-              {imagePreviewUrls.length > 0 && (
-                <Box sx={{ 
-                  border: '1px solid #E0E0E0', 
-                  borderRadius: 1, 
-                  p: 2, 
-                  backgroundColor: '#FAFAFA',
-                  mb: 2
-                }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    첨부된 이미지 ({imagePreviewUrls.length}/4)
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {imagePreviewUrls.map((url, index) => (
-                      <Grid item xs={6} sm={3} key={index}>
-                        <Box
-                          sx={{
-                            position: 'relative',
-                            width: '100%',
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            bgcolor: '#F5F5F5',
-                            border: '1px solid #E0E0E0',
-                            aspectRatio: '1/1',
-                          }}
-                        >
-                          <img
-                            src={url}
-                            alt={`첨부 이미지 ${index + 1}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                            }}
-                          />
-                          <IconButton
-                            size="small"
-                            sx={{
-                              position: 'absolute',
-                              top: 4,
-                              right: 4,
-                              bgcolor: 'rgba(255, 255, 255, 0.8)',
-                              '&:hover': {
-                                bgcolor: 'rgba(255, 255, 255, 0.9)',
-                              },
-                            }}
-                            onClick={() => handleRemoveImage(index)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                        <Typography variant="caption" color="textSecondary" noWrap sx={{ display: 'block', mt: 0.5 }}>
-                          {uploadedImages[index].name}
-                        </Typography>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCompleteDialogOpen(false)}>취소</Button>
-          <Button onClick={submitCompletion} variant="contained" color="success">완료</Button>
-        </DialogActions>
-      </Dialog>
+        currentRequest={currentRequest}
+        onComplete={submitCompletion}
+        showSnackbar={showSnackbar}
+      />
     </Box>
   );
 };

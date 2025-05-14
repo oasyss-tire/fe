@@ -45,7 +45,7 @@ const FacilitiesRegister = () => {
     installationDate: today,  // 설치일, 기본값으로 오늘 날짜 설정
     acquisitionCost: '',      // 취득가액
     installationTypeCode: '', // 설치 유형 (선택적)
-    usefulLifeMonths: 12,     // 사용연한(개월)
+    usefulLifeMonths: 12,     // 사용연한(개월), 기본값 12개월
     statusCode: '',           // 상태코드
     depreciationMethodCode: '',// 감가상각 방법 (선택적)
     locationCompanyId: 1,     // 설치 매장 ID (본사로 고정, 항상 1)
@@ -53,8 +53,8 @@ const FacilitiesRegister = () => {
     quantity: 1               // 수량 (배치 등록용)
   });
   
-  // 사용연한 년 단위 입력 상태 (UI 표시용)
-  const [usefulLifeYears, setUsefulLifeYears] = useState('1');
+  // 사용연한 개월 단위 입력 상태 (UI 표시용)
+  const [usefulLifeMonths, setUsefulLifeMonths] = useState('12');
   
   // 이미지 상태
   const [images, setImages] = useState({
@@ -278,19 +278,19 @@ const FacilitiesRegister = () => {
     }
   };
   
-  // 사용연한 년 단위 입력 처리
-  const handleUsefulLifeYearsChange = (e) => {
+  // 사용연한 개월 단위 입력 처리
+  const handleUsefulLifeMonthsChange = (e) => {
     const { value } = e.target;
     
     // 숫자만 허용
     const numericValue = value.replace(/[^0-9]/g, '');
     
-    // 최대 100년으로 제한
-    if (numericValue === '' || (Number(numericValue) <= 100 && numericValue.length <= 3)) {
-      setUsefulLifeYears(numericValue);
+    // 최대 1200개월(100년)으로 제한
+    if (numericValue === '' || (Number(numericValue) <= 1200 && numericValue.length <= 4)) {
+      setUsefulLifeMonths(numericValue);
       
-      // 년수에 12를 곱해 개월수로 변환하여 저장
-      const months = numericValue === '' ? 0 : Number(numericValue) * 12;
+      // 개월수를 그대로 저장
+      const months = numericValue === '' ? 0 : Number(numericValue);
       setFormData(prev => ({
         ...prev,
         usefulLifeMonths: months
@@ -704,10 +704,10 @@ const FacilitiesRegister = () => {
                     fullWidth
                     size="small"
                     type="text"
-                    name="usefulLifeYears"
-                    value={usefulLifeYears}
-                    onChange={handleUsefulLifeYearsChange}
-                    placeholder="사용연한 입력 (년)"
+                    name="usefulLifeMonths"
+                    value={usefulLifeMonths}
+                    onChange={handleUsefulLifeMonthsChange}
+                    placeholder="사용연한 입력 (개월)"
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         '& fieldset': {
@@ -722,7 +722,7 @@ const FacilitiesRegister = () => {
                       },
                     }}
                     InputProps={{
-                      endAdornment: <InputAdornment position="end">년</InputAdornment>,
+                      endAdornment: <InputAdornment position="end">개월</InputAdornment>,
                     }}
                   />
                 </Grid>

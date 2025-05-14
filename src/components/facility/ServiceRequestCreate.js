@@ -299,7 +299,7 @@ const ServiceRequestCreate = () => {
       // 성공 후 목록 페이지로 이동
       setTimeout(() => {
         navigate('/service-request/list');
-      }, 1500);
+      }, 500);
     } catch (error) {
       console.error('AS 접수 등록 실패:', error);
       showSnackbar('AS 접수 등록에 실패했습니다.', 'error');

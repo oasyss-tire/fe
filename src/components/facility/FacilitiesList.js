@@ -31,6 +31,23 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import FacilityTypeList from './FacilityTypeList';
+import { keyframes } from '@emotion/react';
+
+// 스켈레톤 애니메이션을 위한 키프레임 정의
+const pulse = keyframes`
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.6;
+  }
+`;
+
+// 스켈레톤 애니메이션 스타일
+const skeletonAnimation = `${pulse} 1.5s infinite ease-in-out`;
 
 // 시설물 상태 코드 맵핑
 const statusColorMap = {
@@ -124,6 +141,15 @@ const FacilitiesList = () => {
 
   // 통합 로딩 상태
   const [dataReady, setDataReady] = useState(false);
+  
+  // 셀 클릭 관련 상태 추가
+  const [clickedCell, setClickedCell] = useState(null);
+  const [cellLoading, setCellLoading] = useState(false);
+  const [clickedStore, setClickedStore] = useState(null);
+  const [storeLoading, setStoreLoading] = useState(false);
+  
+  // 선택된 셀 상태 추가
+  const [selectedCell, setSelectedCell] = useState(null);
 
   // 초기 데이터 로딩
   useEffect(() => {
@@ -319,93 +345,111 @@ const FacilitiesList = () => {
 
   // 특정 수탁업체, 특정 시설물 유형 선택 시 해당 시설물 목록 필터링
   const handleCellClick = (companyId, typeCode) => {
-    setSelectedCompany(companyId);
-    setSelectedType(typeCode);
-    setViewAllFacilities(false);
+    // 이미 클릭된 셀이면 무시
+    if (selectedCompany === companyId && selectedType === typeCode) return;
     
-    // 현재 가지고 있는 재고 데이터에서 해당 회사와 시설물 유형에 맞는 데이터 찾기
-    const inventoryItem = currentInventory.find(
-      item => item.companyId === companyId && item.facilityTypeCodeId === typeCode
-    );
+    // 선택된 셀 정보 저장
+    setSelectedCell({ companyId, typeCode });
     
-    // 전표 정보 설정
-    setSelectedInventoryItem(inventoryItem);
+    // 클릭된 셀 정보 저장 및 로딩 상태 활성화
+    setClickedCell({ companyId, typeCode });
+    setCellLoading(true);
     
-    // 새로운 방식: API를 통해 해당 수탁업체와 시설물 유형의 시설물 목록 조회
-    fetchFacilitiesByCompanyAndType(companyId, typeCode);
+    // 렌더링 최적화를 위해 setTimeout을 통해 UI 업데이트와 API 호출 분리
+    setTimeout(() => {
+      // 현재 가지고 있는 재고 데이터에서 해당 회사와 시설물 유형에 맞는 데이터 찾기
+      const inventoryItem = currentInventory.find(
+        item => item.companyId === companyId && item.facilityTypeCodeId === typeCode
+      );
+      
+      // 모든 상태 업데이트를 한 번의 렌더링 사이클로 처리
+      setSelectedCompany(companyId);
+      setSelectedType(typeCode);
+      setViewAllFacilities(false);
+      setSelectedInventoryItem(inventoryItem);
+      
+      // API 호출
+      fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&facilityTypeCode=${typeCode}&page=0&size=10`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('시설물 목록을 불러오는데 실패했습니다.');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // API 응답 처리
+          setSelectedFacilities(data.content || []);
+          setTotalPages(data.totalPages || 1);
+          setPage(0);
+          if (data.totalElements !== undefined) {
+            setTotalItems(data.totalElements);
+          }
+        })
+        .catch(error => {
+          console.error('시설물 목록 조회 실패:', error);
+          showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
+        })
+        .finally(() => {
+          // 로딩 상태 해제 (모든 처리가 완료된 후 한 번에 해제)
+          setCellLoading(false);
+        });
+    }, 0);
   };
 
   // 매장명 클릭 시 해당 매장의 모든 시설물 표시
   const handleStoreNameClick = (companyId) => {
-    setSelectedCompany(companyId);
-    setSelectedType(null);
-    setViewAllFacilities(true);
-    setSelectedInventoryItem(null); // 전표 정보 초기화
+    // 이미 클릭된 매장이면 무시
+    if (selectedCompany === companyId && !selectedType) return;
     
-    // 새로운 방식: API를 통해 해당 수탁업체의 모든 시설물 목록 조회
-    fetchFacilitiesByCompany(companyId);
-  };
-
-  // 특정 수탁업체의 특정 시설물 유형 목록 조회
-  const fetchFacilitiesByCompanyAndType = async (companyId, typeCode, pageNum = 0) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&facilityTypeCode=${typeCode}&page=${pageNum}&size=10`, {
+    // 선택된 셀 초기화 (매장명 클릭 시 셀 선택 해제)
+    setSelectedCell(null);
+    
+    // 클릭된 매장 정보 저장 및 로딩 상태 활성화
+    setClickedStore(companyId);
+    setStoreLoading(true);
+    
+    // 렌더링 최적화를 위해 setTimeout을 통해 UI 업데이트와 API 호출 분리
+    setTimeout(() => {
+      // 모든 상태 업데이트를 한 번의 렌더링 사이클로 처리
+      setSelectedCompany(companyId);
+      setSelectedType(null);
+      setViewAllFacilities(true);
+      setSelectedInventoryItem(null); // 전표 정보 초기화
+      
+      // API 호출
+      fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&page=0&size=10`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
-      });
-
-      if (!response.ok) {
-        throw new Error('시설물 목록을 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
-      setSelectedFacilities(data.content || []);
-      setTotalPages(data.totalPages || 1);
-      setPage(pageNum); // 현재 페이지 업데이트
-      
-      // 총 시설물 개수 추출 및 저장
-      if (data.totalElements !== undefined) {
-        setTotalItems(data.totalElements);
-      }
-    } catch (error) {
-      console.error('시설물 목록 조회 실패:', error);
-      showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // 특정 수탁업체의 모든 시설물 목록 조회
-  const fetchFacilitiesByCompany = async (companyId, pageNum = 0) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&page=${pageNum}&size=10`, {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('시설물 목록을 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
-      setSelectedFacilities(data.content || []);
-      setTotalPages(data.totalPages || 1);
-      setPage(pageNum); // 현재 페이지 업데이트
-      
-      // 총 시설물 개수 추출 및 저장
-      if (data.totalElements !== undefined) {
-        setTotalItems(data.totalElements);
-      }
-    } catch (error) {
-      console.error('시설물 목록 조회 실패:', error);
-      showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
-    } finally {
-      setLoading(false);
-    }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('시설물 목록을 불러오는데 실패했습니다.');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // API 응답 처리
+          setSelectedFacilities(data.content || []);
+          setTotalPages(data.totalPages || 1);
+          setPage(0);
+          if (data.totalElements !== undefined) {
+            setTotalItems(data.totalElements);
+          }
+        })
+        .catch(error => {
+          console.error('시설물 목록 조회 실패:', error);
+          showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
+        })
+        .finally(() => {
+          // 로딩 상태 해제 (모든 처리가 완료된 후 한 번에 해제)
+          setStoreLoading(false);
+        });
+    }, 0);
   };
 
   const handleAddFacility = () => {
@@ -421,12 +465,65 @@ const FacilitiesList = () => {
     
     // 페이지 변경 시 현재 선택된 정보에 따라 적절한 API 호출
     if (selectedCompany) {
+      // 로딩 상태 설정
+      setLoading(true);
+      
       if (selectedType) {
         // 특정 회사의 특정 시설물 유형에 대한 페이징
-        fetchFacilitiesByCompanyAndType(selectedCompany, selectedType, pageIndex);
+        fetch(`http://localhost:8080/api/facilities?companyId=${selectedCompany}&facilityTypeCode=${selectedType}&page=${pageIndex}&size=10`, {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('시설물 목록을 불러오는데 실패했습니다.');
+            }
+            return response.json();
+          })
+          .then(data => {
+            setSelectedFacilities(data.content || []);
+            setTotalPages(data.totalPages || 1);
+            setPage(pageIndex);
+            if (data.totalElements !== undefined) {
+              setTotalItems(data.totalElements);
+            }
+          })
+          .catch(error => {
+            console.error('시설물 목록 조회 실패:', error);
+            showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
+          })
+          .finally(() => {
+            setLoading(false);
+          });
       } else {
         // 특정 회사의 모든 시설물에 대한 페이징
-        fetchFacilitiesByCompany(selectedCompany, pageIndex);
+        fetch(`http://localhost:8080/api/facilities?companyId=${selectedCompany}&page=${pageIndex}&size=10`, {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('시설물 목록을 불러오는데 실패했습니다.');
+            }
+            return response.json();
+          })
+          .then(data => {
+            setSelectedFacilities(data.content || []);
+            setTotalPages(data.totalPages || 1);
+            setPage(pageIndex);
+            if (data.totalElements !== undefined) {
+              setTotalItems(data.totalElements);
+            }
+          })
+          .catch(error => {
+            console.error('시설물 목록 조회 실패:', error);
+            showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
+          })
+          .finally(() => {
+            setLoading(false);
+          });
       }
     }
   };
@@ -537,6 +634,129 @@ const FacilitiesList = () => {
     }
   };
 
+  // 테이블 셀 렌더링 함수
+  const renderTableCell = (company, type) => {
+    const count = facilityCountMatrix[company.id]?.[type.codeId] || 0;
+    const hasFailedStatus = hasFailed(company.id, type.codeId);
+    const isThisCellLoading = cellLoading && clickedCell && 
+                     clickedCell.companyId === company.id && 
+                     clickedCell.typeCode === type.codeId;
+    
+    // 선택된 셀 여부 확인
+    const isSelected = selectedCell && 
+                     selectedCell.companyId === company.id && 
+                     selectedCell.typeCode === type.codeId;
+    
+    // 셀 배경색 결정
+    let backgroundColor = 'inherit';
+    if (isSelected) {
+      backgroundColor = '#e3f2fd'; // 선택된 셀은 하늘색 배경
+    } else if (hasFailedStatus) {
+      backgroundColor = '#ffebee';
+    } else if (count > 0) {
+      backgroundColor = '#f1f8e9';
+    }
+    
+    return (
+      <TableCell 
+        key={`${company.id}-${type.codeId}`} 
+        align="center"
+        onClick={() => handleCellClick(company.id, type.codeId)}
+        sx={{ 
+          cursor: 'pointer',
+          backgroundColor,
+          '&:hover': {
+            backgroundColor: '#e3f2fd',
+          },
+          padding: '6px 8px', // 패딩 줄임
+          position: 'relative', // 로딩 오버레이를 위한 설정
+          height: '52px', // 높이 고정으로 깜빡임 방지
+          transition: 'none' // 트랜지션 효과 제거로 깜빡임 방지
+        }}
+      >
+        <Box sx={{ 
+          visibility: isThisCellLoading ? 'hidden' : 'visible', 
+          display: 'flex', 
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%'
+        }}>
+          {count}
+        </Box>
+        
+        {/* 로딩 중인 셀에만 오버레이 표시 */}
+        {isThisCellLoading && (
+          <Box 
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2
+            }}
+          >
+            <CircularProgress size={16} thickness={4} />
+          </Box>
+        )}
+      </TableCell>
+    );
+  };
+  
+  // 매장명 셀 렌더링 함수
+  const renderStoreNameCell = (company) => {
+    const isThisStoreLoading = storeLoading && clickedStore === company.id;
+    
+    return (
+      <TableCell 
+        onClick={() => handleStoreNameClick(company.id)}
+        sx={{ 
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: '#e3f2fd',
+            textDecoration: 'underline'
+          },
+          position: 'relative', // 로딩 오버레이를 위한 설정
+          height: '36px', // 높이 고정으로 깜빡임 방지
+          transition: 'none' // 트랜지션 효과 제거로 깜빡임 방지
+        }}
+      >
+        <Box sx={{ 
+          visibility: isThisStoreLoading ? 'hidden' : 'visible',
+          display: 'flex',
+          alignItems: 'center',
+          height: '100%'
+        }}>
+          {company.storeName}
+        </Box>
+        
+        {/* 로딩 중인 매장명에만 오버레이 표시 */}
+        {isThisStoreLoading && (
+          <Box 
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2
+            }}
+          >
+            <CircularProgress size={16} thickness={4} />
+          </Box>
+        )}
+      </TableCell>
+    );
+  };
+
   // 매장별 조회 컴포넌트 렌더링
   const renderCompanyView = () => (
     <>
@@ -596,9 +816,9 @@ const FacilitiesList = () => {
         <TableContainer component={Paper} sx={{ minWidth: '100%', maxHeight: '60vh' }}>
           <Table stickyHeader sx={{ tableLayout: 'fixed' }}>
             <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA', width: '130px' }}>지점명</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA', width: '150px' }}>지점 전화</TableCell>
+              <TableRow sx={{ height: '52px' }}>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA', width: '130px', height: '52px', padding: '6px 16px' }}>지점명</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#F8F9FA', width: '150px', height: '52px', padding: '6px 16px' }}>지점 전화</TableCell>
                 {facilityTypes.map(type => (
                   <TableCell 
                     key={type.codeId} 
@@ -607,7 +827,8 @@ const FacilitiesList = () => {
                       fontWeight: 'bold', 
                       backgroundColor: '#F8F9FA',
                       padding: '6px 8px', // 패딩 줄임
-                      width: '80px'
+                      width: '80px',
+                      height: '52px'
                     }}
                   >
                       {type.codeName}
@@ -617,61 +838,41 @@ const FacilitiesList = () => {
             </TableHead>
             <TableBody>
               {(loading || facilityTypesLoading || inventoryLoading || !dataReady) ? (
-                // 로딩 중일 때는 간단한 로딩 표시
-                <TableRow>
-                  <TableCell colSpan={2 + facilityTypes.length} align="center" sx={{ py: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <CircularProgress size={24} sx={{ mr: 2 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        데이터를 불러오는 중입니다...
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
+                // 로딩 중일 때도 레이아웃 유지를 위해 더미 행 5개 생성
+                Array(5).fill(0).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`} sx={{ height: '52px' }}>
+                    <TableCell sx={{ padding: '6px 16px', height: '52px' }}>
+                      <Box sx={{ height: '20px', bgcolor: '#f0f0f0', borderRadius: 1, animation: skeletonAnimation }} />
+                    </TableCell>
+                    <TableCell sx={{ padding: '6px 16px', height: '52px' }}>
+                      <Box sx={{ height: '20px', bgcolor: '#f0f0f0', borderRadius: 1, animation: skeletonAnimation }} />
+                    </TableCell>
+                    {facilityTypes.map((type, typeIndex) => (
+                      <TableCell key={`skeleton-cell-${index}-${typeIndex}`} align="center" sx={{ padding: '6px 8px', height: '36px' }}>
+                        <Box sx={{ 
+                          height: '20px', 
+                          width: '24px', 
+                          bgcolor: '#f0f0f0', 
+                          borderRadius: 1, 
+                          animation: skeletonAnimation,
+                          margin: '0 auto'
+                        }} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
               ) : displayedCompanies.length > 0 ? (
                 // 데이터가 있을 때 표시
                 displayedCompanies.map((company) => (
-                  <TableRow key={company.id} hover>
-                    <TableCell 
-                      onClick={() => handleStoreNameClick(company.id)}
-                      sx={{ 
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: '#e3f2fd',
-                          textDecoration: 'underline'
-                        }
-                      }}
-                    >
-                      {company.storeName}
-                    </TableCell>
-                    <TableCell>{company.phoneNumber}</TableCell>
-                    {facilityTypes.map(type => {
-                      const count = facilityCountMatrix[company.id]?.[type.codeId] || 0;
-                      const hasFailedStatus = hasFailed(company.id, type.codeId);
-                      
-                      return (
-                        <TableCell 
-                          key={`${company.id}-${type.codeId}`} 
-                          align="center"
-                          onClick={() => handleCellClick(company.id, type.codeId)}
-                          sx={{ 
-                            cursor: 'pointer',
-                            backgroundColor: hasFailedStatus ? '#ffebee' : (count > 0 ? '#f1f8e9' : 'inherit'),
-                            '&:hover': {
-                              backgroundColor: '#e3f2fd',
-                            },
-                            padding: '6px 8px', // 패딩 줄임
-                          }}
-                        >
-                          {count}
-                        </TableCell>
-                      );
-                    })}
+                  <TableRow key={company.id} hover sx={{ height: '36px' }}>
+                    {renderStoreNameCell(company)}
+                    <TableCell sx={{ padding: '6px 16px', height: '36px' }}>{company.phoneNumber}</TableCell>
+                    {facilityTypes.map(type => renderTableCell(company, type))}
                   </TableRow>
                 ))
               ) : (
                 // 데이터가 없을 때 표시
-                <TableRow>
+                <TableRow sx={{ height: '36px' }}>
                   <TableCell colSpan={2 + facilityTypes.length} align="center" sx={{ py: 4 }}>
                     검색 조건에 맞는 수탁업체가 없습니다.
                   </TableCell>

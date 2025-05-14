@@ -23,7 +23,9 @@ import {
   DialogContentText,
   DialogTitle,
   Tooltip,
-  Modal
+  Modal,
+  TextField,
+  FormHelperText
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
@@ -31,12 +33,12 @@ import {
   Delete as DeleteIcon,
   History as HistoryIcon,
   Print as PrintIcon,
-  Calculate as CalculateIcon,
   InfoOutlined as InfoIcon,
   Download as DownloadIcon,
-  ZoomIn as ZoomInIcon
+  ZoomIn as ZoomInIcon,
+  Update as UpdateIcon
 } from '@mui/icons-material';
-import { format, addMonths, isBefore } from 'date-fns';
+import { format, differenceInMonths } from 'date-fns';
 
 const FacilitiesDetail = () => {
   const { id } = useParams();
@@ -45,9 +47,6 @@ const FacilitiesDetail = () => {
   const [serviceRequests, setServiceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [facilityImages, setFacilityImages] = useState([]);
-  const [depreciationLoading, setDepreciationLoading] = useState(false);
-  const [nextDepreciationDate, setNextDepreciationDate] = useState(null);
-  const [isDepreciationAvailable, setIsDepreciationAvailable] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -64,6 +63,12 @@ const FacilitiesDetail = () => {
     imageUrl: '',
     title: ''
   });
+  // 사용연한 관리를 위한 상태 변수
+  const [usefulLifeDialog, setUsefulLifeDialog] = useState(false);
+  const [usefulLifeMonths, setUsefulLifeMonths] = useState(0);
+  const [usefulLifeUpdateReason, setUsefulLifeUpdateReason] = useState('');
+  const [updatingUsefulLife, setUpdatingUsefulLife] = useState(false);
+  const [usefulLifeError, setUsefulLifeError] = useState('');
 
   // 스낵바 메시지 표시
   const showSnackbar = (message, severity = 'info') => {
@@ -107,31 +112,121 @@ const FacilitiesDetail = () => {
     });
   };
 
-  // 다음 감가상각 가능 날짜 계산
-  const calculateNextDepreciationDate = (lastValuationDate) => {
-    if (!lastValuationDate) {
-      // 최초 감가상각의 경우 (이전 평가일이 없음)
-      return new Date();
-    }
-    
-    try {
-      const lastDate = new Date(lastValuationDate);
-      // 마지막 평가일로부터 1개월 후가 다음 감가상각 가능일
-      const nextDate = addMonths(lastDate, 1);
-      return nextDate;
-    } catch (error) {
-      console.error('날짜 계산 오류:', error);
-      return new Date();
+  // 사용연한 수정 모달 열기
+  const handleOpenUsefulLifeDialog = () => {
+    if (facility) {
+      console.log('시설물 정보:', facility);
+      console.log('시설물 ID:', facility.id, 'facilityId:', facility.facilityId);
+      setUsefulLifeMonths(facility.usefulLifeMonths);
+      setUsefulLifeUpdateReason('');
+      setUsefulLifeError('');
+      setUsefulLifeDialog(true);
     }
   };
 
-  // 현재 감가상각 가능 여부 확인
-  const checkDepreciationAvailability = (nextDate) => {
-    if (!nextDate) return false;
+  // 사용연한 수정 모달 닫기
+  const handleCloseUsefulLifeDialog = () => {
+    setUsefulLifeDialog(false);
+  };
+
+  // 사용연한 업데이트 처리
+  const handleUpdateUsefulLife = async () => {
+    // 입력 유효성 검사
+    if (!usefulLifeMonths || usefulLifeMonths < 1) {
+      setUsefulLifeError('사용연한은 1개월 이상이어야 합니다');
+      return;
+    }
     
+    if (!usefulLifeUpdateReason.trim()) {
+      setUsefulLifeError('수정 사유를 입력해주세요');
+      return;
+    }
+
+    // ID 유효성 검사
+    if (!facility || !facility.facilityId) {
+      console.error('시설물 ID가 유효하지 않습니다:', facility);
+      setUsefulLifeError('시설물 ID를 찾을 수 없습니다. 페이지를 새로고침하고 다시 시도해주세요.');
+      return;
+    }
+
+    setUpdatingUsefulLife(true);
+    
+    try {
+      // 요청 데이터 구성
+      const requestData = {
+        id: Number(facility.facilityId),
+        usefulLifeMonths: usefulLifeMonths,
+        usefulLifeUpdateReason: usefulLifeUpdateReason
+      };
+      
+      console.log('사용연한 업데이트 요청 데이터:', requestData);
+      
+      // API 호출
+      const response = await fetch('http://localhost:8080/api/facilities/useful-life', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('서버 응답:', response.status, errorData);
+        throw new Error('사용연한 업데이트 실패');
+      }
+
+      const updatedFacility = await response.json();
+      setFacility(updatedFacility);
+      showSnackbar('사용연한이 성공적으로 업데이트 되었습니다', 'success');
+      
+      // 두 다이얼로그 모두 닫기
+      handleCloseDialog(); // 확인 다이얼로그 닫기
+      handleCloseUsefulLifeDialog(); // 사용연한 재평가 다이얼로그 닫기
+    } catch (error) {
+      console.error('사용연한 업데이트 오류:', error);
+      showSnackbar('사용연한 업데이트 중 오류가 발생했습니다', 'error');
+      handleCloseDialog(); // 오류 발생 시에도 확인 다이얼로그는 닫기
+    } finally {
+      setUpdatingUsefulLife(false);
+    }
+  };
+
+  // 남은 사용기간 계산 함수 (개월)
+  const calculateRemainingLifeMonths = () => {
+    if (!facility || !facility.installationDate || !facility.usefulLifeMonths) {
+      return null;
+    }
+
+    const installDate = new Date(facility.installationDate);
     const today = new Date();
-    // 오늘이 다음 감가상각 가능일 이후인지 확인
-    return !isBefore(today, nextDate);
+    const totalLifeMonths = facility.usefulLifeMonths;
+    const usedMonths = differenceInMonths(today, installDate);
+    const remainingMonths = totalLifeMonths - usedMonths;
+    
+    return remainingMonths > 0 ? remainingMonths : 0;
+  };
+
+  // 남은 사용기간 형식화 함수
+  const formatRemainingLife = () => {
+    const remainingMonths = calculateRemainingLifeMonths();
+    if (remainingMonths === null) return '';
+    
+    if (remainingMonths <= 0) {
+      return '(사용기간 만료)';
+    }
+    
+    const years = Math.floor(remainingMonths / 12);
+    const months = remainingMonths % 12;
+    
+    if (years > 0 && months > 0) {
+      return `(남은 기간: ${years}년 ${months}개월)`;
+    } else if (years > 0) {
+      return `(남은 기간: ${years}년)`;
+    } else {
+      return `(남은 기간: ${months}개월)`;
+    }
   };
 
   useEffect(() => {
@@ -151,13 +246,6 @@ const FacilitiesDetail = () => {
         
         const facilityData = await response.json();
         setFacility(facilityData);
-        
-        // 다음 감가상각 가능 날짜 계산
-        const nextDate = calculateNextDepreciationDate(facilityData.lastValuationDate);
-        setNextDepreciationDate(nextDate);
-        
-        // 현재 감가상각 가능 여부 확인
-        setIsDepreciationAvailable(checkDepreciationAvailability(nextDate));
         
         // 수리 이력 데이터 로드
         fetchServiceRequests();
@@ -265,73 +353,6 @@ const FacilitiesDetail = () => {
     return image ? image.imageUrl : null;
   };
 
-  // 감가상각 처리 함수
-  const handleProcessDepreciation = () => {
-    // 감가상각 가능 여부 재확인
-    if (!isDepreciationAvailable) {
-      const formattedDate = nextDepreciationDate ? format(nextDepreciationDate, 'yy-MM-dd') : '알 수 없음';
-      showSnackbar(`아직 감가상각을 진행할 수 없습니다. 다음 감가상각 가능일: ${formattedDate}`, 'warning');
-      return;
-    }
-    
-    setConfirmDialog({
-      open: true,
-      title: '감가상각 처리 확인',
-      message: '이 시설물에 대한 감가상각을 처리하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-      onConfirm: confirmProcessDepreciation
-    });
-  };
-
-  // 감가상각 처리 확인
-  const confirmProcessDepreciation = async () => {
-    setDepreciationLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8080/api/depreciations/facility/${id}/process`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '감가상각 처리에 실패했습니다.');
-      }
-
-      const result = await response.json();
-      
-      // 시설물 정보 새로고침 (현재 가치가 업데이트되었을 것임)
-      const updatedFacilityResponse = await fetch(`http://localhost:8080/api/facilities/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-      
-      if (updatedFacilityResponse.ok) {
-        const updatedFacility = await updatedFacilityResponse.json();
-        setFacility(updatedFacility);
-        
-        // 다음 감가상각 가능 날짜 재계산
-        const nextDate = calculateNextDepreciationDate(updatedFacility.lastValuationDate);
-        setNextDepreciationDate(nextDate);
-        
-        // 현재 감가상각 가능 여부 재확인
-        setIsDepreciationAvailable(checkDepreciationAvailability(nextDate));
-      }
-      
-      showSnackbar(
-        `감가상각이 성공적으로 처리되었습니다. 상각 금액: ${formatCurrency(result.depreciationAmount)}`, 
-        'success'
-      );
-    } catch (error) {
-      console.error('감가상각 처리 실패:', error);
-      showSnackbar(error.message || '감가상각 처리 중 오류가 발생했습니다.', 'error');
-    } finally {
-      setDepreciationLoading(false);
-      setConfirmDialog({ ...confirmDialog, open: false });
-    }
-  };
-
   // QR 코드 다운로드 처리
   const handleDownloadQRCode = () => {
     const qrCodeImageUrl = getImageByType('002005_0005');
@@ -429,24 +450,6 @@ const FacilitiesDetail = () => {
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
             시설물 상세정보
           </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<EditIcon />}
-            onClick={handleEdit}
-            sx={{ 
-              borderColor: '#E0E0E0',
-              color: '#666',
-              backgroundColor: 'white',
-              '&:hover': {
-                backgroundColor: '#F8F9FA',
-                borderColor: '#E0E0E0',
-              },
-            }}
-          >
-            수정
-          </Button>
         </Box>
       </Box>
 
@@ -574,7 +577,19 @@ const FacilitiesDetail = () => {
               >
                 사용 연한
               </Typography>
-              <Typography>{facility.usefulLifeMonths}개월 ({Math.floor(facility.usefulLifeMonths/12)}년)</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography sx={{ mr: 1 }}>{facility.usefulLifeMonths}개월 ({Math.floor(facility.usefulLifeMonths/12)}년)</Typography>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  size="small" 
+                  startIcon={<UpdateIcon />}
+                  onClick={handleOpenUsefulLifeDialog}
+                  sx={{ ml: 1, fontSize: '0.7rem', height: 24 }}
+                >
+                  재평가
+                </Button>
+              </Box>
             </Box>
           </Grid>
 
@@ -604,7 +619,9 @@ const FacilitiesDetail = () => {
               >
                 보증 만료일
               </Typography>
-              <Typography>{formatDate(facility.warrantyEndDate)}</Typography>
+              <Typography>
+                {formatDate(facility.warrantyEndDate)} <Typography component="span" color="text.secondary">{formatRemainingLife()}</Typography>
+              </Typography>
             </Box>
           </Grid>
 
@@ -623,121 +640,10 @@ const FacilitiesDetail = () => {
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
-                감가상각 방법
-              </Typography>
-              <Typography>{facility.depreciationMethodName}</Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
-                현재 가치
-              </Typography>
-              <Typography>{formatCurrency(facility.currentValue)}</Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
-                최근 평가일
-              </Typography>
-              <Typography>{formatDate(facility.lastValuationDate) || '-'}</Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
-                다음 감가상각일
-              </Typography>
-              <Typography color={isDepreciationAvailable ? "success.main" : "text.secondary"}>
-                {nextDepreciationDate ? format(nextDepreciationDate, 'yy-MM-dd') : '-'}
-                {isDepreciationAvailable && 
-                  <Chip 
-                    label="감가상각 가능" 
-                    size="small" 
-                    color="success" 
-                    sx={{ ml: 1, height: 20, fontSize: '0.7rem' }} 
-                  />
-                }
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
-                감가상각 처리
-              </Typography>
-              <Tooltip 
-                title={!isDepreciationAvailable ? 
-                  `다음 감가상각은 ${nextDepreciationDate ? format(nextDepreciationDate, 'yy-MM-dd') : '날짜 정보 없음'} 이후에 가능합니다` : 
-                  "감가상각을 진행하면 시설물의 현재 가치가 업데이트됩니다"}
-                placement="top"
-              >
-                <span>
-                  <Button 
-                    variant="contained" 
-                    color="secondary"
-                    size="small"
-                    startIcon={<CalculateIcon />}
-                    onClick={handleProcessDepreciation}
-                    disabled={depreciationLoading || !isDepreciationAvailable}
-                    sx={{ fontSize: '0.75rem', height: 24 }}
-                  >
-                    {depreciationLoading ? <CircularProgress size={16} /> : '자동 감가상각 처리'}
-                  </Button>
-                </span>
-              </Tooltip>
-              <IconButton 
-                size="small" 
-                color="primary" 
-                sx={{ ml: 1, backgroundColor: 'rgba(0, 0, 0, 0.04)', height: 24, width: 24 }}
-                onClick={() => showSnackbar('감가상각은 월 1회만 처리할 수 있으며, 마지막 평가일로부터 한 달 이후에 처리 가능합니다.', 'info')}
-              >
-                <InfoIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </Grid>
         </Grid>
       </Paper>
 
-      {/* 배치 정보 */}
+      {/* 설치 정보 */}
       <Paper sx={{ mb: 3, p: 3, borderRadius: 2 }}>
         <Typography 
           variant="subtitle1" 
@@ -747,7 +653,7 @@ const FacilitiesDetail = () => {
             mb: 2 
           }}
         >
-          배치 정보
+          설치 정보
         </Typography>
 
         <Grid container spacing={2}>
@@ -760,39 +666,9 @@ const FacilitiesDetail = () => {
                   fontWeight: 500
                 }}
               >
-                설치 매장
+                현재 위치
               </Typography>
               <Typography>{facility.locationStoreName} ({facility.locationStoreNumber})</Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
-                설치 위치
-              </Typography>
-              <Typography>{facility.locationAddress}</Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
-              <Typography 
-                sx={{ 
-                  width: '140px',
-                  color: '#666',
-                  fontWeight: 500
-                }}
-              >
-                소유 매장
-              </Typography>
-              <Typography>{facility.ownerStoreName} ({facility.ownerStoreNumber})</Typography>
             </Box>
           </Grid>
 
@@ -820,7 +696,7 @@ const FacilitiesDetail = () => {
                   fontWeight: 500
                 }}
               >
-                등록일
+                최초 설치일
               </Typography>
               <Typography>{formatDate(facility.createdAt)}</Typography>
             </Box>
@@ -848,6 +724,22 @@ const FacilitiesDetail = () => {
               </Button>
             </Box>
           </Grid>
+
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', borderBottom: '1px solid #EEEEEE', py: 1.5 }}>
+              <Typography 
+                sx={{ 
+                  width: '140px',
+                  color: '#666',
+                  fontWeight: 500
+                }}
+              >
+                설치 주소
+              </Typography>
+              <Typography>{facility.locationAddress}</Typography>
+            </Box>
+          </Grid>
+
         </Grid>
       </Paper>
 
@@ -1518,19 +1410,196 @@ const FacilitiesDetail = () => {
       <Dialog
         open={confirmDialog.open}
         onClose={handleCloseDialog}
+        PaperProps={{
+          sx: { borderRadius: 1 }
+        }}
       >
-        <DialogTitle>{confirmDialog.title}</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ 
+          pb: 1.5, 
+          pt: 2,
+          fontSize: '1.1rem', 
+          fontWeight: 600 
+        }}>
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent sx={{ pb: 1 }}>
           <DialogContentText>
             {confirmDialog.message}
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
+        <DialogActions sx={{ px: 2.5, pb: 2 }}>
+          <Button 
+            onClick={handleCloseDialog} 
+            color="inherit"
+            size="small"
+            sx={{ fontWeight: 500 }}
+          >
             취소
           </Button>
-          <Button onClick={confirmDialog.onConfirm} color="primary" autoFocus>
+          <Button 
+            onClick={confirmDialog.onConfirm} 
+            color="primary" 
+            variant="contained"
+            size="small"
+            autoFocus
+            sx={{ fontWeight: 500 }}
+          >
             확인
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 사용연한 재평가 다이얼로그 */}
+      <Dialog 
+        open={usefulLifeDialog} 
+        onClose={handleCloseUsefulLifeDialog}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { 
+            borderRadius: 1,
+            boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #f0f0f0', 
+          pb: 1.5, 
+          pt: 2,
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <UpdateIcon sx={{ mr: 1, color: '#1976d2', fontSize: '1.2rem' }} />
+          <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600 }}>
+            사용연한 재평가
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2, pb: 1 }}>
+          <Box sx={{ 
+            backgroundColor: '#f0f7ff', 
+            p: 1.5, 
+            borderRadius: 1,
+            mb: 2,
+            mt: 1,
+            border: '1px solid #bae0ff'
+          }}>
+            <Typography variant="subtitle2" sx={{ color: '#1976d2', fontWeight: 600, mb: 0.5, fontSize: '0.8rem' }}>
+              안내사항
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5, fontSize: '0.8rem' }}>
+              • 재평가하는 개월수는 <strong>총 사용연한</strong>을 입력해야 합니다.
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              • 변경 시 <strong>보증 만료일이 자동으로 재계산</strong>됩니다.
+            </Typography>
+          </Box>
+          
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500, color: '#666' }}>
+              현재 설정된 사용연한
+            </Typography>
+            <Typography sx={{ color: '#1976d2', fontWeight: 500, fontSize: '0.9rem' }}>
+              {facility.usefulLifeMonths}개월 ({Math.floor(facility.usefulLifeMonths/12)}년 {facility.usefulLifeMonths % 12}개월)
+            </Typography>
+          </Box>
+          
+          <TextField
+            autoFocus
+            margin="dense"
+            id="usefulLifeMonths"
+            label="새 사용연한 (개월)"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={usefulLifeMonths}
+            onChange={(e) => setUsefulLifeMonths(parseInt(e.target.value) || 0)}
+            InputProps={{
+              inputProps: { min: 1 },
+              startAdornment: (
+                <Typography sx={{ mr: 0.5, color: '#666', fontSize: '0.8rem' }}>총</Typography>
+              )
+            }}
+            size="small"
+            sx={{ mb: 1 }}
+          />
+          
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            backgroundColor: usefulLifeMonths > 0 ? '#f5f5f5' : 'transparent',
+            p: 0.8,
+            borderRadius: 1,
+            mb: 1.5
+          }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+              연환산: 
+            </Typography>
+            <Typography sx={{ ml: 1, fontSize: '0.8rem', color: '#1976d2', fontWeight: 500 }}>
+              {Math.floor(usefulLifeMonths / 12)}년 {usefulLifeMonths % 12}개월
+            </Typography>
+          </Box>
+          
+          <TextField
+            margin="dense"
+            id="usefulLifeUpdateReason"
+            label="수정 사유 (필수)"
+            placeholder="사용연한 변경 사유를 입력해주세요"
+            type="text"
+            fullWidth
+            variant="outlined"
+            multiline
+            rows={2}
+            value={usefulLifeUpdateReason}
+            onChange={(e) => setUsefulLifeUpdateReason(e.target.value)}
+            size="small"
+            sx={{ mt: 0.5, mb: 0.5 }}
+          />
+          
+          {usefulLifeError && (
+            <Box sx={{ 
+              backgroundColor: '#fff0f0', 
+              p: 1, 
+              borderRadius: 1, 
+              mt: 1.5,
+              border: '1px solid #ffccc7'
+            }}>
+              <Typography color="error" variant="body2" sx={{ fontSize: '0.8rem' }}>
+                {usefulLifeError}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2.5, py: 1.5, borderTop: '1px solid #f0f0f0' }}>
+          <Button 
+            onClick={handleCloseUsefulLifeDialog} 
+            color="inherit"
+            size="small"
+            sx={{ fontWeight: 500 }}
+          >
+            취소
+          </Button>
+          <Button 
+            onClick={() => {
+              // 사용연한 변경 전 한번 더 확인
+              setConfirmDialog({
+                open: true,
+                title: '사용연한 변경 확인',
+                message: (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography>사용연한을 {facility.usefulLifeMonths}개월에서 {usefulLifeMonths}개월로 변경하시겠습니까?</Typography>
+                    <Typography sx={{ mt: 1 }}>이 작업은 시설물의 보증 만료일에 영향을 미칩니다.</Typography>
+                  </Box>
+                ),
+                onConfirm: handleUpdateUsefulLife,
+              });
+            }} 
+            variant="contained"
+            color="primary" 
+            size="small"
+            disabled={updatingUsefulLife || !usefulLifeMonths || !usefulLifeUpdateReason.trim()}
+            sx={{ fontWeight: 500 }}
+          >
+            {updatingUsefulLife ? <CircularProgress size={20} /> : '변경 적용'}
           </Button>
         </DialogActions>
       </Dialog>

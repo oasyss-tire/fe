@@ -47,6 +47,7 @@ const ContractCorrectionResponsePage = React.lazy(() => import('./components/con
 const PreviewPdfViewer = React.lazy(() => import('./components/contract/PreviewPdfViewer'));
 const ServiceRequestCreate = React.lazy(() => import('./components/facility/ServiceRequestCreate'));
 const ServiceRequestList = React.lazy(() => import('./components/facility/ServiceRequestList'));
+const ServiceRequestDetail = React.lazy(() => import('./components/facility/ServiceRequestDetail'));
 const FacilityTransfer = React.lazy(() => import('./components/facility/FacilityTransfer'));
 const FacilityHistoryPage = React.lazy(() => import('./components/facility/FacilityHistoryPage'));
 const ContractEventLogPage = React.lazy(() => import('./components/contract/ContractEventLogPage'));
@@ -151,6 +152,7 @@ const AppContent = () => {
               <Route path="/service-request/create" element={<ServiceRequestCreate />} />
               <Route path="/service-request/create/:facilityId" element={<ServiceRequestCreate />} />
               <Route path="/service-request/list" element={<ServiceRequestList />} />
+              <Route path="/service-request/:id" element={<ServiceRequestDetail />} />
               <Route path="/facility-history" element={<FacilityHistoryPage />} />
               <Route path="/contract-log" element={<ContractEventLogPage />} />
               <Route path="/edit-template/:templateId" element={<EditTemplatePage />} />
