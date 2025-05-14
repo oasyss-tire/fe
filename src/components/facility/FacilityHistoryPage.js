@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Box, 
   Typography, 
   Paper, 
-  Tabs, 
-  Tab, 
   Table, 
   TableBody, 
   TableCell, 
@@ -24,45 +22,16 @@ import {
   IconButton,
   InputAdornment,
   Snackbar,
-  Alert
+  Alert,
+  Pagination
 } from '@mui/material';
 import { 
   Search as SearchIcon,
   Refresh as RefreshIcon,
-  FilterList as FilterListIcon,
-  ArrowDropDown as ArrowDropDownIcon
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, subMonths } from 'date-fns';
-
-// 탭 컨텐츠를 위한 컴포넌트
-const TabPanel = (props) => {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`facility-history-tabpanel-${index}`}
-      aria-labelledby={`facility-history-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-};
-
-// 탭 속성 설정
-const a11yProps = (index) => {
-  return {
-    id: `facility-history-tab-${index}`,
-    'aria-controls': `facility-history-tabpanel-${index}`,
-  };
-};
+import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
 
 // 날짜 포맷 함수
 const formatDate = (dateString) => {
@@ -84,16 +53,13 @@ const formatCurrency = (amount) => {
 };
 
 const FacilityHistoryPage = () => {
-  // 탭 상태 관리
-  const [tabValue, setTabValue] = useState(0);
-  
   // 페이지네이션 상태
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
   // 검색 필터 상태
-  const [startDate, setStartDate] = useState(subMonths(new Date(), 3)); // 기본값: 3개월 전
-  const [endDate, setEndDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(null); // 초기값 null로 변경
+  const [endDate, setEndDate] = useState(null); // 초기값 null로 변경
   const [searchKeyword, setSearchKeyword] = useState('');
   const [facilityTypeFilter, setFacilityTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -101,8 +67,6 @@ const FacilityHistoryPage = () => {
   
   // 데이터 상태
   const [facilityTransactions, setFacilityTransactions] = useState([]);
-  const [voucherTransactions, setVoucherTransactions] = useState([]);
-  const [depreciationHistory, setDepreciationHistory] = useState([]);
   const [facilityTypes, setFacilityTypes] = useState([]);
   const [statusCodes, setStatusCodes] = useState([]);
   const [transactionTypes, setTransactionTypes] = useState([]);
@@ -120,23 +84,77 @@ const FacilityHistoryPage = () => {
   // 확장된 행 상태 관리
   const [expandedRow, setExpandedRow] = useState(null);
 
-  // 코드 데이터 로드
+  // 날짜 필터 상태
+  const [isDateFilterActive, setIsDateFilterActive] = useState(false); // 초기값은 비활성화 상태로 변경
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // 모든 시설물 이동 이력 데이터
+  const [allFacilityTransactions, setAllFacilityTransactions] = useState([]);
+  
+  // 필터링된 데이터 계산 (useMemo 사용)
+  const filteredFacilityTransactions = useMemo(() => {
+    // 검색어, 시설물 유형, 이력 유형에 따라 데이터 필터링
+    return allFacilityTransactions.filter(transaction => {
+      // 검색어 필터링 (관리번호, 시설물 유형, 브랜드명, 업체명에서 검색)
+      const matchesKeyword = searchKeyword === '' || 
+        (transaction.managementNumber && transaction.managementNumber.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.facilityTypeName && transaction.facilityTypeName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.brandCodeName && transaction.brandCodeName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.fromCompanyName && transaction.fromCompanyName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.toCompanyName && transaction.toCompanyName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.notes && transaction.notes.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.transactionTypeName && transaction.transactionTypeName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.performedByName && transaction.performedByName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (transaction.createdByName && transaction.createdByName.toLowerCase().includes(searchKeyword.toLowerCase()));
+
+      // 시설물 유형 필터링 - 여러 방식 비교
+      const matchesFacilityType = facilityTypeFilter === '' || 
+        transaction.facilityTypeCode === facilityTypeFilter || 
+        (transaction.facilityTypeName && facilityTypes.find(type => type.codeId === facilityTypeFilter)?.codeName === transaction.facilityTypeName);
+      
+      // 이력 유형 필터링
+      const matchesTransactionType = transactionTypeFilter === '' || 
+        transaction.transactionTypeCode === transactionTypeFilter;
+      
+      // 상태 필터링
+      const matchesStatus = statusFilter === '' || 
+        transaction.statusAfterCode === statusFilter;
+        
+      // 날짜 범위 필터링
+      let matchesDateRange = true;
+      if (isDateFilterActive && startDate && endDate) {
+        const transactionDate = transaction.transactionDate ? new Date(transaction.transactionDate) : null;
+        if (transactionDate) {
+          const endOfDay = new Date(endDate);
+          endOfDay.setHours(23, 59, 59);
+          
+          const startOfDay = new Date(startDate);
+          startOfDay.setHours(0, 0, 0);
+          
+          matchesDateRange = transactionDate >= startOfDay && transactionDate <= endOfDay;
+        } else {
+          matchesDateRange = false;
+        }
+      }
+
+      return matchesKeyword && matchesFacilityType && matchesTransactionType && matchesStatus && matchesDateRange;
+    });
+  }, [allFacilityTransactions, searchKeyword, facilityTypeFilter, transactionTypeFilter, statusFilter, startDate, endDate, isDateFilterActive, facilityTypes]);
+
+  // 현재 페이지에 표시할 데이터
+  const paginatedFacilityTransactions = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredFacilityTransactions.slice(startIndex, endIndex);
+  }, [filteredFacilityTransactions, page, rowsPerPage]);
+  
+  // 초기 데이터 로딩
   useEffect(() => {
     fetchCodes();
+    fetchAllFacilityTransactions();
   }, []);
 
-  // 탭 변경 시 해당 데이터 로드
-  useEffect(() => {
-    if (tabValue === 0) {
-      fetchFacilityTransactions();
-    } else if (tabValue === 1) {
-      fetchVoucherTransactions();
-    } else if (tabValue === 2) {
-      fetchDepreciationHistory();
-    }
-  }, [tabValue]);
-
-  // 코드 데이터 로드 함수
+  // 코드 데이터 로드
   const fetchCodes = async () => {
     try {
       // 시설물 타입 코드 로드
@@ -186,39 +204,12 @@ const FacilityHistoryPage = () => {
     }
   };
 
-  // 시설물 이동 이력 데이터 로드
-  const fetchFacilityTransactions = async () => {
+  // 모든 시설물 이동 이력 데이터 로드
+  const fetchAllFacilityTransactions = async () => {
     setLoading(true);
     try {
-      const startDateStr = format(startDate, 'yyyy-MM-dd');
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-      
+      // API 요청 - 날짜 필터 제거
       const url = new URL('http://localhost:8080/api/facility-transactions');
-      
-      // 날짜 범위 추가
-      url.searchParams.append('startDate', startDateStr);
-      url.searchParams.append('endDate', endDateStr);
-      
-      // 키워드 검색
-      if (searchKeyword && searchKeyword.trim() !== '') {
-        url.searchParams.append('keyword', searchKeyword.trim());
-      }
-      
-      // 시설물 유형 필터 - facilityTypeName 사용 (백엔드 API 요청용)
-      if (facilityTypeFilter && facilityTypeFilter !== '') {
-        url.searchParams.append('facilityTypeName', facilityTypeFilter);
-      }
-      
-      // 트랜잭션 유형 필터
-      if (transactionTypeFilter && transactionTypeFilter !== '') {
-        url.searchParams.append('transactionTypeCode', transactionTypeFilter);
-      }
-      
-      // 상태 필터
-      if (statusFilter && statusFilter !== '') {
-        url.searchParams.append('statusCode', statusFilter);
-      }
-      
       
       const response = await fetch(url, {
         headers: {
@@ -231,162 +222,46 @@ const FacilityHistoryPage = () => {
       }
       
       const data = await response.json();
-
-      // 백엔드 필터링이 작동하지 않는 경우 프론트엔드에서 필터링 수행
-      let filteredData = [...data];
       
-      // 프론트엔드에서 시설물 유형 필터링 (백엔드가 처리하지 않는 경우)
-      if (facilityTypeFilter && facilityTypeFilter !== '') {
-        filteredData = filteredData.filter(
-          item => item.facilityTypeName === facilityTypeFilter
-        );
-      }
-      
-      // 프론트엔드에서 트랜잭션 유형 필터링 (백엔드가 처리하지 않는 경우)
-      if (transactionTypeFilter && transactionTypeFilter !== '') {
-        filteredData = filteredData.filter(
-          item => item.transactionTypeName === transactionTypeFilter
-        );
-      }
-      
-      setFacilityTransactions(filteredData);
-      setPage(0); // 페이지 초기화
+      setAllFacilityTransactions(data);
+      setPage(0); // 데이터 로드 후 첫 페이지로 이동
     } catch (error) {
       console.error('시설물 이동 이력 로드 실패:', error);
       showSnackbar('시설물 이동 이력을 불러오는데 실패했습니다.', 'error');
-      setFacilityTransactions([]);
+      setAllFacilityTransactions([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // 자산 회계 이력 데이터 로드
-  const fetchVoucherTransactions = async () => {
-    setLoading(true);
-    try {
-      const startDateStr = format(startDate, 'yyyy-MM-dd');
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-      
-      const url = new URL('http://localhost:8080/api/vouchers/all');
-      
-      // 날짜 범위 추가
-      url.searchParams.append('startDate', startDateStr);
-      url.searchParams.append('endDate', endDateStr);
-      
-      // 키워드 검색
-      if (searchKeyword && searchKeyword.trim() !== '') {
-        url.searchParams.append('keyword', searchKeyword.trim());
-      }
-      
-      // 시설물 유형 필터 - facilityTypeName 사용
-      if (facilityTypeFilter && facilityTypeFilter !== '') {
-        url.searchParams.append('facilityTypeName', facilityTypeFilter);
-      }
-      
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`자산 회계 이력을 불러오는데 실패했습니다. 상태 코드: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setVoucherTransactions(data);
-      setPage(0); // 페이지 초기화
-    } catch (error) {
-      console.error('자산 회계 이력 로드 실패:', error);
-      showSnackbar('자산 회계 이력을 불러오는데 실패했습니다.', 'error');
-      setVoucherTransactions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 감가상각 이력 데이터 로드
-  const fetchDepreciationHistory = async () => {
-    setLoading(true);
-    try {
-      const startDateStr = format(startDate, 'yyyy-MM-dd');
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-      
-      const url = new URL('http://localhost:8080/api/depreciations');
-      
-      // 날짜 범위 추가
-      url.searchParams.append('startDate', startDateStr);
-      url.searchParams.append('endDate', endDateStr);
-      
-      // 키워드 검색
-      if (searchKeyword && searchKeyword.trim() !== '') {
-        url.searchParams.append('keyword', searchKeyword.trim());
-      }
-      
-      // 시설물 유형 필터 - facilityTypeName 사용
-      if (facilityTypeFilter && facilityTypeFilter !== '') {
-        url.searchParams.append('facilityTypeName', facilityTypeFilter);
-      }
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`감가상각 이력을 불러오는데 실패했습니다. 상태 코드: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setDepreciationHistory(data);
-      setPage(0); // 페이지 초기화
-    } catch (error) {
-      console.error('감가상각 이력 로드 실패:', error);
-      showSnackbar('감가상각 이력을 불러오는데 실패했습니다.', 'error');
-      setDepreciationHistory([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 탭 변경 핸들러
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-
+  // 필터링된 데이터가 변경될 때마다 페이지네이션 정보 업데이트 - 더 이상 필요 없음
+  
   // 페이지 변경 핸들러
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
+    // 페이지 변경 시 스크롤을 상단으로 이동
+    const tableContainer = document.querySelector('.MuiTableContainer-root');
+    if (tableContainer) {
+      tableContainer.scrollTop = 0;
+    }
   };
-
+  
   // 페이지당 행 수 변경 핸들러
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
-  // 검색 핸들러
-  const handleSearch = () => {
-    
-    if (tabValue === 0) {
-      fetchFacilityTransactions();
-    } else if (tabValue === 1) {
-      fetchVoucherTransactions();
-    } else if (tabValue === 2) {
-      fetchDepreciationHistory();
-    }
-  };
-
   // 필터 초기화 핸들러
   const handleResetFilters = () => {
-    setStartDate(subMonths(new Date(), 3));
-    setEndDate(new Date());
+    setStartDate(null);
+    setEndDate(null);
     setSearchKeyword('');
     setFacilityTypeFilter('');
     setStatusFilter('');
     setTransactionTypeFilter('');
+    setIsDateFilterActive(false);
+    setPage(0); // 페이지 초기화
   };
 
   // 스낵바 메시지 표시 함수
@@ -410,11 +285,49 @@ const FacilityHistoryPage = () => {
   const handleFacilityTypeChange = (e) => {
     const value = e.target.value;
     setFacilityTypeFilter(value);
+    setPage(0); // 페이지 초기화
   };
 
   const handleTransactionTypeChange = (e) => {
     const value = e.target.value;
     setTransactionTypeFilter(value);
+    setPage(0); // 페이지 초기화
+  };
+  
+  // 검색어 변경 핸들러
+  const handleSearchKeywordChange = (e) => {
+    const value = e.target.value;
+    setSearchKeyword(value);
+    setPage(0); // 페이지 초기화
+  };
+  
+  // 날짜 변경 핸들러
+  const handleDateRangeChange = (start, end) => {
+    setStartDate(start);
+    setEndDate(end);
+    setIsDateFilterActive(true);
+    setPage(0); // 페이지 초기화
+  };
+  
+  // 날짜 필터 초기화
+  const handleResetDateFilter = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setIsDateFilterActive(false);
+    setShowDatePicker(false);
+    setPage(0);
+  };
+  
+  // 선택된 날짜 표시 텍스트
+  const getDateRangeText = () => {
+    if (!isDateFilterActive || !startDate || !endDate) return '전체';
+    
+    try {
+      return `${format(startDate, 'yy-MM-dd')} ~ ${format(endDate, 'yy-MM-dd')}`;
+    } catch (error) {
+      console.error('날짜 형식 오류:', error);
+      return '전체';
+    }
   };
 
   // 행 확장 토글 핸들러
@@ -424,122 +337,153 @@ const FacilityHistoryPage = () => {
 
   // 검색 필터 UI 렌더링
   const renderSearchFilters = () => (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Grid container spacing={2} alignItems="center">
-        <Grid item xs={12} sm={6} md={3}>
-          <DatePicker
-            label="시작일"
-            value={startDate}
-            onChange={(newValue) => setStartDate(newValue)}
-            slotProps={{ textField: { fullWidth: true, size: "small" } }}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <DatePicker
-            label="종료일"
-            value={endDate}
-            onChange={(newValue) => setEndDate(newValue)}
-            slotProps={{ textField: { fullWidth: true, size: "small" } }}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <FormControl fullWidth size="small">
-            <InputLabel>시설물 유형</InputLabel>
+    <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+      {/* 검색어 필드 */}
+      <Box sx={{ flex: 1, minWidth: '200px' }}>
+        <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+          검색
+        </Typography>
+        <TextField
+          placeholder="시설물 정보, 이력 유형, 업체명 검색"
+          value={searchKeyword}
+          onChange={handleSearchKeywordChange}
+          size="small"
+          sx={{ 
+            width: '100%',
+            backgroundColor: 'white',
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: '#E0E0E0',
+              },
+            },
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: '#9E9E9E' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
+      
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        {/* 시설물 유형 필터 */}
+        <Box sx={{ width: '150px' }}>
+          <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+            시설물 유형
+          </Typography>
+          <FormControl 
+            fullWidth 
+            size="small"
+            sx={{ backgroundColor: 'white' }}
+          >
             <Select
               value={facilityTypeFilter}
-              onChange={(e) => {
-                const selectedValue = e.target.value;
-                setFacilityTypeFilter(selectedValue);
+              onChange={handleFacilityTypeChange}
+              displayEmpty
+              sx={{
+                height: '40px',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#E0E0E0',
+                },
               }}
-              label="시설물 유형"
             >
-              <MenuItem value="">전체</MenuItem>
+              <MenuItem value="">모든 유형</MenuItem>
               {facilityTypes.map((type) => (
-                <MenuItem key={type.codeId} value={type.codeName}>
+                <MenuItem key={type.codeId} value={type.codeId}>
                   {type.codeName}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-        </Grid>
-        {tabValue === 0 && (
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>유형</InputLabel>
-              <Select
-                value={transactionTypeFilter}
-                onChange={(e) => {
-                  const selectedValue = e.target.value;
-                  setTransactionTypeFilter(selectedValue);
-                }}
-                label="유형"
-              >
-                <MenuItem value="">전체</MenuItem>
-                {transactionTypes.map((type) => (
-                  <MenuItem key={type.codeId} value={type.codeName}>
-                    {type.codeName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        )}
-        <Grid item xs={12} sm={6} md={tabValue === 0 ? 2 : 4}>
-          <TextField
-            label="검색어"
-            fullWidth
+        </Box>
+        
+        {/* 이력 유형 필터 */}
+        <Box sx={{ width: '150px' }}>
+          <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+            이력 유형
+          </Typography>
+          <FormControl 
+            fullWidth 
             size="small"
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={handleSearch}>
-                    <SearchIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
+            sx={{ backgroundColor: 'white' }}
+          >
+            <Select
+              value={transactionTypeFilter}
+              onChange={handleTransactionTypeChange}
+              displayEmpty
+              sx={{
+                height: '40px',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#E0E0E0',
+                },
+              }}
+            >
+              <MenuItem value="">모든 유형</MenuItem>
+              {transactionTypes.map((type) => (
+                <MenuItem key={type.codeId} value={type.codeId}>
+                  {type.codeName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        
+        {/* 날짜 범위 필터 */}
+        <Box sx={{ width: '150px' }}>
+          <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+            요청일자
+          </Typography>
+          <DateRangeButton 
+            startDate={startDate}
+            endDate={endDate}
+            isActive={isDateFilterActive}
+            onClick={() => setShowDatePicker(true)}
+            getDateRangeText={getDateRangeText}
+            buttonProps={{
+              sx: {
+                backgroundColor: isDateFilterActive ? 'rgba(25, 118, 210, 0.08)' : 'rgba(249, 249, 249, 0.87)',
+                width: '100%',
+                height: '40px',
+                color: isDateFilterActive ? '#1976d2' : 'rgba(30, 30, 30, 0.87)',
+                borderColor: isDateFilterActive ? '#1976d2' : '#E0E0E0',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+              }
             }}
           />
-        </Grid>
-        <Grid item xs={12} display="flex" justifyContent="flex-end">
-          <Button 
-            variant="outlined" 
-            startIcon={<RefreshIcon />}
-            onClick={handleResetFilters}
-            sx={{ mr: 1 }}
-          >
-            필터 초기화
-          </Button>
-          <Button 
-            variant="contained" 
-            startIcon={<SearchIcon />}
-            onClick={handleSearch}
-          >
-            검색
-          </Button>
-        </Grid>
-      </Grid>
-    </Paper>
+          <DateRangeCalendar
+            startDate={startDate}
+            endDate={endDate}
+            onDateChange={handleDateRangeChange}
+            open={showDatePicker}
+            onClose={() => setShowDatePicker(false)}
+            onApply={() => setShowDatePicker(false)}
+            onReset={handleResetDateFilter}
+          />
+        </Box>
+      </Box>
+    </Box>
   );
 
   // 시설물 이동 이력 테이블 렌더링
   const renderFacilityTransactionTable = () => {
-    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - facilityTransactions.length) : 0;
+    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredFacilityTransactions.length) : 0;
     
     return (
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <TableContainer sx={{ overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 1200, tableLayout: 'fixed' }}>
+      <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden' }}>
+        <TableContainer sx={{ overflowX: 'auto', maxHeight: '600px' }}>
+          <Table sx={{ minWidth: 1200, tableLayout: 'fixed' }} stickyHeader>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell width={60} sx={{ px: 2 }}>번호</TableCell>
+                <TableCell width={60} sx={{ px: 2 }}>No.</TableCell>
                 <TableCell width={200} sx={{ px: 2 }}>시설물 정보</TableCell>
                 <TableCell width={100} sx={{ px: 2 }}>유형</TableCell>
                 <TableCell width={150} sx={{ px: 2 }}>변경 전/후 상태</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>출발 수탁업체</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>도착 수탁업체</TableCell>
+                <TableCell width={120} sx={{ px: 2 }}>출발 수탁업체명</TableCell>
+                <TableCell width={120} sx={{ px: 2 }}>도착 수탁업체명</TableCell>
                 <TableCell width={120} sx={{ px: 2 }}>처리일자</TableCell>
                 <TableCell width={100} sx={{ px: 2 }}>처리자</TableCell>
                 <TableCell width={150} sx={{ px: 2 }}>비고</TableCell>
@@ -553,20 +497,17 @@ const FacilityHistoryPage = () => {
                     <Typography variant="body2" sx={{ mt: 2 }}>데이터를 불러오는 중입니다...</Typography>
                   </TableCell>
                 </TableRow>
-              ) : facilityTransactions.length === 0 ? (
+              ) : filteredFacilityTransactions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
                     <Typography variant="body2">데이터가 없습니다.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                (rowsPerPage > 0
-                  ? facilityTransactions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  : facilityTransactions
-                ).map((transaction, index) => (
-                  <TableRow key={transaction.transactionId}>
+                paginatedFacilityTransactions.map((transaction, index) => (
+                  <TableRow key={transaction.transactionId} hover>
                     <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
-                      {page * rowsPerPage + index + 1}
+                      {filteredFacilityTransactions.length - (page * rowsPerPage + index)}
                     </TableCell>
                     <TableCell sx={{ px: 2 }}>
                       <Box>
@@ -599,218 +540,11 @@ const FacilityHistoryPage = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={facilityTransactions.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="행 수:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
-        />
-      </Paper>
-    );
-  };
-
-  // 자산 회계 이력 테이블 렌더링
-  const renderVoucherTransactionTable = () => {
-    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - voucherTransactions.length) : 0;
-    
-    return (
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <TableContainer sx={{ overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 1200, tableLayout: 'fixed' }}>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell width={60} sx={{ px: 2 }}>번호</TableCell>
-                <TableCell width={150} sx={{ px: 2 }}>전표번호</TableCell>
-                <TableCell width={100} sx={{ px: 2 }}>유형</TableCell>
-                <TableCell width={200} sx={{ px: 2 }}>시설물 정보</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>금액</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>처리일자</TableCell>
-                <TableCell width={100} sx={{ px: 2 }}>처리자</TableCell>
-                <TableCell width={250} sx={{ px: 2 }}>설명</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                    <CircularProgress size={40} />
-                    <Typography variant="body2" sx={{ mt: 2 }}>데이터를 불러오는 중입니다...</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : voucherTransactions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                    <Typography variant="body2">데이터가 없습니다.</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                (rowsPerPage > 0
-                  ? voucherTransactions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  : voucherTransactions
-                ).map((voucher, index) => (
-                  <React.Fragment key={voucher.voucherId}>
-                    <TableRow 
-                      onClick={() => handleRowExpand(voucher.voucherId)}
-                      sx={{ 
-                        cursor: 'pointer',
-                        '&:hover': { backgroundColor: '#f5f5f5' },
-                        backgroundColor: expandedRow === voucher.voucherId ? '#f0f7ff' : 'inherit'
-                      }}
-                    >
-                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{page * rowsPerPage + index + 1}</TableCell>
-                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{voucher.voucherNumber}</TableCell>
-                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{voucher.voucherTypeName}</TableCell>
-                      <TableCell sx={{ px: 2 }}>
-                        <Box>
-                          <Typography variant="body2">{voucher.facilityTypeName}</Typography>
-                          <Typography variant="caption" color="text.secondary">품목: {voucher.brandCodeName}<br/></Typography>
-                          <Typography variant="caption" color="text.secondary">관리번호: {voucher.facilityManagementNumber}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatCurrency(voucher.totalAmount)}</TableCell>
-                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{formatDate(voucher.transactionDate)}</TableCell>
-                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{voucher.createdBy}</TableCell>
-                      <TableCell sx={{ px: 2 }}>{voucher.description || '-'}</TableCell>
-                    </TableRow>
-                    {expandedRow === voucher.voucherId && (
-                      <TableRow>
-                        <TableCell colSpan={8} sx={{ py: 0, px: 0 }}>
-                          <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0' }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'medium' }}>
-                              차변/대변 항목
-                            </Typography>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow sx={{ '& th': { fontWeight: 'medium', py: 1 } }}>
-                                  <TableCell width="15%">유형</TableCell>
-                                  <TableCell width="15%">계정코드</TableCell>
-                                  <TableCell width="25%">계정명</TableCell>
-                                  <TableCell width="15%" align="right">금액</TableCell>
-                                  <TableCell width="30%">설명</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {voucher.items?.map((item) => (
-                                  <TableRow key={item.itemId}>
-                                    <TableCell>{item.debit ? "차변" : "대변"}</TableCell>
-                                    <TableCell>{item.accountCode}</TableCell>
-                                    <TableCell>{item.accountName}</TableCell>
-                                    <TableCell align="right">{formatCurrency(item.amount)}</TableCell>
-                                    <TableCell>{item.description}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                ))
-              )}
-              {emptyRows > 0 && (
-                <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={8} />
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={voucherTransactions.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="행 수:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
-        />
-      </Paper>
-    );
-  };
-
-  // 감가상각 이력 테이블 렌더링
-  const renderDepreciationHistoryTable = () => {
-    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - depreciationHistory.length) : 0;
-    
-    return (
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <TableContainer sx={{ overflowX: 'auto' }}>
-          <Table sx={{ minWidth: 1200, tableLayout: 'fixed' }}>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell width={60} sx={{ px: 2 }}>번호</TableCell>
-                <TableCell width={200} sx={{ px: 2 }}>시설물 정보</TableCell>
-                <TableCell width={100} sx={{ px: 2 }}>상각 방법</TableCell>
-                <TableCell width={100} sx={{ px: 2 }}>상각 유형</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>처리일자</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>이전 가치</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>상각 금액</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>현재 가치</TableCell>
-                <TableCell width={100} sx={{ px: 2 }}>회계연도</TableCell>
-                <TableCell width={120} sx={{ px: 2 }}>위치</TableCell>
-                <TableCell width={100} sx={{ px: 2 }}>처리자</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ py: 3 }}>
-                    <CircularProgress size={40} />
-                    <Typography variant="body2" sx={{ mt: 2 }}>데이터를 불러오는 중입니다...</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : depreciationHistory.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ py: 3 }}>
-                    <Typography variant="body2">데이터가 없습니다.</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                (rowsPerPage > 0
-                  ? depreciationHistory.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  : depreciationHistory
-                ).map((depreciation, index) => (
-                  <TableRow key={depreciation.depreciationId}>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{page * rowsPerPage + index + 1}</TableCell>
-                    <TableCell sx={{ px: 2 }}>
-                      <Box>
-                        <Typography variant="body2">{depreciation.facilityName}</Typography>
-                        <Typography variant="caption" color="text.secondary">품목: {depreciation.brandCodeName}<br/></Typography>
-                        <Typography variant="caption" color="text.secondary">관리번호: {depreciation.managementNumber}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{depreciation.depreciationMethodName}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{depreciation.depreciationTypeName}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{formatDate(depreciation.depreciationDate)}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatCurrency(depreciation.previousValue)}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatCurrency(depreciation.depreciationAmount)}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatCurrency(depreciation.currentValue)}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{depreciation.fiscalYear}년 {depreciation.fiscalMonth}월</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{depreciation.locationCompanyName}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{depreciation.createdByName}</TableCell>
-                  </TableRow>
-                ))
-              )}
-              {emptyRows > 0 && (
-                <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={11} />
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={depreciationHistory.length}
+          count={filteredFacilityTransactions.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -823,40 +557,49 @@ const FacilityHistoryPage = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
-        시설물 이력 관리
-      </Typography>
+    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+      {/* 상단 헤더 */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+          시설물 이력 관리
+        </Typography>
+      </Box>
 
-      <Paper sx={{ mb: 3 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant="fullWidth"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab label="시설물 이동 이력" {...a11yProps(0)} />
-          {/* 임시 비활성화
-          <Tab label="자산 회계 이력" {...a11yProps(1)} />
-          <Tab label="감가상각 이력" {...a11yProps(2)} />
-          */}
-        </Tabs>
-      </Paper>
+      {/* 메인 컨텐츠 영역 */}
+      <Box sx={{ 
+        backgroundColor: 'white',
+        borderRadius: 2,
+        border: '1px solid #EEEEEE',
+        p: 3,
+        mb: 3
+      }}>
+        {/* 검색 필터 */}
+        {renderSearchFilters()}
+        
+        {/* 필터 초기화 버튼 */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleResetFilters}
+            sx={{
+              color: '#666',
+              borderColor: '#ccc',
+              '&:hover': {
+                borderColor: '#1976d2',
+                color: '#1976d2'
+              }
+            }}
+          >
+            검색조건 초기화
+          </Button>
+        </Box>
 
-      {renderSearchFilters()}
-
-      <TabPanel value={tabValue} index={0}>
+        {/* 시설물 이동 이력 테이블 */}
         {renderFacilityTransactionTable()}
-      </TabPanel>
-      {/* 임시 비활성화
-      <TabPanel value={tabValue} index={1}>
-        {renderVoucherTransactionTable()}
-      </TabPanel>
-      <TabPanel value={tabValue} index={2}>
-        {renderDepreciationHistoryTable()}
-      </TabPanel>
-      */}
+      </Box>
 
+      {/* 알림 스낵바 */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

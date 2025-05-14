@@ -19,7 +19,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  FormHelperText
 } from '@mui/material';
 import { 
   ArrowBack,
@@ -61,10 +62,32 @@ const CompanyDetail = () => {
     rightSideImage: null,
     fullImage: null
   });
+  const [branchGroups, setBranchGroups] = useState([]);
 
   // 수탁자 변경 다이얼로그 열기/닫기 핸들러
   const handleOpenTrusteeDialog = () => setOpenTrusteeDialog(true);
   const handleCloseTrusteeDialog = () => setOpenTrusteeDialog(false);
+
+  // 지부별 그룹 목록 조회 함수
+  const fetchBranchGroups = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/codes/groups/003002/codes', {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('지부별 그룹 코드를 불러오는데 실패했습니다.');
+      }
+      
+      const data = await response.json();
+      setBranchGroups(data);
+    } catch (error) {
+      console.error('지부별 그룹 코드 조회 실패:', error);
+    }
+  };
 
   // 수탁업체 정보 조회 함수
   const fetchCompanyData = async () => {
@@ -110,7 +133,9 @@ const CompanyDetail = () => {
         storeTelNumber: data.storeTelNumber || '',
         address: data.address || '',
         businessType: data.businessType || '',
-        businessCategory: data.businessCategory || ''
+        businessCategory: data.businessCategory || '',
+        branchGroupId: data.branchGroupId || '',
+        branchGroupName: data.branchGroupName || ''
       });
       
     } catch (error) {
@@ -123,6 +148,7 @@ const CompanyDetail = () => {
 
   useEffect(() => {
     fetchCompanyData();
+    fetchBranchGroups();
   }, [companyId]);
 
   // 폼 입력값 변경 핸들러
@@ -265,6 +291,10 @@ const CompanyDetail = () => {
     
     if (!formData.representativeName) {
       errors.representativeName = '대표자명은 필수 입력 항목입니다.';
+    }
+    
+    if (!formData.branchGroupId) {
+      errors.branchGroupId = '지부별 그룹은 필수 선택 항목입니다.';
     }
     
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -561,7 +591,9 @@ const CompanyDetail = () => {
         storeTelNumber: company.storeTelNumber || '',
         address: company.address || '',
         businessType: company.businessType || '',
-        businessCategory: company.businessCategory || ''
+        businessCategory: company.businessCategory || '',
+        branchGroupId: company.branchGroupId || '',
+        branchGroupName: company.branchGroupName || ''
       });
       setFormErrors({});
       
@@ -769,7 +801,37 @@ const CompanyDetail = () => {
                     </>
                   )}
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={4}>
+                  {isEditing ? (
+                    <FormControl fullWidth size="small" error={!!formErrors.branchGroupId} required>
+                      <InputLabel id="branchGroupId-label">지부별 그룹</InputLabel>
+                      <Select
+                        labelId="branchGroupId-label"
+                        id="branchGroupId"
+                        name="branchGroupId"
+                        value={formData.branchGroupId || ''}
+                        onChange={handleFormChange}
+                        label="지부별 그룹"
+                      >
+                        <MenuItem value="" disabled>선택하세요</MenuItem>
+                        {branchGroups.map((group) => (
+                          <MenuItem key={group.codeId} value={group.codeId}>
+                            {group.codeName}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      {formErrors.branchGroupId && (
+                        <FormHelperText error>{formErrors.branchGroupId}</FormHelperText>
+                      )}
+                    </FormControl>
+                  ) : (
+                    <>
+                      <Typography variant="body2" color="text.secondary">지부별 그룹</Typography>
+                      <Typography variant="body1">{company?.branchGroupName || '-'}</Typography>
+                    </>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={8}>
                   {isEditing ? (
                     <TextField
                       label="주소"

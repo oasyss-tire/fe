@@ -68,11 +68,13 @@ const ServiceRequestList = () => {
   const [allServiceRequests, setAllServiceRequests] = useState([]); // 모든 데이터를 저장할 상태
   const [serviceStatusCodes, setServiceStatusCodes] = useState([]); // AS 상태 코드 (002010)
   const [departmentCodes, setDepartmentCodes] = useState([]); // 담당 부서 코드 (003001)
+  const [branchGroupCodes, setBranchGroupCodes] = useState([]); // 지부별 그룹 코드 (003002)
   
   // 검색 필터 상태
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedServiceStatusCode, setSelectedServiceStatusCode] = useState(''); // AS 상태 코드
   const [selectedDepartmentCode, setSelectedDepartmentCode] = useState(''); // 담당 부서 코드
+  const [selectedBranchGroupCode, setSelectedBranchGroupCode] = useState(''); // 지부별 그룹 코드
   
   // 날짜 필터 상태
   const [startDate, setStartDate] = useState(null);
@@ -119,6 +121,10 @@ const ServiceRequestList = () => {
       const matchesDepartment = selectedDepartmentCode === '' || 
         request.departmentTypeCode === selectedDepartmentCode;
         
+      // 지부별 그룹 필터링
+      const matchesBranchGroup = selectedBranchGroupCode === '' || 
+        request.branchGroupId === selectedBranchGroupCode;
+        
       // 날짜 범위 필터링
       let matchesDateRange = true;
       if (isDateFilterActive && startDate && endDate) {
@@ -134,9 +140,9 @@ const ServiceRequestList = () => {
         }
       }
 
-      return matchesKeyword && matchesServiceStatus && matchesDepartment && matchesDateRange;
+      return matchesKeyword && matchesServiceStatus && matchesDepartment && matchesBranchGroup && matchesDateRange;
     });
-  }, [allServiceRequests, searchKeyword, selectedServiceStatusCode, selectedDepartmentCode, startDate, endDate, isDateFilterActive]);
+  }, [allServiceRequests, searchKeyword, selectedServiceStatusCode, selectedDepartmentCode, selectedBranchGroupCode, startDate, endDate, isDateFilterActive]);
 
   // 현재 페이지에 표시할 데이터
   const paginatedServiceRequests = useMemo(() => {
@@ -185,6 +191,17 @@ const ServiceRequestList = () => {
       if (departmentResponse.ok) {
         const data = await departmentResponse.json();
         setDepartmentCodes(data);
+      }
+      
+      // 지부별 그룹 코드 조회 (003002)
+      const branchGroupResponse = await fetch('http://localhost:8080/api/codes/groups/003002/codes/active', {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      if (branchGroupResponse.ok) {
+        const data = await branchGroupResponse.json();
+        setBranchGroupCodes(data);
       }
     } catch (error) {
       console.error('코드 조회 에러:', error);
@@ -242,6 +259,12 @@ const ServiceRequestList = () => {
   // 담당 부서 필터 변경 처리
   const handleDepartmentChange = (e) => {
     setSelectedDepartmentCode(e.target.value);
+    setPage(0); // 페이지 초기화
+  };
+  
+  // 지부별 그룹 필터 변경 처리
+  const handleBranchGroupChange = (e) => {
+    setSelectedBranchGroupCode(e.target.value);
     setPage(0); // 페이지 초기화
   };
   
@@ -431,6 +454,28 @@ const ServiceRequestList = () => {
     // 날짜는 이미 handleDateChange에서 설정됨
   };
   
+  // 모든 필터 초기화
+  const resetAllFilters = () => {
+    setSearchKeyword('');
+    setSelectedServiceStatusCode('');
+    setSelectedDepartmentCode('');
+    setSelectedBranchGroupCode('');
+    handleResetDateFilter();
+    setPage(0);
+  };
+  
+  // 선택된 날짜 표시 텍스트
+  const getDateRangeText = () => {
+    if (!isDateFilterActive || !startDate || !endDate) return '전체';
+    
+    try {
+      return `${format(startDate, 'yy-MM-dd')} ~ ${format(endDate, 'yy-MM-dd')}`;
+    } catch (error) {
+      console.error('날짜 형식 오류:', error);
+      return '전체';
+    }
+  };
+  
   return (
     <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
       {/* 상단 헤더 */}
@@ -581,6 +626,37 @@ const ServiceRequestList = () => {
         </Box>
         
         <Box sx={{ display: 'flex', gap: 2 }}>
+          {/* 지부별 그룹 필터 */}
+          <Box sx={{ width: '150px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              지부별 그룹
+            </Typography>
+            <FormControl 
+              fullWidth 
+              size="small"
+              sx={{ backgroundColor: 'white' }}
+            >
+              <Select
+                value={selectedBranchGroupCode}
+                onChange={handleBranchGroupChange}
+                displayEmpty
+                sx={{
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E0E0E0',
+                  },
+                }}
+              >
+                <MenuItem value="">모든 지부</MenuItem>
+                {branchGroupCodes.map(branch => (
+                  <MenuItem key={branch.codeId} value={branch.codeId}>
+                    {branch.codeName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          
           {/* AS 상태 필터 */}
           <Box sx={{ width: '150px' }}>
             <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
@@ -651,16 +727,19 @@ const ServiceRequestList = () => {
             <DateRangeButton 
               startDate={startDate}
               endDate={endDate}
-              isActive={false}
+              isActive={isDateFilterActive}
               onClick={() => setShowDatePicker(true)}
+              getDateRangeText={getDateRangeText}
               buttonProps={{
-                startIcon: <CalendarIcon fontSize="small" sx={{ color: 'rgba(0, 0, 0, 0.54)' }} />,
                 sx: {
-                  backgroundColor: 'rgba(249, 249, 249, 0.87)',
+                  backgroundColor: isDateFilterActive ? 'rgba(25, 118, 210, 0.08)' : 'rgba(249, 249, 249, 0.87)',
                   width: '100%',
                   height: '40px',
-                  color: 'rgba(30, 30, 30, 0.87)',
-                  borderColor: '#E0E0E0'
+                  color: isDateFilterActive ? '#1976d2' : 'rgba(30, 30, 30, 0.87)',
+                  borderColor: isDateFilterActive ? '#1976d2' : '#E0E0E0',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap'
                 }
               }}
             />
@@ -675,6 +754,25 @@ const ServiceRequestList = () => {
             />
           </Box>
         </Box>
+      </Box>
+      
+      {/* 필터 초기화 버튼 */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={resetAllFilters}
+          sx={{
+            color: '#666',
+            borderColor: '#ccc',
+            '&:hover': {
+              borderColor: '#1976d2',
+              color: '#1976d2'
+            }
+          }}
+        >
+          검색조건 초기화
+        </Button>
       </Box>
       
       {/* AS 접수 목록 테이블 */}
@@ -694,7 +792,7 @@ const ServiceRequestList = () => {
                   <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>품목</TableCell>
                   <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>담당 부서</TableCell>
                   <TableCell sx={{ width: '8%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>사용연한</TableCell>
-                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>최초설치일</TableCell>
+                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>지부별 그룹</TableCell>
                   <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>AS 상태</TableCell>
                   <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>요청일자</TableCell>
                   <TableCell sx={{ width: '9%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>처리</TableCell>
@@ -724,7 +822,7 @@ const ServiceRequestList = () => {
                       <TableCell sx={{ width: '12%' }}>{request.brandName || '-'}</TableCell>
                       <TableCell sx={{ width: '12%' }}>{request.departmentTypeName || '-'}</TableCell>
                       <TableCell sx={{ width: '8%' }}>{request.usefulLifeMonths || '-'}</TableCell>
-                      <TableCell sx={{ width: '10%' }}>{formatDate(request.installationDate) || '-'}</TableCell>
+                      <TableCell sx={{ width: '10%' }}>{request.branchGroupName || '-'}</TableCell>
                       <TableCell sx={{ width: '10%' }}>
                         <Chip 
                           label={

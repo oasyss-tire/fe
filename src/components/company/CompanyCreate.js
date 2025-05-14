@@ -20,7 +20,12 @@ import {
   CardMedia,
   CardContent,
   CardActions,
-  Snackbar
+  Snackbar,
+  FormControl,
+  FormHelperText,
+  Select,
+  MenuItem,
+  InputLabel
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -39,6 +44,9 @@ const CompanyCreate = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  
+  // 지부별 그룹 코드 상태 추가
+  const [branchGroups, setBranchGroups] = useState([]);
   
   // 스낵바 상태
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -97,7 +105,8 @@ const CompanyCreate = () => {
     address: '',
     addressDetail: '',
     businessType: '',
-    businessCategory: ''
+    businessCategory: '',
+    branchGroupId: '' // 지부별 그룹 ID 필드 추가
   });
   
   // 유효성 검사 오류 상태
@@ -113,6 +122,40 @@ const CompanyCreate = () => {
     return () => {
       document.body.removeChild(script);
     };
+  }, []);
+  
+  // 지부별 그룹 코드 로드
+  useEffect(() => {
+    const fetchBranchGroups = async () => {
+      try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('http://localhost:8080/api/codes/groups/003002/codes', {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('지부별 그룹 코드를 불러오는데 실패했습니다.');
+        }
+        
+        const data = await response.json();
+        setBranchGroups(data);
+        
+        // 초기값 설정 (첫 번째 항목으로)
+        if (data.length > 0) {
+          setCompanyData(prev => ({
+            ...prev,
+            branchGroupId: data[0].codeId
+          }));
+        }
+      } catch (error) {
+        console.error('지부별 그룹 코드 조회 실패:', error);
+        // 에러 표시는 하지 않고 콘솔에만 로깅
+      }
+    };
+    
+    fetchBranchGroups();
   }, []);
   
   // 주소 검색 다이얼로그 열기
@@ -354,6 +397,10 @@ const CompanyCreate = () => {
     
     if (!companyData.insuranceEndDate) {
       newErrors.insuranceEndDate = '보험 종료일자를 입력해주세요.';
+    }
+    
+    if (!companyData.branchGroupId) {
+      newErrors.branchGroupId = '지부별 그룹을 선택해주세요.';
     }
     
     // 연락처 정보 - 필수 필드 검사
@@ -794,7 +841,7 @@ const CompanyCreate = () => {
           <Divider sx={{ mb: 3 }} />
           
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 label="매장코드 *"
                 name="storeCode"
@@ -809,7 +856,7 @@ const CompanyCreate = () => {
               />
             </Grid>
             
-            <Grid item xs={12} md={8}>
+            <Grid item xs={12} md={5}>
               <TextField
                 label="매장명 *"
                 name="storeName"
@@ -822,6 +869,43 @@ const CompanyCreate = () => {
                 helperText={errors.storeName}
                 placeholder="예: 세종점"
               />
+            </Grid>
+            
+            {/* 지부별 그룹 선택 필드 추가 */}
+            <Grid item xs={12} md={4}>
+              <FormControl 
+                fullWidth 
+                size="small"
+                error={!!errors.branchGroupId}
+                required
+              >
+                <InputLabel id="branchGroupId-label">지부별 그룹</InputLabel>
+                <Select
+                  labelId="branchGroupId-label"
+                  id="branchGroupId"
+                  displayEmpty
+                  name="branchGroupId"
+                  value={companyData.branchGroupId}
+                  onChange={handleChange}
+                  label="지부별 그룹"
+                  sx={{
+                    backgroundColor: '#F8F9FA',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: errors.branchGroupId ? '#d32f2f' : '#E0E0E0',
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>선택하세요</MenuItem>
+                  {branchGroups.map((group) => (
+                    <MenuItem key={group.codeId} value={group.codeId}>
+                      {group.codeName}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.branchGroupId && (
+                  <FormHelperText error>{errors.branchGroupId}</FormHelperText>
+                )}
+              </FormControl>
             </Grid>
             
             {/* 주소 입력 필드 */}
