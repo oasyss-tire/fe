@@ -203,7 +203,7 @@ const MyServiceRequestList = () => {
     }
   };
   
-  // 내가 담당하는 AS 요청 목록 조회
+  // 담당AS 요청 목록 조회
   const fetchMyServiceRequests = async () => {
     setLoading(true);
     try {
@@ -213,7 +213,7 @@ const MyServiceRequestList = () => {
       
       const url = `http://localhost:8080/api/service-requests/manager/${authUser.id}`;
       
-      console.log("API 요청 URL:", url); // 디버깅용 로그
+
       
       const response = await fetch(url, {
         headers: {
@@ -226,7 +226,7 @@ const MyServiceRequestList = () => {
       }
       
       const data = await response.json();
-      console.log("API 응답 데이터:", data); // 디버깅용 로그
+
       
       setAllServiceRequests(data || []);
     } catch (error) {
@@ -469,7 +469,7 @@ const MyServiceRequestList = () => {
         mb: 3 
       }}>
         <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          내가 담당하는 AS 목록
+          담당 AS 목록
         </Typography>
         
         <Box sx={{ 

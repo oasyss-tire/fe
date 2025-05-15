@@ -160,8 +160,7 @@ const CompleteRequestDialog = ({
         images: uploadedImages
       };
       
-      console.log('CompleteRequestDialog에서 전송하는 데이터:', completionData);
-      
+
       onComplete(completionData);
     } catch (error) {
       console.error('AS 요청 완료 처리 중 오류:', error);

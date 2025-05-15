@@ -230,7 +230,6 @@ const ServiceRequestList = () => {
       // 페이지네이션 없이 모든 데이터 요청 (또는 백엔드에서 허용하는 최대 크기로 요청)
       const url = `http://localhost:8080/api/service-requests/paged?page=0&size=1000&sort=serviceRequestId,desc`;
       
-      console.log("API 요청 URL:", url); // 디버깅용 로그
       
       const response = await fetch(url, {
         headers: {
@@ -243,7 +242,6 @@ const ServiceRequestList = () => {
       }
       
       const data = await response.json();
-      console.log("API 응답 데이터:", data); // 디버깅용 로그
       
       setAllServiceRequests(data.content || []);
     } catch (error) {

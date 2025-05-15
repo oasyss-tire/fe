@@ -210,7 +210,6 @@ const ServiceRequestDetail = () => {
     try {
       let response;
       
-      console.log('완료 처리 데이터:', completionData); // 데이터 로깅
       
       // 이미지가 있는 경우와 없는 경우에 따라 다른 API 호출
       if (completionData.images && completionData.images.length > 0) {
@@ -222,8 +221,7 @@ const ServiceRequestDetail = () => {
           cost: completionData.cost,
           repairComment: completionData.repairComment
         };
-        
-        console.log('이미지 포함 요청 데이터:', requestData); // 요청 데이터 로깅
+
         
         formDataObj.append('request', JSON.stringify(requestData));
         
@@ -232,9 +230,7 @@ const ServiceRequestDetail = () => {
           formDataObj.append('images', file);
         });
         
-        // 이미지를 포함한 API 호출
-        console.log('API 호출 URL:', `${API_BASE_URL}/api/service-requests/${id}/complete-with-images`); // URL 로깅
-        
+
         response = await fetch(`${API_BASE_URL}/api/service-requests/${id}/complete-with-images`, {
           method: 'PUT',
           headers: {
@@ -250,9 +246,7 @@ const ServiceRequestDetail = () => {
           repairComment: completionData.repairComment
         };
         
-        console.log('이미지 없는 요청 데이터:', requestData); // 요청 데이터 로깅
-        console.log('API 호출 URL:', `${API_BASE_URL}/api/service-requests/${id}/complete`); // URL 로깅
-        
+  
         response = await fetch(`${API_BASE_URL}/api/service-requests/${id}/complete`, {
           method: 'PUT',
           headers: {
@@ -263,8 +257,7 @@ const ServiceRequestDetail = () => {
         });
       }
       
-      console.log('API 응답 상태:', response.status); // 응답 상태 로깅
-      
+    
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API 오류 응답:', errorText); // 오류 응답 로깅
@@ -272,7 +265,7 @@ const ServiceRequestDetail = () => {
       }
       
       const responseData = await response.json();
-      console.log('API 응답 데이터:', responseData); // 응답 데이터 로깅
+
       
       showSnackbar('AS 요청이 성공적으로 완료 처리되었습니다.', 'success');
       setCompleteDialogOpen(false);

@@ -116,8 +116,7 @@ const FacilitiesDetail = () => {
   // 사용연한 수정 모달 열기
   const handleOpenUsefulLifeDialog = () => {
     if (facility) {
-      console.log('시설물 정보:', facility);
-      console.log('시설물 ID:', facility.id, 'facilityId:', facility.facilityId);
+
       setUsefulLifeMonths(facility.usefulLifeMonths);
       setUsefulLifeUpdateReason('');
       setUsefulLifeError('');
@@ -159,8 +158,7 @@ const FacilitiesDetail = () => {
         usefulLifeMonths: usefulLifeMonths,
         usefulLifeUpdateReason: usefulLifeUpdateReason
       };
-      
-      console.log('사용연한 업데이트 요청 데이터:', requestData);
+
       
       // API 호출
       const response = await fetch('http://localhost:8080/api/facilities/useful-life', {
