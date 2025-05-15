@@ -220,8 +220,8 @@ const FacilitiesList = () => {
           const companiesForFirstPage = companiesData.slice(startIndex, endIndex);
           setDisplayedCompanies(companiesForFirstPage);
           
-          // 고장/수리중 상태 시설물 정보 조회
-          await fetchFailedFacilities();
+          // 고장/수리중 상태 시설물 정보 조회 - 빈 객체 설정으로 대체
+          setFailedFacilities({});
           
           // 재고 현황 조회
           await fetchInventoryForCompanies(companiesForFirstPage);
@@ -611,39 +611,15 @@ const FacilitiesList = () => {
 
   // 특정 수탁업체, 특정 유형의 고장/수리중 상태 시설물이 있는지 확인
   const hasFailed = (companyId, typeCode) => {
-    // failedFacilities 맵에서 해당 회사-시설물 유형에 고장/수리중 상태가 있는지 확인
-    return failedFacilities[`${companyId}-${typeCode}`] === true;
+    // 고장/수리중 시설물 표시 기능 제거 - 항상 false 반환
+    return false;
   };
 
   // 고장/수리중 상태 시설물 정보 조회
   const fetchFailedFacilities = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/facilities/status?statusCodes=002003_0002,002003_0003', {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('고장/수리중 시설물 정보를 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
-      
-      // 회사ID-시설물유형코드 형태로 맵 생성
-      const failedMap = {};
-      (data.content || []).forEach(facility => {
-        const key = `${facility.locationCompanyId}-${facility.facilityTypeCode}`;
-        failedMap[key] = true;
-      });
-      
-      setFailedFacilities(failedMap);
-      return failedMap; // 초기 로딩에서 사용할 수 있도록 결과 반환
-    } catch (error) {
-      console.error('고장/수리중 시설물 정보 조회 실패:', error);
-      // 오류 발생 시 UI에 영향을 주지 않기 위해 스낵바는 표시하지 않음
-      return {}; // 오류 시 빈 객체 반환
-    }
+    // 고장/수리중 시설물 조회 기능 제거 - 빈 객체 반환
+    setFailedFacilities({});
+    return {};
   };
 
   // 현재 재고 현황 데이터로 매트릭스 생성
@@ -680,7 +656,7 @@ const FacilitiesList = () => {
   // 테이블 셀 렌더링 함수
   const renderTableCell = (company, type) => {
     const count = facilityCountMatrix[company.id]?.[type.codeId] || 0;
-    const hasFailedStatus = hasFailed(company.id, type.codeId);
+    // 고장/수리중 상태 표시 제거
     const isThisCellLoading = cellLoading && clickedCell && 
                      clickedCell.companyId === company.id && 
                      clickedCell.typeCode === type.codeId;
@@ -690,12 +666,10 @@ const FacilitiesList = () => {
                      selectedCell.companyId === company.id && 
                      selectedCell.typeCode === type.codeId;
     
-    // 셀 배경색 결정
+    // 셀 배경색 결정 - 고장/수리중 표시 제거
     let backgroundColor = 'inherit';
     if (isSelected) {
       backgroundColor = '#e3f2fd'; // 선택된 셀은 하늘색 배경
-    } else if (hasFailedStatus) {
-      backgroundColor = '#ffebee';
     } else if (count > 0) {
       backgroundColor = '#f1f8e9';
     }
