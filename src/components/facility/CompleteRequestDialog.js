@@ -28,6 +28,12 @@ const CompleteRequestDialog = ({
   const [formattedRepairCost, setFormattedRepairCost] = useState('');
   const [repairComment, setRepairComment] = useState('');
   
+  // 유효성 검사 상태 추가
+  const [errors, setErrors] = useState({
+    repairCost: false,
+    repairComment: false
+  });
+  
   // 이미지 업로드 관련 상태
   const [uploadedImages, setUploadedImages] = useState([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
@@ -46,6 +52,12 @@ const CompleteRequestDialog = ({
       setFormattedRepairCost(
         value === '' ? '' : Number(value).toLocaleString('ko-KR')
       );
+      
+      // 에러 상태 초기화
+      setErrors(prev => ({
+        ...prev,
+        repairCost: false
+      }));
     }
   };
   
@@ -55,6 +67,12 @@ const CompleteRequestDialog = ({
     // 최대 2000자 제한
     if (value.length <= 2000) {
       setRepairComment(value);
+      
+      // 에러 상태 초기화
+      setErrors(prev => ({
+        ...prev,
+        repairComment: false
+      }));
     }
   };
   
@@ -114,12 +132,27 @@ const CompleteRequestDialog = ({
     setUploadedImages([]);
     setImagePreviewUrls([]);
     setUploadError('');
+    setErrors({ repairCost: false, repairComment: false });
     
     onClose();
   };
   
   // 완료 처리 제출
   const handleSubmit = () => {
+    // 유효성 검사
+    const newErrors = {
+      repairCost: !repairCost,
+      repairComment: !repairComment || repairComment.trim() === ''
+    };
+    
+    setErrors(newErrors);
+    
+    // 에러가 있으면 제출 중단
+    if (Object.values(newErrors).some(error => error)) {
+      showSnackbar('수리 비용과 수리 코멘트는 필수 입력 항목입니다.', 'error');
+      return;
+    }
+    
     try {
       const completionData = {
         cost: parseInt(repairCost, 10) || 0,
@@ -152,14 +185,19 @@ const CompleteRequestDialog = ({
               매장: {currentRequest.companyName} | 시설물: {currentRequest.facilityTypeName} ({currentRequest.brandName})
             </Typography>
             
+            
             {/* 수리 비용 입력 */}
-            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>수리 비용</Typography>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              수리 비용 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
+            </Typography>
             <TextField
               fullWidth
               size="small"
               value={formattedRepairCost}
               onChange={handleRepairCostChange}
               placeholder="예: 500,000"
+              error={errors.repairCost}
+              helperText={errors.repairCost && "수리 비용을 입력해주세요"}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">₩</InputAdornment>
@@ -169,7 +207,9 @@ const CompleteRequestDialog = ({
             />
             
             {/* 수리 코멘트 입력 */}
-            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>수리 코멘트</Typography>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              수리 코멘트 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
+            </Typography>
             <TextField
               fullWidth
               size="small"
@@ -178,6 +218,8 @@ const CompleteRequestDialog = ({
               value={repairComment}
               onChange={handleRepairCommentChange}
               placeholder="수리 내용, 문제 원인 등을 입력해주세요 (최대 2000자)"
+              error={errors.repairComment}
+              helperText={errors.repairComment && "수리 코멘트를 입력해주세요"}
               sx={{ mb: 2 }}
               InputProps={{
                 endAdornment: (

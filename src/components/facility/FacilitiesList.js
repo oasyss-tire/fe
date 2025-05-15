@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import FacilityTypeList from './FacilityTypeList';
 import { keyframes } from '@emotion/react';
+import { useAuth } from '../../contexts/AuthContext';
 
 // 스켈레톤 애니메이션을 위한 키프레임 정의
 const pulse = keyframes`
@@ -97,6 +98,7 @@ function TabPanel(props) {
 
 const FacilitiesList = () => {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   
   const [loading, setLoading] = useState(false);
   const [facilityTypesLoading, setFacilityTypesLoading] = useState(false);
@@ -158,37 +160,58 @@ const FacilitiesList = () => {
       setLoading(true);
       
       try {
-        // 회사 목록과 시설물 유형 코드를 병렬로 조회
-        const [companiesResponse, typesResponse] = await Promise.all([
-          fetch('http://localhost:8080/api/companies', {
-            headers: {
-              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            }
-          }),
-          fetch('http://localhost:8080/api/codes/groups/002001/codes/active', {
-            headers: {
-              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-            }
-          })
-        ]);
-        
-        if (!companiesResponse.ok) {
-          throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
-        }
+        // 시설물 유형 코드 조회
+        const typesResponse = await fetch('http://localhost:8080/api/codes/groups/002001/codes/active', {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        });
         
         if (!typesResponse.ok) {
           throw new Error('시설물 유형 코드를 불러오는데 실패했습니다.');
         }
         
-        const companiesData = await companiesResponse.json();
         const typesData = await typesResponse.json();
         
         // sortOrder 기준으로 정렬
         const sortedTypesData = typesData.sort((a, b) => a.sortOrder - b.sortOrder);
+        setFacilityTypes(sortedTypesData);
+        
+        // 회사 목록 조회 - 사용자 권한에 따라 다르게 처리
+        let companiesData = [];
+        
+        // USER 또는 MANAGER 권한을 가진 사용자는 자신의 회사만 조회
+        if (authUser && (authUser.role === 'USER' || authUser.role === 'MANAGER') && authUser.companyId) {
+          // 단일 회사 정보 조회
+          const companyResponse = await fetch(`http://localhost:8080/api/companies/${authUser.companyId}`, {
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          
+          if (!companyResponse.ok) {
+            throw new Error('수탁업체 정보를 불러오는데 실패했습니다.');
+          }
+          
+          const companyData = await companyResponse.json();
+          companiesData = [companyData]; // 단일 회사 정보를 배열로 설정
+        } else {
+          // 관리자 등 다른 권한은 모든 회사 목록 조회
+          const companiesResponse = await fetch('http://localhost:8080/api/companies', {
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          
+          if (!companiesResponse.ok) {
+            throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
+          }
+          
+          companiesData = await companiesResponse.json();
+        }
         
         // 상태 업데이트
         setCompanies(companiesData);
-        setFacilityTypes(sortedTypesData);
         
         // 회사가 있으면 첫 페이지의 회사들에 대한 재고 현황 조회
         if (companiesData.length > 0) {
@@ -216,7 +239,7 @@ const FacilitiesList = () => {
     };
     
     loadInitialData();
-  }, []);
+  }, [authUser]);
 
   // 회사 목록 조회 (초기 로딩에서 처리하므로 제거)
   const fetchCompanies = async () => {
@@ -224,18 +247,38 @@ const FacilitiesList = () => {
     setLoading(true);
     setDataReady(false);
     try {
-      const response = await fetch('http://localhost:8080/api/companies', {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+      // 사용자 권한에 따라 다른 API 호출
+      let response;
+      
+      if (authUser && (authUser.role === 'USER' || authUser.role === 'MANAGER') && authUser.companyId) {
+        // 단일 회사 정보만 조회
+        response = await fetch(`http://localhost:8080/api/companies/${authUser.companyId}`, {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('수탁업체 정보를 불러오는데 실패했습니다.');
         }
-      });
-
-      if (!response.ok) {
-        throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
+        
+        const companyData = await response.json();
+        setCompanies([companyData]); // 단일 회사 정보를 배열로 설정
+      } else {
+        // 관리자 등 다른 권한은 모든 회사 목록 조회
+        response = await fetch('http://localhost:8080/api/companies', {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
+        }
+        
+        const data = await response.json();
+        setCompanies(data);
       }
-
-      const data = await response.json();
-      setCompanies(data);
     } catch (error) {
       console.error('수탁업체 목록 조회 실패:', error);
       showSnackbar('수탁업체 목록을 불러오는데 실패했습니다.', 'error');
@@ -801,14 +844,17 @@ const FacilitiesList = () => {
         >
           시설물 출고 (이동/폐기)
         </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleAddFacility}
-        >
-          시설물 입고
-        </Button>
+        {/* USER 권한이 아닌 경우에만 시설물 입고 버튼 표시 */}
+        {authUser?.role !== 'USER' && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleAddFacility}
+          >
+            시설물 입고
+          </Button>
+        )}
       </Box>
 
       {/* 메인 테이블 */}

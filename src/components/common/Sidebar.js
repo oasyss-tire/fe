@@ -32,6 +32,9 @@ import ChatIcon from '@mui/icons-material/Chat';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import HistoryIcon from '@mui/icons-material/History';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import { useAuth } from '../../contexts/AuthContext';
 
 const DRAWER_WIDTH = 240;
@@ -131,7 +134,10 @@ const Sidebar = () => {
       'BusinessIcon': <BusinessIcon />,
       'GroupIcon': <GroupIcon />,
       'SettingsIcon': <SettingsIcon />,
-      'PeopleAltIcon': <PeopleAltIcon />
+      'PeopleAltIcon': <PeopleAltIcon />,
+      'CalendarTodayIcon': <CalendarTodayIcon />,
+      'InventoryIcon': <InventoryIcon />,
+      'AssignmentIndIcon': <AssignmentIndIcon />
     };
     
     return icons[iconName] || <DescriptionIcon />;
@@ -158,9 +164,12 @@ const Sidebar = () => {
       items: [
         { text: '시설물 리스트', icon: <ListAltIcon />, path: '/facility-list', id: 'facility_list' },
         { text: '시설물 등록', icon: <EngineeringIcon />, path: '/facility-register', id: 'facility_register' },
-        { text: 'A/S 관리', icon: <BuildIcon />, path: '/service-request/list', id: 'facility_service' },
+        { text: 'A/S 요청목록', icon: <BuildIcon />, path: '/service-request/list', id: 'facility_service' },
+        { text: '내 담당 AS 목록', icon: <AssignmentIndIcon />, path: '/service-request/my', id: 'my_facility_service' },
         { text: '시설물 이동/폐기 등록', icon: <SwapHorizIcon />, path: '/facility-transfer', id: 'facility_transfer' },
         { text: '시설물 이력관리', icon: <DashboardIcon />, path: '/facility-history', id: 'facility_history' },
+        { text: '재고 마감 데이터 조회', icon: <CalendarTodayIcon />, path: '/closing-inventory', id: 'daily_closing' },
+        { text: '재고 마감 관리', icon: <InventoryIcon />, path: '/closing-management', id: 'closing_management' },
       ]
     },
     {

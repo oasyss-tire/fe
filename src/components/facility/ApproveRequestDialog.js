@@ -128,8 +128,8 @@ const ApproveRequestDialog = ({
               </>
             )}
             
-            {/* 예상 완료일 입력 */}
-            <InputLabel htmlFor="expected-completion-date" sx={{ mb: 1 }}>예상 완료일</InputLabel>
+            {/* 예상 방문일 입력 */}
+            <InputLabel htmlFor="expected-completion-date" sx={{ mb: 1 }}>예상 방문일</InputLabel>
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 id="expected-completion-date"

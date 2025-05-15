@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material';
 import { format, subMonths } from 'date-fns';
 import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
+import { useAuth } from '../../contexts/AuthContext';
 
 // 날짜 포맷 함수
 const formatDate = (dateString) => {
@@ -53,6 +54,9 @@ const formatCurrency = (amount) => {
 };
 
 const FacilityHistoryPage = () => {
+  const { user: authUser } = useAuth();
+  const isUserRole = authUser?.role === 'USER';
+  
   // 페이지네이션 상태
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -93,8 +97,19 @@ const FacilityHistoryPage = () => {
   
   // 필터링된 데이터 계산 (useMemo 사용)
   const filteredFacilityTransactions = useMemo(() => {
+    // USER 권한인 경우 먼저 회사 ID 필터링 적용
+    let filteredData = [...allFacilityTransactions];
+    
+    if (isUserRole && authUser?.companyId) {
+      const userCompanyId = Number(authUser.companyId);
+      filteredData = filteredData.filter(transaction => 
+        transaction.fromCompanyId === userCompanyId || 
+        transaction.toCompanyId === userCompanyId
+      );
+    }
+    
     // 검색어, 시설물 유형, 이력 유형에 따라 데이터 필터링
-    return allFacilityTransactions.filter(transaction => {
+    return filteredData.filter(transaction => {
       // 검색어 필터링 (관리번호, 시설물 유형, 브랜드명, 업체명에서 검색)
       const matchesKeyword = searchKeyword === '' || 
         (transaction.managementNumber && transaction.managementNumber.toLowerCase().includes(searchKeyword.toLowerCase())) ||
@@ -139,7 +154,7 @@ const FacilityHistoryPage = () => {
 
       return matchesKeyword && matchesFacilityType && matchesTransactionType && matchesStatus && matchesDateRange;
     });
-  }, [allFacilityTransactions, searchKeyword, facilityTypeFilter, transactionTypeFilter, statusFilter, startDate, endDate, isDateFilterActive, facilityTypes]);
+  }, [allFacilityTransactions, searchKeyword, facilityTypeFilter, transactionTypeFilter, statusFilter, startDate, endDate, isDateFilterActive, facilityTypes, isUserRole, authUser]);
 
   // 현재 페이지에 표시할 데이터
   const paginatedFacilityTransactions = useMemo(() => {

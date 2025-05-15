@@ -121,8 +121,8 @@ const FacilityCompanySelectDialog = ({
     }
     
     const filtered = companies.filter(company => 
-      (company.companyName && company.companyName.toLowerCase().includes(term)) ||
-      (company.businessNumber && company.businessNumber.toLowerCase().includes(term)) ||
+      (company.storeName && company.storeName.toLowerCase().includes(term)) ||
+      (company.storeCode && company.storeCode.toLowerCase().includes(term)) ||
       (company.address && company.address.toLowerCase().includes(term))
     );
     
@@ -178,7 +178,7 @@ const FacilityCompanySelectDialog = ({
           <Box sx={{ p: 2, borderBottom: '1px solid #EEEEEE' }}>
             <TextField
               fullWidth
-              placeholder="수탁업체명, 사업자등록번호, 주소로 검색"
+              placeholder="매장명, 매장코드, 주소로 검색"
               variant="outlined"
               size="small"
               value={searchTerm}
@@ -228,10 +228,9 @@ const FacilityCompanySelectDialog = ({
                   <TableHead>
                     <TableRow>
                       <TableCell padding="checkbox" width="50px"></TableCell>
-                      <TableCell>수탁업체명</TableCell>
-                      <TableCell>사업자등록번호</TableCell>
+                      <TableCell>매장코드</TableCell>
+                      <TableCell>매장명</TableCell>
                       <TableCell>주소</TableCell>
-                      <TableCell>전화번호</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -249,10 +248,9 @@ const FacilityCompanySelectDialog = ({
                             onChange={() => handleSelectCompany(company)}
                           />
                         </TableCell>
-                        <TableCell>{company.companyName || '-'}</TableCell>
-                        <TableCell>{company.businessNumber || '-'}</TableCell>
+                        <TableCell>{company.storeCode || '-'}</TableCell>
+                        <TableCell>{company.storeName || '-'}</TableCell>
                         <TableCell>{company.address || '-'}</TableCell>
-                        <TableCell>{company.phoneNumber || '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

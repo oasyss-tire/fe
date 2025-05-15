@@ -47,6 +47,7 @@ const FacilitiesDetail = () => {
   const [serviceRequests, setServiceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [facilityImages, setFacilityImages] = useState([]);
+  const [facilityTransactions, setFacilityTransactions] = useState([]);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -253,6 +254,9 @@ const FacilitiesDetail = () => {
         // 이미지 데이터 로드
         fetchFacilityImages();
         
+        // 트랜잭션 이력 데이터 로드
+        fetchFacilityTransactions();
+        
         setLoading(false);
       } catch (error) {
         console.error('시설물 정보 로드 실패:', error);
@@ -261,6 +265,7 @@ const FacilitiesDetail = () => {
         setFacility(null);
         setServiceRequests([]);
         setFacilityImages([]);
+        setFacilityTransactions([]);
       }
     };
 
@@ -309,6 +314,30 @@ const FacilitiesDetail = () => {
     } catch (error) {
       console.error('시설물 이미지 로드 실패:', error);
       setFacilityImages([]);
+    }
+  };
+
+  // 트랜잭션 이력 API 호출
+  const fetchFacilityTransactions = async () => {
+    try {
+      // 시설물에 대한 트랜잭션 이력 목록 가져오기
+      const response = await fetch(`http://localhost:8080/api/facility-transactions/facility/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const transactionData = await response.json();
+        // 날짜순 정렬 (최신순)
+        setFacilityTransactions(transactionData || []);
+      } else {
+        // API 호출 실패 시 빈 배열로 설정
+        setFacilityTransactions([]);
+      }
+    } catch (error) {
+      console.error('트랜잭션 이력 로드 실패:', error);
+      setFacilityTransactions([]);
     }
   };
 
@@ -1369,6 +1398,59 @@ const FacilitiesDetail = () => {
                         sx={{ height: 22, fontSize: '0.75rem' }}
                       />
                     </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* 시설물 트랜잭션 이력 */}
+      <Paper sx={{ mb: 3, p: 3, borderRadius: 2 }}>
+        <Typography 
+          variant="subtitle1" 
+          sx={{ 
+            fontWeight: 600, 
+            color: '#3A3A3A',
+            mb: 2 
+          }}
+        >
+          시설물 이동 이력
+        </Typography>
+
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#F8F9FA' }}>
+                <TableCell align="center">번호</TableCell>
+                <TableCell align="center">이력유형</TableCell>
+                <TableCell align="center">이전 위치</TableCell>
+                <TableCell align="center">이동 위치</TableCell>
+                <TableCell align="center">처리일자</TableCell>
+                <TableCell align="center">처리자</TableCell>
+                <TableCell align="center">비고</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {facilityTransactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
+                    <Typography color="textSecondary">
+                      이동 이력이 없습니다.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                facilityTransactions.map((transaction, index) => (
+                  <TableRow key={transaction.transactionId} hover>
+                    <TableCell align="center">{facilityTransactions.length - index}</TableCell>
+                    <TableCell align="center">{transaction.transactionTypeName}</TableCell>
+                    <TableCell align="center">{transaction.fromCompanyName || '-'}</TableCell>
+                    <TableCell align="center">{transaction.toCompanyName || '-'}</TableCell>
+                    <TableCell align="center">{formatDate(transaction.transactionDate)}</TableCell>
+                    <TableCell align="center">{transaction.performedByName || transaction.createdByName || '-'}</TableCell>
+                    <TableCell align="left">{transaction.notes || '-'}</TableCell>
                   </TableRow>
                 ))
               )}

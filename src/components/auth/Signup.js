@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import FacilityCompanySelectDialog from '../facility/FacilityCompanySelectDialog';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -27,7 +28,9 @@ const Signup = () => {
     email: '',
     phoneNumber: '',
     role: 'MANAGER',
-    companyId: ''
+    companyId: '',
+    departmentTypeId: '',
+    branchGroupId: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -38,28 +41,58 @@ const Signup = () => {
   const [companies, setCompanies] = useState([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   
+  // 담당부서 및 지부별그룹 상태 추가
+  const [departments, setDepartments] = useState([]);
+  const [branchGroups, setBranchGroups] = useState([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [isLoadingBranchGroups, setIsLoadingBranchGroups] = useState(false);
+  
+  // 수탁업체 선택 다이얼로그 상태 추가
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  
   const navigate = useNavigate();
 
   // 수탁업체 목록 불러오기
   useEffect(() => {
-    fetchCompanies();
+    // AS_MANAGER 권한 선택 시 필요한 데이터 미리 로드
+    fetchDepartments();
+    fetchBranchGroups();
   }, []);
 
-  // 수탁업체 목록 가져오기
-  const fetchCompanies = async () => {
-    setIsLoadingCompanies(true);
+  // 담당부서 목록 가져오기
+  const fetchDepartments = async () => {
+    setIsLoadingDepartments(true);
     try {
-      const response = await fetch('http://localhost:8080/api/companies');
+      const response = await fetch('http://localhost:8080/api/codes/groups/003001/codes/active');
       if (!response.ok) {
-        throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
+        throw new Error('담당부서 목록을 불러오는데 실패했습니다.');
       }
       const data = await response.json();
-      setCompanies(data);
+      setDepartments(data);
     } catch (error) {
-      console.error('수탁업체 목록 조회 오류:', error);
-      setApiError('수탁업체 목록을 불러오는데 실패했습니다.');
+      console.error('담당부서 목록 조회 오류:', error);
+      setApiError('담당부서 목록을 불러오는데 실패했습니다.');
     } finally {
-      setIsLoadingCompanies(false);
+      setIsLoadingDepartments(false);
+    }
+  };
+
+  // 지부별그룹 목록 가져오기
+  const fetchBranchGroups = async () => {
+    setIsLoadingBranchGroups(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/codes/groups/003002/codes/active');
+      if (!response.ok) {
+        throw new Error('지부별그룹 목록을 불러오는데 실패했습니다.');
+      }
+      const data = await response.json();
+      setBranchGroups(data);
+    } catch (error) {
+      console.error('지부별그룹 목록 조회 오류:', error);
+      setApiError('지부별그룹 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoadingBranchGroups(false);
     }
   };
 
@@ -225,6 +258,22 @@ const Signup = () => {
         }
         break;
         
+      case 'departmentTypeId':
+        if (formData.role === 'AS_MANAGER' && !value) {
+          newErrors.departmentTypeId = '담당부서를 선택해주세요.';
+        } else {
+          newErrors.departmentTypeId = '';
+        }
+        break;
+        
+      case 'branchGroupId':
+        if (formData.role === 'AS_MANAGER' && !value) {
+          newErrors.branchGroupId = '지부별그룹을 선택해주세요.';
+        } else {
+          newErrors.branchGroupId = '';
+        }
+        break;
+        
       default:
         break;
     }
@@ -261,6 +310,17 @@ const Signup = () => {
   // 비밀번호 확인 표시 토글
   const handleToggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  // 역할 변경 핸들러 추가
+  const handleRoleChange = (e) => {
+    const newRole = e.target.value;
+    setFormData(prev => ({ 
+      ...prev, 
+      role: newRole,
+      // AS_MANAGER가 아닌 경우 관련 필드 초기화
+      ...(newRole !== 'AS_MANAGER' ? { departmentTypeId: '', branchGroupId: '' } : {})
+    }));
   };
 
   // 폼 제출 전 유효성 검사
@@ -301,9 +361,22 @@ const Signup = () => {
       isValid = false;
     }
     
-    if (!formData.companyId) {
+    if (!formData.companyId || !selectedCompany) {
       newErrors.companyId = '수탁업체를 선택해주세요.';
       isValid = false;
+    }
+    
+    // AS_MANAGER 권한인 경우 추가 필드 검사
+    if (formData.role === 'AS_MANAGER') {
+      if (!formData.departmentTypeId) {
+        newErrors.departmentTypeId = '담당부서를 선택해주세요.';
+        isValid = false;
+      }
+      
+      if (!formData.branchGroupId) {
+        newErrors.branchGroupId = '지부별그룹을 선택해주세요.';
+        isValid = false;
+      }
     }
     
     // 선택 필드 검사 (입력된 경우에만)
@@ -321,7 +394,7 @@ const Signup = () => {
     return isValid;
   };
 
-  // 회원가입 제출 핸들러
+  // 사용자추가 제출 핸들러
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -334,38 +407,65 @@ const Signup = () => {
     setApiError('');
     
     try {
+      // 요청 데이터 준비
+      const requestData = {
+        userId: formData.userId,
+        password: formData.password,
+        userName: formData.userName,
+        email: formData.email || null,
+        phoneNumber: formData.phoneNumber || null,
+        role: formData.role,
+        companyId: parseInt(formData.companyId)
+      };
+      
+      // AS_MANAGER 권한인 경우 추가 필드 포함
+      if (formData.role === 'AS_MANAGER') {
+        requestData.departmentTypeId = formData.departmentTypeId;
+        requestData.branchGroupId = formData.branchGroupId;
+      }
+      
       const response = await fetch('http://localhost:8080/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          userId: formData.userId,
-          password: formData.password,
-          userName: formData.userName,
-          email: formData.email || null,
-          phoneNumber: formData.phoneNumber || null,
-          role: formData.role,
-          companyId: parseInt(formData.companyId)
-        })
+        body: JSON.stringify(requestData)
       });
       
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || '회원가입에 실패했습니다.');
+        throw new Error(data.message || '사용자추가에 실패했습니다.');
       }
       
-      // 회원가입 성공 시 로그인 페이지로 이동
-      alert('회원가입이 완료되었습니다. 로그인해주세요.');
-      navigate('/login');
+      alert('사용자추가를 완료하셨습니다.');
+      navigate('/users');  // 사용자 목록 페이지로 이동
       
     } catch (error) {
-      console.error('회원가입 오류:', error);
-      setApiError(error.message || '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+      console.error('사용자추가 오류:', error);
+      setApiError(error.message || '사용자추가 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 수탁업체 선택 다이얼로그 열기
+  const handleOpenCompanyDialog = () => {
+    setCompanyDialogOpen(true);
+  };
+
+  // 수탁업체 선택 처리
+  const handleCompanySelect = (company) => {
+    setSelectedCompany(company);
+    setFormData(prev => ({
+      ...prev,
+      companyId: company.id.toString()
+    }));
+    // 에러 메시지 초기화
+    setErrors(prev => ({
+      ...prev,
+      companyId: ''
+    }));
   };
 
   return (
@@ -391,7 +491,7 @@ const Signup = () => {
         }}
       />
       
-      {/* 회원가입 폼 */}
+      {/* 사용자추가 폼 */}
       <Paper
         elevation={1}
         sx={{
@@ -410,12 +510,12 @@ const Signup = () => {
             <ArrowBack />
           </IconButton>
           <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
-            회원가입
+          사용자추가
           </Typography>
         </Box>
         
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          계정 정보를 입력하여 회원가입을 완료해주세요.
+          계정 정보를 입력하여 사용자추가를 완료해주세요.
         </Typography>
         
         <form onSubmit={handleSubmit}>
@@ -551,40 +651,114 @@ const Signup = () => {
             <InputLabel>권한 *</InputLabel>
             <Select
               value={formData.role}
-              onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+              onChange={handleRoleChange}
               label="권한 *"
             >
               <MenuItem value="ADMIN">관리자</MenuItem>
-              <MenuItem value="MANAGER">매니저</MenuItem>
+              <MenuItem value="FINANCE_MANAGER">재경부 매니저</MenuItem>
+              <MenuItem value="CONTRACT_MANAGER">계약관리 매니저</MenuItem>
+              <MenuItem value="FACILITY_MANAGER">시설물관리 매니저</MenuItem>
+              <MenuItem value="AS_MANAGER">AS관리 매니저</MenuItem>
+              <MenuItem value="MANAGER">위수탁업체 매니저</MenuItem>
               <MenuItem value="USER">일반 사용자</MenuItem>
             </Select>
             <FormHelperText>권한 설정</FormHelperText>
           </FormControl>
 
-          <FormControl fullWidth margin="normal" error={!!errors.companyId}>
-            <InputLabel>수탁업체 *</InputLabel>
-            <Select
-              value={formData.companyId}
-              onChange={handleChange}
-              name="companyId"
-              label="수탁업체 *"
-              disabled={isLoadingCompanies}
-              required
-            >
-              {isLoadingCompanies ? (
-                <MenuItem value="" disabled>
-                  로딩 중...
-                </MenuItem>
-              ) : (
-                companies.map((company) => (
-                  <MenuItem key={company.id} value={company.id}>
-                    {company.companyName} ({company.storeCode})
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-            {errors.companyId && <FormHelperText>{errors.companyId}</FormHelperText>}
-          </FormControl>
+          {/* AS_MANAGER 권한인 경우에만 표시되는 추가 필드 */}
+          {formData.role === 'AS_MANAGER' && (
+            <>
+              <FormControl fullWidth margin="normal" error={!!errors.departmentTypeId}>
+                <InputLabel>담당부서 *</InputLabel>
+                <Select
+                  value={formData.departmentTypeId}
+                  onChange={handleChange}
+                  name="departmentTypeId"
+                  label="담당부서 *"
+                  disabled={isLoadingDepartments}
+                  required
+                >
+                  {isLoadingDepartments ? (
+                    <MenuItem value="" disabled>
+                      로딩 중...
+                    </MenuItem>
+                  ) : (
+                    departments.map((department) => (
+                      <MenuItem key={department.codeId} value={department.codeId}>
+                        {department.codeName}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+                {errors.departmentTypeId && <FormHelperText>{errors.departmentTypeId}</FormHelperText>}
+              </FormControl>
+
+              <FormControl fullWidth margin="normal" error={!!errors.branchGroupId}>
+                <InputLabel>지부별그룹 *</InputLabel>
+                <Select
+                  value={formData.branchGroupId}
+                  onChange={handleChange}
+                  name="branchGroupId"
+                  label="지부별그룹 *"
+                  disabled={isLoadingBranchGroups}
+                  required
+                >
+                  {isLoadingBranchGroups ? (
+                    <MenuItem value="" disabled>
+                      로딩 중...
+                    </MenuItem>
+                  ) : (
+                    branchGroups.map((group) => (
+                      <MenuItem key={group.codeId} value={group.codeId}>
+                        {group.codeName}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+                {errors.branchGroupId && <FormHelperText>{errors.branchGroupId}</FormHelperText>}
+              </FormControl>
+            </>
+          )}
+
+          {/* 수탁업체 선택 필드 - 다이얼로그로 변경 */}
+          <Box sx={{ mb: 2, mt: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              수탁업체 *
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                fullWidth
+                value={selectedCompany ? `${selectedCompany.storeName} (${selectedCompany.storeCode || ''})` : ''}
+                disabled
+                placeholder="수탁업체를 선택해주세요"
+                error={!!errors.companyId}
+                helperText={errors.companyId}
+                InputProps={{
+                  readOnly: true,
+                  sx: { 
+                    bgcolor: !selectedCompany ? '#fafafa' : 'transparent',
+                    border: selectedCompany ? '1px solid #e0e0e0' : 'inherit'
+                  }
+                }}
+              />
+              <Button
+                variant="outlined"
+                onClick={handleOpenCompanyDialog}
+                disabled={isLoading}
+                sx={{ height: '56px', minWidth: '120px' }}
+              >
+                업체 선택
+              </Button>
+            </Box>
+          </Box>
+
+          {/* 수탁업체 선택 다이얼로그 */}
+          <FacilityCompanySelectDialog
+            open={companyDialogOpen}
+            onClose={() => setCompanyDialogOpen(false)}
+            onSelect={handleCompanySelect}
+            title="수탁업체 선택"
+          />
           
           {apiError && (
             <Typography color="error" variant="body2" sx={{ mt: 2 }}>
@@ -628,31 +802,10 @@ const Signup = () => {
                 처리 중...
               </>
             ) : (
-              '회원가입'
+              '사용자추가'
             )}
           </Button>
         </form>
-        
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="body2">
-            이미 계정이 있으신가요?{' '}
-            <Link
-              component="button"
-              variant="body2"
-              onClick={handleGoBack}
-              sx={{ 
-                fontWeight: 600,
-                color: '#0073b1',
-                textDecoration: 'none',
-                '&:hover': {
-                  textDecoration: 'underline',
-                }
-              }}
-            >
-              로그인
-            </Link>
-          </Typography>
-        </Box>
       </Paper>
     </Box>
   );

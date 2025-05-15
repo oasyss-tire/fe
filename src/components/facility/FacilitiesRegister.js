@@ -72,6 +72,17 @@ const FacilitiesRegister = () => {
     severity: 'info'
   });
 
+  // 필드 유효성 검사 상태 추가
+  const [errors, setErrors] = useState({
+    brandCode: false,
+    facilityTypeCode: false,
+    acquisitionCost: false,
+    usefulLifeMonths: false,
+    statusCode: false,
+    installationDate: false,
+    installationTypeCode: false
+  });
+
   // 코드 테이블 데이터 조회
   useEffect(() => {
     const fetchCodes = async () => {
@@ -126,6 +137,14 @@ const FacilitiesRegister = () => {
         if (depreciationMethodResponse.ok) {
           const data = await depreciationMethodResponse.json();
           setDepreciationMethods(data);
+          
+          // 감가상각 방법 기본값 설정 (첫 번째 항목)
+          if (data.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              depreciationMethodCode: data[0].codeId
+            }));
+          }
         }
       } catch (error) {
         console.error('코드 목록 조회 실패:', error);
@@ -204,6 +223,12 @@ const FacilitiesRegister = () => {
         brandCode: '' // 브랜드 선택 초기화
       }));
       
+      // 에러 상태 초기화
+      setErrors(prev => ({
+        ...prev,
+        [name]: false
+      }));
+      
       // 새로운 시설물 유형에 맞는 브랜드 목록 조회
       fetchBrandsForFacilityType(value);
     } else {
@@ -211,6 +236,12 @@ const FacilitiesRegister = () => {
       setFormData(prev => ({
         ...prev,
         [name]: value
+      }));
+      
+      // 에러 상태 초기화
+      setErrors(prev => ({
+        ...prev,
+        [name]: false
       }));
     }
   };
@@ -270,10 +301,22 @@ const FacilitiesRegister = () => {
         ...prev,
         [name]: limitedValue // 내부적으로는 숫자만 저장
       }));
+      
+      // 에러 상태 초기화
+      setErrors(prev => ({
+        ...prev,
+        [name]: false
+      }));
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: limitedValue === '' ? '' : Number(limitedValue)
+      }));
+      
+      // 에러 상태 초기화
+      setErrors(prev => ({
+        ...prev,
+        [name]: false
       }));
     }
   };
@@ -294,6 +337,12 @@ const FacilitiesRegister = () => {
       setFormData(prev => ({
         ...prev,
         usefulLifeMonths: months
+      }));
+      
+      // 에러 상태 초기화
+      setErrors(prev => ({
+        ...prev,
+        usefulLifeMonths: false
       }));
     }
   };
@@ -371,6 +420,26 @@ const FacilitiesRegister = () => {
   // 폼 제출 처리
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 필수 필드 유효성 검사
+    const newErrors = {
+      brandCode: !formData.brandCode,
+      facilityTypeCode: !formData.facilityTypeCode,
+      acquisitionCost: !formData.acquisitionCost,
+      usefulLifeMonths: !formData.usefulLifeMonths,
+      statusCode: !formData.statusCode,
+      installationDate: !formData.installationDate,
+      installationTypeCode: !formData.installationTypeCode
+    };
+    
+    setErrors(newErrors);
+    
+    // 에러가 있으면 등록 처리 중단
+    if (Object.values(newErrors).some(error => error)) {
+      showSnackbar('필수 입력 항목을 모두 입력해주세요.', 'error');
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -546,6 +615,7 @@ const FacilitiesRegister = () => {
         mb: 3
       }}>
         <form onSubmit={handleSubmit}>
+
           {/* 기본 정보 섹션 */}
           <Box sx={{ mb: 4 }}>
             <Typography 
@@ -568,9 +638,9 @@ const FacilitiesRegister = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    시설물 구분
+                    시설물 구분 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                   </Typography>
-                  <FormControl fullWidth size="small">
+                  <FormControl fullWidth size="small" error={errors.facilityTypeCode}>
                     <Select
                       displayEmpty
                       name="facilityTypeCode"
@@ -579,7 +649,7 @@ const FacilitiesRegister = () => {
                       sx={{
                         backgroundColor: '#F8F9FA',
                         '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#E0E0E0',
+                          borderColor: errors.facilityTypeCode ? 'error.main' : '#E0E0E0',
                         },
                       }}
                     >
@@ -590,13 +660,14 @@ const FacilitiesRegister = () => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {errors.facilityTypeCode && <Typography variant="caption" color="error">필수 입력 항목입니다</Typography>}
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    제조사
+                    제조사 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                   </Typography>
-                  <FormControl fullWidth size="small">
+                  <FormControl fullWidth size="small" error={errors.brandCode}>
                     <Select
                       displayEmpty
                       name="brandCode"
@@ -605,7 +676,7 @@ const FacilitiesRegister = () => {
                       sx={{
                         backgroundColor: '#F8F9FA',
                         '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#E0E0E0',
+                          borderColor: errors.brandCode ? 'error.main' : '#E0E0E0',
                         },
                       }}
                     >
@@ -616,6 +687,7 @@ const FacilitiesRegister = () => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {errors.brandCode && <Typography variant="caption" color="error">필수 입력 항목입니다</Typography>}
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -645,7 +717,7 @@ const FacilitiesRegister = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    취득가액
+                    취득가액 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                   </Typography>
                   <TextField
                     fullWidth
@@ -655,11 +727,13 @@ const FacilitiesRegister = () => {
                     value={formattedAcquisitionCost}
                     onChange={handleNumberChange}
                     placeholder="취득가액 입력 (원)"
+                    error={errors.acquisitionCost}
+                    helperText={errors.acquisitionCost && "필수 입력 항목입니다"}
                     sx={{ 
                       backgroundColor: '#F8F9FA',
                       '& .MuiOutlinedInput-root': {
                         '& fieldset': {
-                          borderColor: '#E0E0E0',
+                          borderColor: errors.acquisitionCost ? 'error.main' : '#E0E0E0',
                         },
                       },
                     }}
@@ -698,7 +772,7 @@ const FacilitiesRegister = () => {
                 
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    사용연한
+                    사용연한 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                   </Typography>
                   <TextField
                     fullWidth
@@ -708,10 +782,12 @@ const FacilitiesRegister = () => {
                     value={usefulLifeMonths}
                     onChange={handleUsefulLifeMonthsChange}
                     placeholder="사용연한 입력 (개월)"
+                    error={errors.usefulLifeMonths}
+                    helperText={errors.usefulLifeMonths && "필수 입력 항목입니다"}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         '& fieldset': {
-                          borderColor: '#e0e0e0',
+                          borderColor: errors.usefulLifeMonths ? 'error.main' : '#E0E0E0',
                         },
                         '&:hover fieldset': {
                           borderColor: '#blue',
@@ -729,9 +805,9 @@ const FacilitiesRegister = () => {
                 
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    상태
+                    상태 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                   </Typography>
-                  <FormControl fullWidth size="small">
+                  <FormControl fullWidth size="small" error={errors.statusCode}>
                     <Select
                       displayEmpty
                       name="statusCode"
@@ -740,7 +816,7 @@ const FacilitiesRegister = () => {
                       sx={{
                         backgroundColor: '#F8F9FA',
                         '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#E0E0E0',
+                          borderColor: errors.statusCode ? 'error.main' : '#E0E0E0',
                         },
                       }}
                     >
@@ -751,6 +827,7 @@ const FacilitiesRegister = () => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {errors.statusCode && <Typography variant="caption" color="error">필수 입력 항목입니다</Typography>}
                   </FormControl>
                 </Grid>
               </Grid>
@@ -802,7 +879,7 @@ const FacilitiesRegister = () => {
                 </Grid>
                 <Grid item xs={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    설치일
+                    설치일 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                   </Typography>
                   <TextField
                     fullWidth
@@ -811,11 +888,13 @@ const FacilitiesRegister = () => {
                     name="installationDate"
                     value={formData.installationDate}
                     onChange={handleChange}
+                    error={errors.installationDate}
+                    helperText={errors.installationDate && "필수 입력 항목입니다"}
                     sx={{ 
                       backgroundColor: '#F8F9FA',
                       '& .MuiOutlinedInput-root': {
                         '& fieldset': {
-                          borderColor: '#E0E0E0',
+                          borderColor: errors.installationDate ? 'error.main' : '#E0E0E0',
                         },
                       },
                     }}
@@ -824,9 +903,9 @@ const FacilitiesRegister = () => {
 
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                    설치 유형
+                    설치 유형 <Box component="span" sx={{ color: 'error.main' }}>*</Box>
                   </Typography>
-                  <FormControl fullWidth size="small">
+                  <FormControl fullWidth size="small" error={errors.installationTypeCode}>
                     <Select
                       displayEmpty
                       name="installationTypeCode"
@@ -835,7 +914,7 @@ const FacilitiesRegister = () => {
                       sx={{
                         backgroundColor: '#F8F9FA',
                         '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#E0E0E0',
+                          borderColor: errors.installationTypeCode ? 'error.main' : '#E0E0E0',
                         },
                       }}
                     >
@@ -846,6 +925,7 @@ const FacilitiesRegister = () => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {errors.installationTypeCode && <Typography variant="caption" color="error">필수 입력 항목입니다</Typography>}
                   </FormControl>
                 </Grid>
               </Grid>

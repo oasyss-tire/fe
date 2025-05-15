@@ -20,21 +20,11 @@ import {
   FormControl,
   Select,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  InputLabel,
-  InputAdornment as MuiInputAdornment,
   Grid,
   IconButton
 } from '@mui/material';
 import { 
   Search as SearchIcon,
-  Add as AddIcon,
-  CloudUpload as CloudUploadIcon,
-  Delete as DeleteIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -53,20 +43,9 @@ const statusColorMap = {
   '002010_0003': 'default'  // AS 수리완료
 };
 
-// 시설물 상태 칩 색상 매핑
-const facilityStatusColorMap = {
-  '002003_0001': 'default', // 사용중
-  '002003_0002': 'default', // 수리중
-  '002003_0003': 'default', // 폐기
-  '002003_0004': 'default', // 임대중
-  '002003_0005': 'default', // 폐기
-  '002003_0006': 'default'  // 수리 완료
-};
-
-const ServiceRequestList = () => {
+const MyServiceRequestList = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const isUserRole = authUser?.role === 'USER';
   const [loading, setLoading] = useState(false);
   const [allServiceRequests, setAllServiceRequests] = useState([]); // 모든 데이터를 저장할 상태
   const [serviceStatusCodes, setServiceStatusCodes] = useState([]); // AS 상태 코드 (002010)
@@ -107,16 +86,7 @@ const ServiceRequestList = () => {
   
   // 데이터 필터링 처리
   const filteredServiceRequests = useMemo(() => {
-    // 먼저 USER 권한이면 자신의 회사 ID와 일치하는 데이터만 필터링
     let filteredData = [...allServiceRequests];
-    
-    // USER 권한인 경우 originalLocationCompanyId와 사용자의 companyId가 일치하는 항목만 필터링
-    if (isUserRole && authUser?.companyId) {
-      const userCompanyId = String(authUser.companyId);
-      filteredData = filteredData.filter(request => 
-        String(request.originalLocationCompanyId) === userCompanyId
-      );
-    }
     
     // 나머지 필터 적용
     return filteredData.filter(request => {
@@ -156,28 +126,38 @@ const ServiceRequestList = () => {
 
       return matchesKeyword && matchesServiceStatus && matchesDepartment && matchesBranchGroup && matchesDateRange;
     });
-  }, [allServiceRequests, searchKeyword, selectedServiceStatusCode, selectedDepartmentCode, selectedBranchGroupCode, startDate, endDate, isDateFilterActive, isUserRole, authUser]);
+  }, [allServiceRequests, searchKeyword, selectedServiceStatusCode, selectedDepartmentCode, selectedBranchGroupCode, startDate, endDate, isDateFilterActive]);
 
   // 현재 페이지에 표시할 데이터
   const paginatedServiceRequests = useMemo(() => {
+    // 데이터를 최신순으로 정렬 (serviceRequestId 역순)
+    const sortedRequests = [...filteredServiceRequests].sort((a, b) => 
+      b.serviceRequestId - a.serviceRequestId
+    );
+    
     const startIndex = page * 10;
     const endIndex = startIndex + 10;
-    return filteredServiceRequests.slice(startIndex, endIndex);
+    return sortedRequests.slice(startIndex, endIndex);
   }, [filteredServiceRequests, page]);
   
   // 초기 데이터 로딩
   useEffect(() => {
     fetchCodes();
-    fetchAllServiceRequests();
+    fetchMyServiceRequests();
   }, []); // 컴포넌트가 마운트될 때만 데이터를 로드
   
   // 필터링된 데이터가 변경될 때마다 페이지네이션 정보 업데이트
   useEffect(() => {
-    setTotalItems(filteredServiceRequests.length);
-    setTotalPages(Math.ceil(filteredServiceRequests.length / 10));
+    // 데이터를 최신순으로 정렬 (serviceRequestId 역순)
+    const sortedRequests = [...filteredServiceRequests].sort((a, b) => 
+      b.serviceRequestId - a.serviceRequestId
+    );
+    
+    setTotalItems(sortedRequests.length);
+    setTotalPages(Math.ceil(sortedRequests.length / 10));
     
     // 현재 페이지가 전체 페이지 수보다 크면 첫 페이지로 이동
-    if (page >= Math.ceil(filteredServiceRequests.length / 10)) {
+    if (page >= Math.ceil(sortedRequests.length / 10)) {
       setPage(0);
     }
   }, [filteredServiceRequests, page]);
@@ -223,12 +203,15 @@ const ServiceRequestList = () => {
     }
   };
   
-  // 모든 AS 요청 목록 조회 (필터링 없이)
-  const fetchAllServiceRequests = async () => {
+  // 내가 담당하는 AS 요청 목록 조회
+  const fetchMyServiceRequests = async () => {
     setLoading(true);
     try {
-      // 페이지네이션 없이 모든 데이터 요청 (또는 백엔드에서 허용하는 최대 크기로 요청)
-      const url = `http://localhost:8080/api/service-requests/paged?page=0&size=1000&sort=serviceRequestId,desc`;
+      if (!authUser || !authUser.id) {
+        throw new Error('로그인 정보를 찾을 수 없습니다.');
+      }
+      
+      const url = `http://localhost:8080/api/service-requests/manager/${authUser.id}`;
       
       console.log("API 요청 URL:", url); // 디버깅용 로그
       
@@ -239,16 +222,16 @@ const ServiceRequestList = () => {
       });
       
       if (!response.ok) {
-        throw new Error('AS 요청 목록을 불러오는데 실패했습니다.');
+        throw new Error('나의 AS 요청 목록을 불러오는데 실패했습니다.');
       }
       
       const data = await response.json();
       console.log("API 응답 데이터:", data); // 디버깅용 로그
       
-      setAllServiceRequests(data.content || []);
+      setAllServiceRequests(data || []);
     } catch (error) {
-      console.error('AS 요청 목록 조회 실패:', error);
-      showSnackbar('AS 요청 목록을 불러오는데 실패했습니다.', 'error');
+      console.error('나의 AS 요청 목록 조회 실패:', error);
+      showSnackbar('나의 AS 요청 목록을 불러오는데 실패했습니다.', 'error');
     } finally {
       setLoading(false);
     }
@@ -290,11 +273,6 @@ const ServiceRequestList = () => {
   // 상세보기로 이동
   const handleViewDetails = (serviceRequestId) => {
     navigate(`/service-request/${serviceRequestId}`);
-  };
-  
-  // 새 AS 접수
-  const handleCreateNew = () => {
-    navigate('/service-request/create');
   };
   
   // 알림 스낵바 표시
@@ -342,40 +320,6 @@ const ServiceRequestList = () => {
     } catch (error) {
       console.error('AS 요청 상세 조회 실패:', error);
       showSnackbar('AS 요청 상세 정보를 불러오는데 실패했습니다.', 'error');
-    }
-  };
-  
-  // AS 요청 승인 처리 시작
-  const handleApproveRequest = (serviceRequestId) => {
-    setCurrentRequestId(serviceRequestId);
-    fetchRequestDetail(serviceRequestId);
-    setApproveDialogOpen(true);
-  };
-  
-  // AS 요청 승인 제출
-  const submitApproval = async (formattedDateTime) => {
-    try {
-      const response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/receive`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          expectedCompletionDate: formattedDateTime
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('AS 요청 승인 처리에 실패했습니다.');
-      }
-      
-      showSnackbar('AS 요청이 성공적으로 승인되었습니다.', 'success');
-      setApproveDialogOpen(false);
-      fetchAllServiceRequests(); // 목록 새로고침
-    } catch (error) {
-      console.error('AS 요청 승인 실패:', error);
-      showSnackbar('AS 요청 승인 처리에 실패했습니다.', 'error');
     }
   };
   
@@ -439,7 +383,7 @@ const ServiceRequestList = () => {
       
       showSnackbar('AS 요청이 성공적으로 완료 처리되었습니다.', 'success');
       setCompleteDialogOpen(false);
-      fetchAllServiceRequests(); // 목록 새로고침
+      fetchMyServiceRequests(); // 목록 새로고침
     } catch (error) {
       console.error('AS 요청 완료 처리 실패:', error);
       showSnackbar('AS 요청 완료 처리에 실패했습니다.', 'error');
@@ -490,6 +434,31 @@ const ServiceRequestList = () => {
     }
   };
   
+  // 예정일/완료일 표시 함수
+  const getStatusDate = (request) => {
+    if (request.serviceStatusCode === '002010_0002' && request.expectedCompletionDate) {
+      return { type: '예정일', date: formatDate(request.expectedCompletionDate) };
+    } else if (request.serviceStatusCode === '002010_0003' && request.completionDate) {
+      return { type: '완료일', date: formatDate(request.completionDate) };
+    }
+    return { type: '-', date: '-' };
+  };
+  
+  // 컬럼 헤더 텍스트 가져오기
+  const getDateColumnHeader = (request) => {
+    if (request.serviceStatusCode === '002010_0002') {
+      return '예정일';
+    } else if (request.serviceStatusCode === '002010_0003') {
+      return '완료일';
+    }
+    return '-';
+  };
+  
+  // 통계 정보 계산
+  const totalCount = allServiceRequests.length;
+  const waitingCount = allServiceRequests.filter(req => req.serviceStatusCode !== '002010_0003').length;
+  const completedCount = allServiceRequests.filter(req => req.serviceStatusCode === '002010_0003').length;
+  
   return (
     <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
       {/* 상단 헤더 */}
@@ -500,113 +469,110 @@ const ServiceRequestList = () => {
         mb: 3 
       }}>
         <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          AS 요청 목록
+          내가 담당하는 AS 목록
         </Typography>
         
-        {/* USER 권한이 아닌 경우에만 통계 카드 표시 */}
-        {!isUserRole && (
+        <Box sx={{ 
+          display: 'flex',
+          gap: 1.5,
+          backgroundColor: '#E8F3FF',
+          p: 1.5,
+          borderRadius: 1
+        }}>
           <Box sx={{ 
+            px: 2.5, 
+            py: 1, 
+            backgroundColor: '#E8F3FF', 
+            borderRadius: 1,
+            minWidth: 100,
             display: 'flex',
-            gap: 1.5,
-            backgroundColor: '#E8F3FF',
-            p: 1.5,
-            borderRadius: 1
+            flexDirection: 'column',
+            alignItems: 'center'
           }}>
-            <Box sx={{ 
-              px: 2.5, 
-              py: 1, 
-              backgroundColor: '#E8F3FF', 
-              borderRadius: 1,
-              minWidth: 100,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center'
-            }}>
-              <Typography 
-                variant="caption" 
-                color="text.secondary" 
-                sx={{ 
-                  fontSize: '0.75rem',
-                  mb: 0.5 
-                }}
-              >
-                전체 접수
-              </Typography>
-              <Typography 
-                color="primary" 
-                sx={{ 
-                  fontSize: '1.125rem',
-                  fontWeight: 600,
-                  lineHeight: 1 
-                }}
-              >
-                {allServiceRequests.length} 건
-              </Typography>
-            </Box>
-            <Box sx={{ 
-              px: 2.5, 
-              py: 1, 
-              backgroundColor: '#E8F3FF', 
-              borderRadius: 1,
-              minWidth: 100,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center'
-            }}>
-              <Typography 
-                variant="caption" 
-                color="text.secondary" 
-                sx={{ 
-                  fontSize: '0.75rem',
-                  mb: 0.5 
-                }}
-              >
-                처리 대기
-              </Typography>
-              <Typography 
-                color="primary" 
-                sx={{ 
-                  fontSize: '1.125rem',
-                  fontWeight: 600,
-                  lineHeight: 1 
-                }}
-              >
-                {allServiceRequests.filter(req => req.serviceStatusCode !== '002010_0003').length} 건
-              </Typography>
-            </Box>
-            <Box sx={{ 
-              px: 2.5, 
-              py: 1, 
-              backgroundColor: '#E8F3FF', 
-              borderRadius: 1,
-              minWidth: 100,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center'
-            }}>
-              <Typography 
-                variant="caption" 
-                color="text.secondary" 
-                sx={{ 
-                  fontSize: '0.75rem',
-                  mb: 0.5 
-                }}
-              >
-                완료
-              </Typography>
-              <Typography 
-                color="primary" 
-                sx={{ 
-                  fontSize: '1.125rem',
-                  fontWeight: 600,
-                  lineHeight: 1 
-                }}
-              >
-                {allServiceRequests.filter(req => req.serviceStatusCode === '002010_0003').length} 건
-              </Typography>
-            </Box>
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ 
+                fontSize: '0.75rem',
+                mb: 0.5 
+              }}
+            >
+              전체 접수
+            </Typography>
+            <Typography 
+              color="primary" 
+              sx={{ 
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                lineHeight: 1 
+              }}
+            >
+              {totalCount} 건
+            </Typography>
           </Box>
-        )}
+          <Box sx={{ 
+            px: 2.5, 
+            py: 1, 
+            backgroundColor: '#E8F3FF', 
+            borderRadius: 1,
+            minWidth: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}>
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ 
+                fontSize: '0.75rem',
+                mb: 0.5 
+              }}
+            >
+              처리 대기
+            </Typography>
+            <Typography 
+              color="primary" 
+              sx={{ 
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                lineHeight: 1 
+              }}
+            >
+              {waitingCount} 건
+            </Typography>
+          </Box>
+          <Box sx={{ 
+            px: 2.5, 
+            py: 1, 
+            backgroundColor: '#E8F3FF', 
+            borderRadius: 1,
+            minWidth: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}>
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ 
+                fontSize: '0.75rem',
+                mb: 0.5 
+              }}
+            >
+              완료
+            </Typography>
+            <Typography 
+              color="primary" 
+              sx={{ 
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                lineHeight: 1 
+              }}
+            >
+              {completedCount} 건
+            </Typography>
+          </Box>
+        </Box>
       </Box>
       
       {/* 검색 및 필터 도구 바 */}
@@ -642,105 +608,100 @@ const ServiceRequestList = () => {
         </Box>
         
         <Box sx={{ display: 'flex', gap: 2 }}>
-          {/* USER 권한이 아닌 경우에만 필터 표시 */}
-          {!isUserRole && (
-            <>
-              {/* 지부별 그룹 필터 */}
-              <Box sx={{ width: '150px' }}>
-                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                  지부별 그룹
-                </Typography>
-                <FormControl 
-                  fullWidth 
-                  size="small"
-                  sx={{ backgroundColor: 'white' }}
-                >
-                  <Select
-                    value={selectedBranchGroupCode}
-                    onChange={handleBranchGroupChange}
-                    displayEmpty
-                    sx={{
-                      height: '40px',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#E0E0E0',
-                      },
-                    }}
-                  >
-                    <MenuItem value="">모든 지부</MenuItem>
-                    {branchGroupCodes.map(branch => (
-                      <MenuItem key={branch.codeId} value={branch.codeId}>
-                        {branch.codeName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              
-              {/* AS 상태 필터 */}
-              <Box sx={{ width: '150px' }}>
-                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                  AS 상태
-                </Typography>
-                <FormControl 
-                  fullWidth 
-                  size="small"
-                  sx={{ backgroundColor: 'white' }}
-                >
-                  <Select
-                    value={selectedServiceStatusCode}
-                    onChange={handleServiceStatusChange}
-                    displayEmpty
-                    sx={{
-                      height: '40px',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#E0E0E0',
-                      },
-                    }}
-                  >
-                    <MenuItem value="">모든 AS 상태</MenuItem>
-                    {serviceStatusCodes.map(status => (
-                      <MenuItem key={status.codeId} value={status.codeId}>
-                        {status.codeName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              
-              {/* 담당 부서 필터 */}
-              <Box sx={{ width: '150px' }}>
-                <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-                  담당 부서
-                </Typography>
-                <FormControl 
-                  fullWidth 
-                  size="small"
-                  sx={{ backgroundColor: 'white' }}
-                >
-                  <Select
-                    value={selectedDepartmentCode}
-                    onChange={handleDepartmentChange}
-                    displayEmpty
-                    sx={{
-                      height: '40px',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#E0E0E0',
-                      },
-                    }}
-                  >
-                    <MenuItem value="">모든 담당 부서</MenuItem>
-                    {departmentCodes.map(dept => (
-                      <MenuItem key={dept.codeId} value={dept.codeId}>
-                        {dept.codeName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </>
-          )}
+          {/* 지부별 그룹 필터 */}
+          <Box sx={{ width: '150px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              지부별 그룹
+            </Typography>
+            <FormControl 
+              fullWidth 
+              size="small"
+              sx={{ backgroundColor: 'white' }}
+            >
+              <Select
+                value={selectedBranchGroupCode}
+                onChange={handleBranchGroupChange}
+                displayEmpty
+                sx={{
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E0E0E0',
+                  },
+                }}
+              >
+                <MenuItem value="">모든 지부</MenuItem>
+                {branchGroupCodes.map(branch => (
+                  <MenuItem key={branch.codeId} value={branch.codeId}>
+                    {branch.codeName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
           
-          {/* 요청일자 필터는 모든 사용자에게 표시 */}
+          {/* AS 상태 필터 */}
+          <Box sx={{ width: '150px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              AS 상태
+            </Typography>
+            <FormControl 
+              fullWidth 
+              size="small"
+              sx={{ backgroundColor: 'white' }}
+            >
+              <Select
+                value={selectedServiceStatusCode}
+                onChange={handleServiceStatusChange}
+                displayEmpty
+                sx={{
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E0E0E0',
+                  },
+                }}
+              >
+                <MenuItem value="">모든 AS 상태</MenuItem>
+                {serviceStatusCodes.map(status => (
+                  <MenuItem key={status.codeId} value={status.codeId}>
+                    {status.codeName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          
+          {/* 담당 부서 필터 */}
+          <Box sx={{ width: '150px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              담당 부서
+            </Typography>
+            <FormControl 
+              fullWidth 
+              size="small"
+              sx={{ backgroundColor: 'white' }}
+            >
+              <Select
+                value={selectedDepartmentCode}
+                onChange={handleDepartmentChange}
+                displayEmpty
+                sx={{
+                  height: '40px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#E0E0E0',
+                  },
+                }}
+              >
+                <MenuItem value="">모든 담당 부서</MenuItem>
+                {departmentCodes.map(dept => (
+                  <MenuItem key={dept.codeId} value={dept.codeId}>
+                    {dept.codeName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          
+          {/* 요청일자 필터 */}
           <Box sx={{ width: '150px' }}>
             <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
               요청일자
@@ -808,25 +769,22 @@ const ServiceRequestList = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ width: '5%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>No.</TableCell>
-                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>매장명</TableCell>
+                  <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>매장명</TableCell>
                   <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>시설물 유형</TableCell>
                   <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>품목</TableCell>
                   <TableCell sx={{ width: '12%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>담당 부서</TableCell>
-                  <TableCell sx={{ width: '8%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>사용연한</TableCell>
                   <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>지부별 그룹</TableCell>
                   <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>AS 상태</TableCell>
-                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>요청일자</TableCell>
-                  {/* USER 권한이 아닌 경우에만 처리 열 표시 */}
-                  {!isUserRole && (
-                    <TableCell sx={{ width: '9%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>처리</TableCell>
-                  )}
+                  <TableCell sx={{ width: '9%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>요청일자</TableCell>
+                  <TableCell sx={{ width: '10%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>예정일/완료일</TableCell>
+                  <TableCell sx={{ width: '8%', fontWeight: 'bold', backgroundColor: '#F8F9FA' }}>처리</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {paginatedServiceRequests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isUserRole ? 9 : 10} align="center" sx={{ py: 3 }}>
-                      AS 접수 내역이 없습니다.
+                    <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                      담당하는 AS 요청 내역이 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -838,14 +796,12 @@ const ServiceRequestList = () => {
                       sx={{ cursor: 'pointer' }}
                     >
                       <TableCell sx={{ width: '5%' }}>
-                        {/* 전체 아이템 수에서 현재 인덱스를 역순으로 계산 */}
                         {totalItems - (page * 10 + index)}
                       </TableCell>
                       <TableCell sx={{ width: '12%' }}>{request.companyName}</TableCell>
                       <TableCell sx={{ width: '12%' }}>{request.facilityTypeName}</TableCell>
                       <TableCell sx={{ width: '12%' }}>{request.brandName || '-'}</TableCell>
                       <TableCell sx={{ width: '12%' }}>{request.departmentTypeName || '-'}</TableCell>
-                      <TableCell sx={{ width: '8%' }}>{request.usefulLifeMonths || '-'}</TableCell>
                       <TableCell sx={{ width: '10%' }}>{request.branchGroupName || '-'}</TableCell>
                       <TableCell sx={{ width: '10%' }}>
                         <Chip 
@@ -859,40 +815,26 @@ const ServiceRequestList = () => {
                           variant="outlined"
                         />
                       </TableCell>
-                      <TableCell sx={{ width: '10%' }}>{formatDate(request.requestDate)}</TableCell>
-                      {/* USER 권한이 아닌 경우에만 처리 버튼 표시 */}
-                      {!isUserRole && (
-                        <TableCell sx={{ width: '9%' }}>
-                          {request.serviceStatusCode === '002010_0001' && !request.isReceived && (
-                            <Button 
-                              variant="contained" 
-                              size="small"
-                              color="primary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleApproveRequest(request.serviceRequestId);
-                              }}
-                              sx={{ fontSize: '0.7rem', py: 0.5 }}
-                            >
-                              요청접수
-                            </Button>
-                          )}
-                          {request.serviceStatusCode === '002010_0002' && !request.isCompleted && (
-                            <Button 
-                              variant="contained" 
-                              size="small"
-                              color="success"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCompleteRequest(request.serviceRequestId);
-                              }}
-                              sx={{ fontSize: '0.7rem', py: 0.5 }}
-                            >
-                              완료
-                            </Button>
-                          )}
-                        </TableCell>
-                      )}
+                      <TableCell sx={{ width: '9%' }}>{formatDate(request.requestDate)}</TableCell>
+                      <TableCell sx={{ width: '10%' }}>
+                        {getStatusDate(request).date}
+                      </TableCell>
+                      <TableCell sx={{ width: '8%' }}>
+                        {request.serviceStatusCode === '002010_0002' && !request.isCompleted && (
+                          <Button 
+                            variant="contained" 
+                            size="small"
+                            color="success"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCompleteRequest(request.serviceRequestId);
+                            }}
+                            sx={{ fontSize: '0.7rem', py: 0.5 }}
+                          >
+                            완료
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -926,15 +868,6 @@ const ServiceRequestList = () => {
         </Alert>
       </Snackbar>
       
-      {/* AS 요청 승인 다이얼로그 컴포넌트 */}
-      <ApproveRequestDialog 
-        open={approveDialogOpen}
-        onClose={() => setApproveDialogOpen(false)}
-        currentRequest={currentRequest}
-        onApprove={submitApproval}
-        showSnackbar={showSnackbar}
-      />
-      
       {/* AS 완료 처리 다이얼로그 컴포넌트 */}
       <CompleteRequestDialog
         open={completeDialogOpen}
@@ -947,4 +880,4 @@ const ServiceRequestList = () => {
   );
 };
 
-export default ServiceRequestList; 
+export default MyServiceRequestList; 

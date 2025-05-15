@@ -40,9 +40,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import FacilityCompanySelectDialog from './FacilityCompanySelectDialog';
 import FacilitySelectDialog from './FacilitySelectDialog';
+import { useAuth } from '../../contexts/AuthContext';
 
 const FacilityTransfer = () => {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  const isUserRole = authUser?.role === 'USER';
+  
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -105,6 +109,56 @@ const FacilityTransfer = () => {
   const MAX_IMAGE_COUNT = 5;
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
   
+  // USER 권한 사용자의 업체 정보 자동 설정
+  useEffect(() => {
+    const fetchUserCompany = async () => {
+      // USER 권한이고 companyId가 있는 경우에만 실행
+      if (isUserRole && authUser?.companyId) {
+        try {
+          // 사용자의 업체 정보 조회
+          const response = await fetch(`http://localhost:8080/api/companies/${authUser.companyId}`, {
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('수탁업체 정보를 불러오는데 실패했습니다.');
+          }
+          
+          const companyData = await response.json();
+          
+          // 출발지 수탁업체 정보 자동 설정
+          setFormData(prev => ({
+            ...prev,
+            sourceCompanyId: String(companyData.id),
+            sourceCompanyName: companyData.companyName || companyData.storeName,
+            currentSourceCompanyId: String(companyData.id),
+            currentSourceCompanyName: companyData.companyName || companyData.storeName
+          }));
+          
+          // 폐기 작업을 위한 수탁업체 정보도 자동 설정
+          if (operationType === 'dispose') {
+            setFormData(prev => ({
+              ...prev,
+              companyId: String(companyData.id),
+              companyName: companyData.companyName || companyData.storeName
+            }));
+          }
+          
+          // 시설물 목록 자동 조회
+          await fetchFacilitiesByCompany(companyData.id);
+          
+        } catch (error) {
+          console.error('사용자 업체 정보 조회 실패:', error);
+          showSnackbar('사용자 업체 정보를 불러오는데 실패했습니다.', 'error');
+        }
+      }
+    };
+    
+    fetchUserCompany();
+  }, [authUser, isUserRole, operationType]);
+  
   // 수탁업체 및 시설물 데이터 로딩
   useEffect(() => {
     fetchCompanies();
@@ -134,6 +188,52 @@ const FacilityTransfer = () => {
     // 이미지 미리보기 URL 해제
     setCurrentFacilityId(null);
     setImageUploadError('');
+    
+    // USER 권한인 경우 작업 유형 변경 후 자동으로 업체 정보 다시 설정
+    if (isUserRole && authUser?.companyId) {
+      // setTimeout을 사용하여 다음 렌더링 사이클에서 실행되도록 함
+      setTimeout(async () => {
+        try {
+          // 사용자의 업체 정보 조회
+          const response = await fetch(`http://localhost:8080/api/companies/${authUser.companyId}`, {
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('수탁업체 정보를 불러오는데 실패했습니다.');
+          }
+          
+          const companyData = await response.json();
+          
+          if (e.target.value === 'move') {
+            // 이동 작업인 경우 출발지 수탁업체 정보 설정
+            setFormData(prev => ({
+              ...prev,
+              sourceCompanyId: String(companyData.id),
+              sourceCompanyName: companyData.companyName || companyData.storeName,
+              currentSourceCompanyId: String(companyData.id),
+              currentSourceCompanyName: companyData.companyName || companyData.storeName
+            }));
+          } else {
+            // 폐기 작업인 경우 수탁업체 정보 설정
+            setFormData(prev => ({
+              ...prev,
+              companyId: String(companyData.id),
+              companyName: companyData.companyName || companyData.storeName
+            }));
+          }
+          
+          // 시설물 목록 자동 조회
+          await fetchFacilitiesByCompany(companyData.id);
+          
+        } catch (error) {
+          console.error('사용자 업체 정보 조회 실패:', error);
+          showSnackbar('사용자 업체 정보를 불러오는데 실패했습니다.', 'error');
+        }
+      }, 0);
+    }
   };
 
   // 수탁업체 목록 조회
@@ -219,6 +319,18 @@ const FacilityTransfer = () => {
   
   // 수탁업체 선택 다이얼로그 열기
   const handleOpenCompanyDialog = (type) => {
+    // USER 권한이고 출발지 수탁업체 선택인 경우 차단
+    if (isUserRole && type === 'source') {
+      showSnackbar('사용자 권한으로는 출발지 수탁업체를 변경할 수 없습니다.', 'warning');
+      return;
+    }
+    
+    // USER 권한이고 폐기용 수탁업체 선택인 경우 차단
+    if (isUserRole && type === 'company') {
+      showSnackbar('사용자 권한으로는 폐기 대상 수탁업체를 변경할 수 없습니다.', 'warning');
+      return;
+    }
+    
     let title = '';
     let excludeCompanyId = null;
     
@@ -887,7 +999,7 @@ const FacilityTransfer = () => {
         <TextField
           fullWidth
           size="small"
-          placeholder="출발지 수탁업체 선택"
+          placeholder={isUserRole ? "자동 선택됨" : "출발지 수탁업체 선택"}
           value={formData.sourceCompanyName || ''}
           onClick={() => handleOpenCompanyDialog('source')}
           InputProps={{
@@ -897,8 +1009,8 @@ const FacilityTransfer = () => {
             ),
           }}
           sx={{
-            backgroundColor: '#F8F9FA',
-            cursor: 'pointer',
+            backgroundColor: isUserRole ? '#f0f0f0' : '#F8F9FA',
+            cursor: isUserRole ? 'default' : 'pointer',
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
                 borderColor: '#E0E0E0',
@@ -1146,7 +1258,7 @@ const FacilityTransfer = () => {
         <TextField
           fullWidth
           size="small"
-          placeholder="수탁업체 선택"
+          placeholder={isUserRole ? "자동 선택됨" : "수탁업체 선택"}
           value={formData.companyName || ''}
           onClick={() => handleOpenCompanyDialog('company')}
           InputProps={{
@@ -1156,8 +1268,8 @@ const FacilityTransfer = () => {
             ),
           }}
           sx={{
-            backgroundColor: '#F8F9FA',
-            cursor: 'pointer',
+            backgroundColor: isUserRole ? '#f0f0f0' : '#F8F9FA',
+            cursor: isUserRole ? 'default' : 'pointer',
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
                 borderColor: '#E0E0E0',
@@ -1165,6 +1277,9 @@ const FacilityTransfer = () => {
             },
           }}
         />
+        {isUserRole && (
+          <FormHelperText>현재 로그인한 사용자의 업체가 자동으로 선택됩니다.</FormHelperText>
+        )}
       </Grid>
       
       <Grid item xs={12}>

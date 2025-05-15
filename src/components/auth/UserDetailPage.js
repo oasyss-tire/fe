@@ -19,10 +19,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogContentText,
-  DialogActions
+  DialogActions,
+  InputAdornment
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import FacilityCompanySelectDialog from '../facility/FacilityCompanySelectDialog';
 
 const UserDetailPage = () => {
   const { userId } = useParams();
@@ -39,7 +41,9 @@ const UserDetailPage = () => {
     active: true,
     companyId: '',
     companyName: '',
-    storeCode: ''
+    storeCode: '',
+    departmentTypeId: '',
+    branchGroupId: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -54,8 +58,12 @@ const UserDetailPage = () => {
     newPassword: '',
     confirmPassword: ''
   });
-  const [companies, setCompanies] = useState([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+  
+  // 담당부서 및 지부별그룹 상태 추가
+  const [departments, setDepartments] = useState([]);
+  const [branchGroups, setBranchGroups] = useState([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [isLoadingBranchGroups, setIsLoadingBranchGroups] = useState(false);
   
   // 비밀번호 초기화 관련 상태
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
@@ -76,33 +84,71 @@ const UserDetailPage = () => {
   // 권한 및 상태 수정 가능 여부 확인
   const canEditRoleAndStatus = isAdmin; // 관리자만 권한과 상태 수정 가능
 
-  // 수탁업체 목록 가져오기
-  useEffect(() => {
-    if (isAdmin) {
-      fetchCompanies();
-    }
-  }, [isAdmin]);
+  // 수탁업체 선택 다이얼로그 상태 추가
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(null);
 
-  const fetchCompanies = async () => {
-    setIsLoadingCompanies(true);
+  // 담당부서 및 지부별그룹 목록 불러오기
+  useEffect(() => {
+    // 담당부서 및 지부별그룹 목록 가져오기
+    fetchDepartments();
+    fetchBranchGroups();
+  }, []);
+
+  // 담당부서 목록 가져오기
+  const fetchDepartments = async () => {
+    setIsLoadingDepartments(true);
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch('http://localhost:8080/api/companies', {
+      const response = await fetch('http://localhost:8080/api/codes/groups/003001/codes/active', {
         headers: {
           'Authorization': token ? `Bearer ${token}` : ''
         }
       });
       if (!response.ok) {
-        throw new Error('수탁업체 목록을 불러오는데 실패했습니다.');
+        throw new Error('담당부서 목록을 불러오는데 실패했습니다.');
       }
       const data = await response.json();
-      setCompanies(data);
+      setDepartments(data);
     } catch (error) {
-      console.error('수탁업체 목록 조회 오류:', error);
+      console.error('담당부서 목록 조회 오류:', error);
     } finally {
-      setIsLoadingCompanies(false);
+      setIsLoadingDepartments(false);
     }
   };
+
+  // 지부별그룹 목록 가져오기
+  const fetchBranchGroups = async () => {
+    setIsLoadingBranchGroups(true);
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/codes/groups/003002/codes/active', {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      if (!response.ok) {
+        throw new Error('지부별그룹 목록을 불러오는데 실패했습니다.');
+      }
+      const data = await response.json();
+      setBranchGroups(data);
+    } catch (error) {
+      console.error('지부별그룹 목록 조회 오류:', error);
+    } finally {
+      setIsLoadingBranchGroups(false);
+    }
+  };
+
+  // 사용자 정보 로드 시 선택된 수탁업체 설정
+  useEffect(() => {
+    if (user && user.companyId) {
+      setSelectedCompany({
+        id: user.companyId,
+        storeCode: user.storeCode,
+        storeName: user.companyName
+      });
+    }
+  }, [user.companyId]);
 
   // 비밀번호 유효성 검사 함수
   const validatePassword = (password) => {
@@ -135,15 +181,19 @@ const UserDetailPage = () => {
   };
 
   // 수탁업체 변경 핸들러
-  const handleCompanyChange = (e) => {
-    const companyId = e.target.value;
-    const selectedCompany = companies.find(c => c.id === companyId);
-    setUser({ 
-      ...user, 
-      companyId: companyId,
-      companyName: selectedCompany ? selectedCompany.companyName : '',
-      storeCode: selectedCompany ? selectedCompany.storeCode : ''
+  const handleCompanyChange = (company) => {
+    setSelectedCompany(company);
+    setUser({
+      ...user,
+      companyId: company.id.toString(),
+      companyName: company.storeName,
+      storeCode: company.storeCode
     });
+  };
+
+  // 수탁업체 선택 다이얼로그 열기
+  const handleOpenCompanyDialog = () => {
+    setCompanyDialogOpen(true);
   };
 
   useEffect(() => {
@@ -167,6 +217,15 @@ const UserDetailPage = () => {
         
         const data = await response.json();
         setUser(data);
+        
+        // 수탁업체 정보 설정
+        if (data.companyId) {
+          setSelectedCompany({
+            id: data.companyId,
+            storeCode: data.storeCode || '',
+            storeName: data.companyName || ''
+          });
+        }
       } catch (error) {
         console.error('사용자 정보 조회 오류:', error);
         setError(error.message);
@@ -183,7 +242,12 @@ const UserDetailPage = () => {
   // 권한 변경 핸들러
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
-    setUser({ ...user, role: newRole });
+    setUser(prev => ({
+      ...prev,
+      role: newRole,
+      // AS_MANAGER가 아닌 경우 관련 필드 초기화
+      ...(newRole !== 'AS_MANAGER' ? { departmentTypeId: '', branchGroupId: '' } : {})
+    }));
   };
 
   // 활성화 상태 변경 핸들러
@@ -291,9 +355,14 @@ const UserDetailPage = () => {
         phoneNumber: user.phoneNumber,
         role: user.role,
         active: user.active,
-        companyId: user.companyId ? parseInt(user.companyId) : null
+        companyId: selectedCompany ? parseInt(selectedCompany.id) : null
       };
       
+      // AS_MANAGER 권한인 경우 추가 필드 포함
+      if (user.role === 'AS_MANAGER') {
+        updateData.departmentTypeId = user.departmentTypeId;
+        updateData.branchGroupId = user.branchGroupId;
+      }
 
       const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
         method: 'PUT',
@@ -438,25 +507,45 @@ const UserDetailPage = () => {
 
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                 {isAdmin ? (
-                  <FormControl fullWidth size="small">
-                    <InputLabel>수탁업체</InputLabel>
-                    <Select
-                      value={user.companyId || ''}
-                      onChange={handleCompanyChange}
-                      label="수탁업체"
-                      disabled={isLoadingCompanies}
-                    >
-                      {isLoadingCompanies ? (
-                        <MenuItem value="" disabled>로딩 중...</MenuItem>
-                      ) : (
-                        companies.map((company) => (
-                          <MenuItem key={company.id} value={company.id}>
-                            {company.companyName} ({company.storeCode})
-                          </MenuItem>
-                        ))
-                      )}
-                    </Select>
-                  </FormControl>
+                  <TextField
+                    label="수탁업체"
+                    value={selectedCompany ? `${selectedCompany.storeName} (${selectedCompany.storeCode || ''})` : ''}
+                    fullWidth
+                    size="small"
+                    placeholder="수탁업체를 선택해주세요"
+                    InputProps={{
+                      readOnly: true,
+                      endAdornment: (
+                        <InputAdornment position="end" sx={{ mr: -0.75 }}>
+                          <Button
+                            variant="outlined"
+                            onClick={handleOpenCompanyDialog}
+                            disabled={isLoading}
+                            size="small"
+                            sx={{ 
+                              height: '26px', 
+                              minWidth: '70px', 
+                              fontSize: '0.75rem',
+                              mr: 0.75,
+                              borderColor: 'rgba(0, 0, 0, 0.23)',
+                              color: 'text.primary',
+                              textTransform: 'none',
+                              py: 0
+                            }}
+                          >
+                            업체 선택
+                          </Button>
+                        </InputAdornment>
+                      ),
+                      sx: { 
+                        pr: 0.75,
+                        bgcolor: 'background.paper',
+                        '&:hover': {
+                          borderColor: 'rgba(0, 0, 0, 0.87)'
+                        }
+                      }
+                    }}
+                  />
                 ) : (
                   <TextField
                     label="수탁업체"
@@ -479,8 +568,12 @@ const UserDetailPage = () => {
                     disabled={!canEditRoleAndStatus}
                   >
                     <MenuItem value="ADMIN">관리자</MenuItem>
-                    <MenuItem value="MANAGER">업체담당자</MenuItem>
-                    <MenuItem value="USER">사용자</MenuItem>
+                    <MenuItem value="FINANCE_MANAGER">재경부 매니저</MenuItem>
+                    <MenuItem value="CONTRACT_MANAGER">계약관리 매니저</MenuItem>
+                    <MenuItem value="FACILITY_MANAGER">시설물관리 매니저</MenuItem>
+                    <MenuItem value="AS_MANAGER">AS관리 매니저</MenuItem>
+                    <MenuItem value="MANAGER">위수탁업체 매니저</MenuItem>
+                    <MenuItem value="USER">위수탁업체 사용자</MenuItem>
                   </Select>
                   {!canEditRoleAndStatus && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
@@ -509,6 +602,61 @@ const UserDetailPage = () => {
                   </Typography>
                 )}
               </Box>
+
+              {/* AS_MANAGER 권한인 경우에만 표시되는 추가 필드 */}
+              {user.role === 'AS_MANAGER' && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>담당부서</InputLabel>
+                    <Select
+                      value={user.departmentTypeId || ''}
+                      onChange={(e) => setUser({ ...user, departmentTypeId: e.target.value })}
+                      label="담당부서"
+                      disabled={isLoadingDepartments || (!isAdmin && !isSelfEdit)}
+                    >
+                      {isLoadingDepartments ? (
+                        <MenuItem value="" disabled>로딩 중...</MenuItem>
+                      ) : (
+                        departments.map(department => (
+                          <MenuItem key={department.codeId} value={department.codeId}>
+                            {department.codeName}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                    {(!isAdmin && !isSelfEdit) && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                        수정 권한이 없습니다.
+                      </Typography>
+                    )}
+                  </FormControl>
+                  
+                  <FormControl fullWidth size="small">
+                    <InputLabel>지부별그룹</InputLabel>
+                    <Select
+                      value={user.branchGroupId || ''}
+                      onChange={(e) => setUser({ ...user, branchGroupId: e.target.value })}
+                      label="지부별그룹"
+                      disabled={isLoadingBranchGroups || (!isAdmin && !isSelfEdit)}
+                    >
+                      {isLoadingBranchGroups ? (
+                        <MenuItem value="" disabled>로딩 중...</MenuItem>
+                      ) : (
+                        branchGroups.map(group => (
+                          <MenuItem key={group.codeId} value={group.codeId}>
+                            {group.codeName}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                    {(!isAdmin && !isSelfEdit) && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                        수정 권한이 없습니다.
+                      </Typography>
+                    )}
+                  </FormControl>
+                </Box>
+              )}
             </Stack>
           </Box>
 
@@ -637,6 +785,14 @@ const UserDetailPage = () => {
           </Box>
         </form>
       </Paper>
+      
+      {/* 수탁업체 선택 다이얼로그 */}
+      <FacilityCompanySelectDialog
+        open={companyDialogOpen}
+        onClose={() => setCompanyDialogOpen(false)}
+        onSelect={handleCompanyChange}
+        title="수탁업체 선택"
+      />
       
       {/* 비밀번호 초기화 확인 다이얼로그 */}
       <Dialog

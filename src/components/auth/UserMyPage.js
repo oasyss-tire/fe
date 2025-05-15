@@ -25,7 +25,10 @@ import {
   Grid,
   LinearProgress,
   ToggleButtonGroup,
-  ToggleButton
+  ToggleButton,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -71,6 +74,12 @@ const UserMyPage = () => {
   const [isContractsLoading, setIsContractsLoading] = useState(false);
   const [contractsError, setContractsError] = useState(null);
 
+  // 담당부서 및 지부별그룹 상태 추가
+  const [departments, setDepartments] = useState([]);
+  const [branchGroups, setBranchGroups] = useState([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [isLoadingBranchGroups, setIsLoadingBranchGroups] = useState(false);
+
   const [user, setUser] = useState({
     id: '',
     userId: '',
@@ -80,7 +89,9 @@ const UserMyPage = () => {
     role: '',
     companyId: '',
     companyName: '',
-    storeCode: ''
+    storeCode: '',
+    departmentTypeId: '',
+    branchGroupId: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -95,6 +106,57 @@ const UserMyPage = () => {
     newPassword: '',
     confirmPassword: ''
   });
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    // 담당부서 및 지부별그룹 목록 가져오기
+    fetchDepartments();
+    fetchBranchGroups();
+  }, []);
+
+  // 담당부서 목록 가져오기
+  const fetchDepartments = async () => {
+    setIsLoadingDepartments(true);
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/codes/groups/003001/codes/active', {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      if (!response.ok) {
+        throw new Error('담당부서 목록을 불러오는데 실패했습니다.');
+      }
+      const data = await response.json();
+      setDepartments(data);
+    } catch (error) {
+      console.error('담당부서 목록 조회 오류:', error);
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  };
+
+  // 지부별그룹 목록 가져오기
+  const fetchBranchGroups = async () => {
+    setIsLoadingBranchGroups(true);
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/codes/groups/003002/codes/active', {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      if (!response.ok) {
+        throw new Error('지부별그룹 목록을 불러오는데 실패했습니다.');
+      }
+      const data = await response.json();
+      setBranchGroups(data);
+    } catch (error) {
+      console.error('지부별그룹 목록 조회 오류:', error);
+    } finally {
+      setIsLoadingBranchGroups(false);
+    }
+  };
 
   // 탭 변경 핸들러
   const handleTabChange = (event, newValue) => {
@@ -283,6 +345,12 @@ const UserMyPage = () => {
         active: user.active,
         companyId: user.companyId ? parseInt(user.companyId) : null
       };
+      
+      // AS_MANAGER 권한인 경우 추가 필드 포함
+      if (user.role === 'AS_MANAGER') {
+        updateData.departmentTypeId = user.departmentTypeId;
+        updateData.branchGroupId = user.branchGroupId;
+      }
       
       const response = await fetch(`http://localhost:8080/api/users/${user.id}`, {
         method: 'PUT',
@@ -538,8 +606,8 @@ const UserMyPage = () => {
 
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                     <TextField
-                      label="수탁사업자명"
-                      value={user.companyName ? `${user.companyName} (${user.storeCode})` : '수탁사업자명 정보 없음'}
+                      label="수탁업체명"
+                      value={user.companyName ? `${user.companyName} (${user.storeCode})` : '수탁업체명 정보 없음'}
                       fullWidth
                       disabled
                       size="small"
@@ -551,8 +619,12 @@ const UserMyPage = () => {
                     <TextField
                       label="권한"
                       value={user.role === 'ADMIN' ? '관리자' : 
-                             user.role === 'MANAGER' ? '업체담당자' : 
-                             user.role === 'USER' ? '사용자' : user.role || ''}
+                             user.role === 'FINANCE_MANAGER' ? '재경부 매니저' :
+                             user.role === 'CONTRACT_MANAGER' ? '계약관리 매니저' :
+                             user.role === 'FACILITY_MANAGER' ? '시설물관리 매니저' :
+                             user.role === 'AS_MANAGER' ? 'AS관리 매니저' :
+                             user.role === 'MANAGER' ? '위수탁업체 매니저' : 
+                             user.role === 'USER' ? '위수탁업체 사용자' : user.role || ''}
                       fullWidth
                       disabled
                       size="small"
@@ -561,6 +633,55 @@ const UserMyPage = () => {
                       }}
                     />
                   </Box>
+
+                  {/* AS_MANAGER 권한인 경우에만 표시되는 추가 필드 */}
+                  {user.role === 'AS_MANAGER' && (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>담당부서</InputLabel>
+                        <Select
+                          value={user.departmentTypeId || ''}
+                          onChange={(e) => setUser({ ...user, departmentTypeId: e.target.value })}
+                          label="담당부서"
+                          disabled={isLoadingDepartments || !isEditMode}
+                          size="small"
+                          sx={!isEditMode ? { bgcolor: '#f5f5f5' } : {}}
+                        >
+                          {isLoadingDepartments ? (
+                            <MenuItem value="" disabled>로딩 중...</MenuItem>
+                          ) : (
+                            departments.map(department => (
+                              <MenuItem key={department.codeId} value={department.codeId}>
+                                {department.codeName}
+                              </MenuItem>
+                            ))
+                          )}
+                        </Select>
+                      </FormControl>
+                      
+                      <FormControl fullWidth size="small">
+                        <InputLabel>지부별그룹</InputLabel>
+                        <Select
+                          value={user.branchGroupId || ''}
+                          onChange={(e) => setUser({ ...user, branchGroupId: e.target.value })}
+                          label="지부별그룹"
+                          disabled={isLoadingBranchGroups || !isEditMode}
+                          size="small"
+                          sx={!isEditMode ? { bgcolor: '#f5f5f5' } : {}}
+                        >
+                          {isLoadingBranchGroups ? (
+                            <MenuItem value="" disabled>로딩 중...</MenuItem>
+                          ) : (
+                            branchGroups.map(group => (
+                              <MenuItem key={group.codeId} value={group.codeId}>
+                                {group.codeName}
+                              </MenuItem>
+                            ))
+                          )}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  )}
                 </Stack>
               </Box>
 
@@ -768,7 +889,7 @@ const UserMyPage = () => {
                         <TableRow>
                           <TableCell>계약 번호</TableCell>
                           <TableCell>계약명</TableCell>
-                          <TableCell>수탁사업자명</TableCell>
+                          <TableCell>수탁업체명</TableCell>
                           <TableCell>계약생성일</TableCell>
                           <TableCell>상태</TableCell>
                           <TableCell align="center">진행률</TableCell>

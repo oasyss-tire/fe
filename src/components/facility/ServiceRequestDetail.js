@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useAuth } from '../../contexts/AuthContext';
 
 // 커스텀 다이얼로그 컴포넌트 추가
 import ApproveRequestDialog from './ApproveRequestDialog';
@@ -59,6 +60,8 @@ const priorityColorMap = {
 const ServiceRequestDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  const isUserRole = authUser?.role === 'USER';
   
   const [loading, setLoading] = useState(true);
   const [serviceRequest, setServiceRequest] = useState(null);
@@ -302,7 +305,7 @@ const ServiceRequestDetail = () => {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A', fontSize: '1.3rem' }}>
-            시설물 상세정보
+            A/S 상세정보
           </Typography>
         </Box>
         
@@ -608,7 +611,7 @@ const ServiceRequestDetail = () => {
                   </Grid>
                   <Grid item xs={12} sm={6} md={4}>
                     <Box sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem' }}>예상 완료일</Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem' }}>예상 방문일</Typography>
                       <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>
                         {formatDateTime(serviceRequest.expectedCompletionDate) || '-'}
                       </Typography>
@@ -616,7 +619,7 @@ const ServiceRequestDetail = () => {
                   </Grid>
                   <Grid item xs={12} sm={6} md={4}>
                     <Box sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem' }}>실제 완료일</Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem' }}>완료일</Typography>
                       <Typography variant="body2" sx={{ 
                         color: serviceRequest.completionDate ? 'success.main' : 'text.secondary',
                         fontSize: '0.95rem'
@@ -637,6 +640,20 @@ const ServiceRequestDetail = () => {
                     </Box>
                   </Grid>
                 </Grid>
+                
+                {/* 수리 코멘트 */}
+                {serviceRequest.repairComment && (
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem', display: 'block', mb: 0.5 }}>
+                      수리 코멘트
+                    </Typography>
+                    <Box sx={{ p: 2, backgroundColor: '#fafafa', borderRadius: 4 }}>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '0.95rem' }}>
+                        {serviceRequest.repairComment}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
                 
                 {/* AS 완료 이미지 */}
                 {completionImages.length > 0 && (
@@ -709,7 +726,8 @@ const ServiceRequestDetail = () => {
                 목록으로 돌아가기
               </Button>
               
-              {serviceRequest.serviceStatusCode === '002010_0001' && !serviceRequest.isReceived && (
+              {/* USER 권한이 아닌 경우에만 접수 처리하기 버튼 표시 */}
+              {!isUserRole && serviceRequest.serviceStatusCode === '002010_0001' && !serviceRequest.isReceived && (
                 <Button
                   variant="contained"
                   color="primary"
@@ -721,7 +739,8 @@ const ServiceRequestDetail = () => {
                 </Button>
               )}
               
-              {serviceRequest.serviceStatusCode === '002010_0002' && !serviceRequest.isCompleted && (
+              {/* USER 권한이 아닌 경우에만 완료 처리하기 버튼 표시 */}
+              {!isUserRole && serviceRequest.serviceStatusCode === '002010_0002' && !serviceRequest.isCompleted && (
                 <Button
                   variant="contained"
                   color="success"

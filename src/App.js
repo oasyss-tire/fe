@@ -35,7 +35,6 @@ const SignaturePdfViewer = React.lazy(() => import('./components/contract/Signat
 const ContractSend = React.lazy(() => import('./components/contract/ContractSend'));
 const FacilitiesList = React.lazy(() => import('./components/facility/FacilitiesList'));
 const FacilitiesRegister = React.lazy(() => import('./components/facility/FacilitiesRegister'));
-const FacilitiesService = React.lazy(() => import('./components/facility/FacilitiesService'));
 const FacilitiesDetail = React.lazy(() => import('./components/facility/FacilitiesDetail'));
 const ContractDetailPage = React.lazy(() => import('./components/contract/ContractDetailPage'));
 const FacilityDashboard = React.lazy(() => import('./components/facility/FacilityDashboard'));
@@ -48,8 +47,11 @@ const PreviewPdfViewer = React.lazy(() => import('./components/contract/PreviewP
 const ServiceRequestCreate = React.lazy(() => import('./components/facility/ServiceRequestCreate'));
 const ServiceRequestList = React.lazy(() => import('./components/facility/ServiceRequestList'));
 const ServiceRequestDetail = React.lazy(() => import('./components/facility/ServiceRequestDetail'));
+const MyServiceRequestList = React.lazy(() => import('./components/facility/MyServiceRequestList'));
 const FacilityTransfer = React.lazy(() => import('./components/facility/FacilityTransfer'));
 const FacilityHistoryPage = React.lazy(() => import('./components/facility/FacilityHistoryPage'));
+const ClosingInventoryPage = React.lazy(() => import('./components/facility/ClosingInventoryPage'));
+const ClosingManagementPage = React.lazy(() => import('./components/facility/ClosingManagementPage'));
 const ContractEventLogPage = React.lazy(() => import('./components/contract/ContractEventLogPage'));
 const EditTemplatePage = React.lazy(() => import('./components/contract/EditTemplatePage'));
 
@@ -137,7 +139,6 @@ const AppContent = () => {
               <Route path="/contract-send" element={<ContractSend />} />
               <Route path="/facility-list" element={<FacilitiesList />} />
               <Route path="/facility-register" element={<FacilitiesRegister />} />
-              <Route path="/facility-service" element={<FacilitiesService />} />
               <Route path="/facility-detail/:id" element={<FacilitiesDetail />} />
               <Route path="/facility-transfer" element={<FacilityTransfer />} />
               <Route path="/contract-detail/:id" element={<ContractDetailPage />} />
@@ -152,8 +153,11 @@ const AppContent = () => {
               <Route path="/service-request/create" element={<ServiceRequestCreate />} />
               <Route path="/service-request/create/:facilityId" element={<ServiceRequestCreate />} />
               <Route path="/service-request/list" element={<ServiceRequestList />} />
+              <Route path="/service-request/my" element={<MyServiceRequestList />} />
               <Route path="/service-request/:id" element={<ServiceRequestDetail />} />
               <Route path="/facility-history" element={<FacilityHistoryPage />} />
+              <Route path="/closing-inventory" element={<ClosingInventoryPage />} />
+              <Route path="/closing-management" element={<ClosingManagementPage />} />
               <Route path="/contract-log" element={<ContractEventLogPage />} />
               <Route path="/edit-template/:templateId" element={<EditTemplatePage />} />
             </Route>

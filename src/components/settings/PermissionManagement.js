@@ -34,7 +34,7 @@ const PermissionManagement = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [selectedRole, setSelectedRole] = useState('USER');
+  const [selectedRole, setSelectedRole] = useState('CONTRACT_MANAGER');
   const [roles, setRoles] = useState([]);
   const [allMenus, setAllMenus] = useState([]);
   const [menuCategories, setMenuCategories] = useState([]);
@@ -133,7 +133,11 @@ const PermissionManagement = () => {
   const getRoleName = (roleId) => {
     switch (roleId) {
       case 'ADMIN': return '관리자';
-      case 'MANAGER': return '위수탁업체 담당자';
+      case 'FINANCE_MANAGER': return '재경부 매니저';
+      case 'CONTRACT_MANAGER': return '계약관리 매니저';
+      case 'FACILITY_MANAGER': return '시설물관리 매니저';
+      case 'AS_MANAGER': return 'AS관리 매니저';
+      case 'MANAGER': return '위수탁업체 매니저';
       case 'USER': return '위수탁업체 사용자';
       default: return roleId;
     }
@@ -234,15 +238,7 @@ const PermissionManagement = () => {
     fetchRolePermissions(newRole);
   };
 
-  // 코드 ID에서 카테고리 추출 (예: 008001001_0001 -> 계약)
-  const getCategoryFromMenuId = (menuId) => {
-    const prefix = menuId.split('_')[0];
-    if (prefix.startsWith('008001001')) return '계약';
-    if (prefix.startsWith('008001002')) return '시설물';
-    if (prefix.startsWith('008001003')) return '관리';
-    if (prefix.startsWith('008001004')) return '커뮤니티';
-    return '기타';
-  };
+
 
   // 컴포넌트 마운트 시 초기 데이터 로드
   useEffect(() => {
@@ -260,7 +256,7 @@ const PermissionManagement = () => {
 
   // 카테고리 내 모든 메뉴가 선택되었는지 확인
   const isCategoryFullyChecked = (category) => {
-    if (!permissions || !allMenus) return false;
+    if (!permissions || !allMenus || !category) return false;
     
     const categoryMenus = allMenus.filter(menu => menu.category === category.name);
     return categoryMenus.every(menu => permissions[menu.id] === true);
@@ -268,7 +264,7 @@ const PermissionManagement = () => {
 
   // 카테고리 내 일부 메뉴가 선택되었는지 확인
   const isCategoryPartiallyChecked = (category) => {
-    if (!permissions || !allMenus) return false;
+    if (!permissions || !allMenus || !category) return false;
     
     const categoryMenus = allMenus.filter(menu => menu.category === category.name);
     const checkedCount = categoryMenus.filter(menu => permissions[menu.id] === true).length;
