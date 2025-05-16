@@ -66,7 +66,7 @@ const FacilitySelectDialog = ({
         setIsLoading(true);
         setError(null);
         
-        const response = await fetch(`http://localhost:8080/api/facilities?companyId=${companyId}`, {
+        const response = await fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&isActive=true`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }

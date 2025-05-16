@@ -35,12 +35,18 @@ import {
   DeleteForever as DeleteForeverIcon,
   Search as SearchIcon,
   AddPhotoAlternate as AddPhotoAlternateIcon,
-  Image as ImageIcon
+  Image as ImageIcon,
+  MoreHoriz as MoreHorizIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import FacilityCompanySelectDialog from './FacilityCompanySelectDialog';
 import FacilitySelectDialog from './FacilitySelectDialog';
 import { useAuth } from '../../contexts/AuthContext';
+import MoveForm from './TransferForm/MoveForm';
+import DisposeForm from './TransferForm/DisposeForm';
+import LostForm from './TransferForm/LostForm';
+import MiscForm from './TransferForm/MiscForm';
+import { format } from 'date-fns';
 
 const FacilityTransfer = () => {
   const navigate = useNavigate();
@@ -55,8 +61,8 @@ const FacilityTransfer = () => {
     severity: 'info'
   });
   
-  // 작업 유형 (이동 또는 폐기)
-  const [operationType, setOperationType] = useState('move'); // 'move' or 'dispose'
+  // 작업 유형 (이동, 폐기, 분실, 기타)
+  const [operationType, setOperationType] = useState('move'); // 'move', 'dispose', 'lost', 'misc'
   
   // 단일 폼 데이터
   const [formData, setFormData] = useState({
@@ -66,9 +72,11 @@ const FacilityTransfer = () => {
     facilityName: '',    // 시설물명
     destinationCompanyId: '', // 목적지 수탁업체 (이동용)
     destinationCompanyName: '', // 목적지 수탁업체명
-    companyId: '',       // 수탁업체 ID (폐기용)
-    companyName: '',     // 수탁업체명 (폐기용)
-    notes: '',            // 비고/사유
+    companyId: '',       // 수탁업체 ID (폐기/분실/기타용)
+    companyName: '',     // 수탁업체명 (폐기/분실/기타용)
+    notes: '',           // 비고/사유
+    reason: '',          // 기타 트랜잭션 사유 (기타용)
+    locationCompanyId: '', // 분실 장소 (분실용)
     currentSourceCompanyId: '',
     currentSourceCompanyName: ''
   });
@@ -178,6 +186,8 @@ const FacilityTransfer = () => {
       companyId: '',
       companyName: '',
       notes: '',
+      reason: '',
+      locationCompanyId: '',
       currentSourceCompanyId: '',
       currentSourceCompanyName: ''
     });
@@ -216,8 +226,8 @@ const FacilityTransfer = () => {
               currentSourceCompanyId: String(companyData.id),
               currentSourceCompanyName: companyData.companyName || companyData.storeName
             }));
-          } else {
-            // 폐기 작업인 경우 수탁업체 정보 설정
+          } else if (e.target.value === 'dispose' || e.target.value === 'lost' || e.target.value === 'misc') {
+            // 폐기/분실/기타 작업인 경우 수탁업체 정보 설정
             setFormData(prev => ({
               ...prev,
               companyId: String(companyData.id),
@@ -554,9 +564,22 @@ const FacilityTransfer = () => {
         showSnackbar('출발지와 목적지 수탁업체가 동일합니다. 다른 수탁업체를 선택해주세요.', 'warning');
         return;
       }
-    } else { // 폐기
+    } else if (operationType === 'dispose') { 
+      // 폐기
       if (!formData.companyId || selectedFacilities.length === 0) {
         showSnackbar('수탁업체와 시설물을 선택해주세요.', 'warning');
+        return;
+      }
+    } else if (operationType === 'lost') { 
+      // 분실
+      if (!formData.companyId || selectedFacilities.length === 0) {
+        showSnackbar('분실 업체와 시설물을 선택해주세요.', 'warning');
+        return;
+      }
+    } else if (operationType === 'misc') { 
+      // 기타
+      if (!formData.companyId || selectedFacilities.length === 0 || !formData.reason) {
+        showSnackbar('수탁 업체, 시설물, 트랜잭션 사유를 모두 선택해주세요.', 'warning');
         return;
       }
     }
@@ -569,12 +592,26 @@ const FacilityTransfer = () => {
         message: `선택한 ${selectedFacilities.length}개의 시설물을 이동하시겠습니까?`,
         onConfirm: confirmTransfer
       });
-    } else {
+    } else if (operationType === 'dispose') {
       setConfirmDialog({
         open: true,
         title: '시설물 폐기 확인',
         message: `선택한 ${selectedFacilities.length}개의 시설물을 폐기하시겠습니까? 이 작업은 되돌릴 수 없습니다.`,
         onConfirm: confirmDisposal
+      });
+    } else if (operationType === 'lost') {
+      setConfirmDialog({
+        open: true,
+        title: '시설물 분실 확인',
+        message: `선택한 ${selectedFacilities.length}개의 시설물을 분실 처리하시겠습니까?`,
+        onConfirm: confirmLost
+      });
+    } else if (operationType === 'misc') {
+      setConfirmDialog({
+        open: true,
+        title: '기타 트랜잭션 확인',
+        message: `선택한 ${selectedFacilities.length}개의 시설물에 대한 기타 트랜잭션을 처리하시겠습니까?`,
+        onConfirm: confirmMisc
       });
     }
   };
@@ -715,6 +752,8 @@ const FacilityTransfer = () => {
           companyId: '',
           companyName: '',
           notes: '',
+          reason: '',
+          locationCompanyId: '',
           currentSourceCompanyId: '',
           currentSourceCompanyName: ''
         });
@@ -846,6 +885,8 @@ const FacilityTransfer = () => {
           companyId: '',
           companyName: '',
           notes: '',
+          reason: '',
+          locationCompanyId: '',
           currentSourceCompanyId: '',
           currentSourceCompanyName: ''
         });
@@ -855,6 +896,312 @@ const FacilityTransfer = () => {
     } catch (error) {
       console.error('시설물 폐기 처리 중 오류 발생:', error);
       showSnackbar(error.message || '시설물 폐기 처리 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setLoading(false);
+      setConfirmDialog({ ...confirmDialog, open: false });
+    }
+  };
+
+  // 분실 확인 처리 함수 추가
+  const confirmLost = async () => {
+    setLoading(true);
+    try {
+      // notes 값 추출
+      const notes = formData.notes || '시설물 이동/폐기/분실 관리 화면에서 분실 처리됨';
+      
+      // 순차적으로 처리 (한 번에 하나씩)
+      let successCount = 0;
+      let failedFacilities = [];
+      
+      for (const facility of selectedFacilities) {
+        try {
+          // 이동 전에 시설물 상태 재확인
+          const facilityResponse = await fetch(`http://localhost:8080/api/facilities/${facility.facilityId}`, {
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          
+          if (!facilityResponse.ok) {
+            throw new Error(`시설물 정보 조회 실패 (ID: ${facility.facilityId})`);
+          }
+          
+          const facilityData = await facilityResponse.json();
+          // 폐기 상태 확인 ("002003_0003": 폐기중, "002003_0004": 폐기완료, "002003_0005": 분실)
+          if (facilityData.statusCode === "002003_0003" || 
+              facilityData.statusCode === "002003_0004" || 
+              facilityData.statusCode === "002003_0005") {
+            throw new Error(`이미 폐기 또는 분실 처리된 시설물입니다 (ID: ${facility.facilityId}, ${facilityData.facilityTypeName})`);
+          }
+          
+          let response;
+          
+          // 이미지가 있는 경우 multipart/form-data로 전송
+          if (facility.images && facility.images.length > 0) {
+            const formDataObj = new FormData();
+            
+            // 분실 요청 정보를 JSON 문자열로 변환하여 추가
+            const lostRequest = {
+              facilityId: facility.facilityId,
+              locationCompanyId: formData.companyId, 
+              notes: notes
+            };
+            
+            // JSON 객체를 문자열로 변환하여 request 파라미터로 추가
+            formDataObj.append('request', JSON.stringify(lostRequest));
+            
+            // 해당 시설물에 연결된 이미지 파일들 추가
+            for (const image of facility.images) {
+              formDataObj.append('images', image);
+            }
+            
+            // 이미지 첨부 지원 API 호출
+            response = await fetch('http://localhost:8080/api/facility-transactions/lost-with-images', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+              },
+              body: formDataObj
+            });
+          } else {
+            // 이미지 없는 경우 API 호출
+            response = await fetch('http://localhost:8080/api/facility-transactions/lost', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+              },
+              body: JSON.stringify({
+                facilityId: facility.facilityId,
+                locationCompanyId: formData.companyId, 
+                notes: notes
+              })
+            });
+          }
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `시설물 (ID: ${facility.facilityId}) 분실 처리 중 오류가 발생했습니다.`);
+          }
+          
+          // 각 시설물 처리 후 0.5초 지연 (서버 부하 방지 및 중복 생성 방지)
+          await new Promise(resolve => setTimeout(resolve, 500));
+          successCount++;
+        } catch (error) {
+          console.error(`시설물 (${facility.facilityTypeName} / ${facility.managementNumber}) 분실 처리 실패:`, error);
+          failedFacilities.push({
+            ...facility,
+            errorMessage: error.message
+          });
+        }
+      }
+      
+      if (successCount > 0) {
+        showSnackbar(`${successCount}개의 시설물 분실 처리가 성공적으로 완료되었습니다.${failedFacilities.length > 0 ? ' 일부 시설물은 처리에 실패했습니다.' : ''}`, 'success');
+        
+        // 이미지 관련 상태 초기화
+        setCurrentFacilityId(null);
+        setImageUploadError('');
+      }
+      
+      if (failedFacilities.length > 0) {
+        console.error('분실 처리 실패한 시설물:', failedFacilities);
+        // 실패한 시설물만 남기고 성공한 것은 제거
+        
+        // 미리보기 URL 해제
+        const successFacilities = selectedFacilities.filter(
+          facility => !failedFacilities.some(
+            failedFacility => String(failedFacility.facilityId) === String(facility.facilityId)
+          )
+        );
+        
+        successFacilities.forEach(facility => {
+          facility.previewUrls.forEach(url => URL.revokeObjectURL(url));
+        });
+        
+        setSelectedFacilities(failedFacilities);
+      } else {
+        // 모두 성공하면 초기화
+        
+        // 미리보기 URL 해제
+        selectedFacilities.forEach(facility => {
+          facility.previewUrls.forEach(url => URL.revokeObjectURL(url));
+        });
+        
+        setFormData({
+          sourceCompanyId: '',
+          sourceCompanyName: '',
+          facilityId: '',
+          facilityName: '',
+          destinationCompanyId: '',
+          destinationCompanyName: '',
+          companyId: '',
+          companyName: '',
+          notes: '',
+          reason: '',
+          locationCompanyId: '',
+          currentSourceCompanyId: '',
+          currentSourceCompanyName: ''
+        });
+        setSelectedFacilities([]);
+        setFacilities([]);
+      }
+    } catch (error) {
+      console.error('시설물 분실 처리 중 오류 발생:', error);
+      showSnackbar(error.message || '시설물 분실 처리 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setLoading(false);
+      setConfirmDialog({ ...confirmDialog, open: false });
+    }
+  };
+
+  // 기타 트랜잭션 확인 처리
+  const confirmMisc = async () => {
+    setLoading(true);
+    try {
+      // notes 값 추출
+      const notes = formData.notes || '기타 트랜잭션 처리';
+      
+      // 순차적으로 처리 (한 번에 하나씩)
+      let successCount = 0;
+      let failedFacilities = [];
+      
+      for (const facility of selectedFacilities) {
+        try {
+          // 시설물 상태 재확인
+          const facilityResponse = await fetch(`http://localhost:8080/api/facilities/${facility.facilityId}`, {
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          
+          if (!facilityResponse.ok) {
+            throw new Error(`시설물 정보 조회 실패 (ID: ${facility.facilityId})`);
+          }
+          
+          const facilityData = await facilityResponse.json();
+          // 폐기 상태 확인 ("002003_0003": 폐기중, "002003_0004": 폐기완료)
+          if (facilityData.statusCode === "002003_0003" || facilityData.statusCode === "002003_0004") {
+            throw new Error(`폐기 처리된 시설물은 기타 트랜잭션을 처리할 수 없습니다 (ID: ${facility.facilityId}, ${facilityData.facilityTypeName})`);
+          }
+          
+          let response;
+          
+          // 이미지가 있는 경우 multipart/form-data로 전송
+          if (facility.images && facility.images.length > 0) {
+            const formDataObj = new FormData();
+            
+            // 기타 요청 정보를 JSON 문자열로 변환하여 추가
+            const miscRequest = {
+              facilityId: facility.facilityId,
+              locationCompanyId: formData.companyId,
+              reason: formData.reason,
+              notes: notes
+            };
+            
+            // JSON 객체를 문자열로 변환하여 request 파라미터로 추가
+            formDataObj.append('request', JSON.stringify(miscRequest));
+            
+            // 해당 시설물에 연결된 이미지 파일들 추가
+            for (const image of facility.images) {
+              formDataObj.append('images', image);
+            }
+            
+            // 이미지 첨부 지원 API 호출
+            response = await fetch('http://localhost:8080/api/facility-transactions/misc-with-images', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+              },
+              body: formDataObj
+            });
+          } else {
+            // 이미지 없는 경우 API 호출
+            response = await fetch('http://localhost:8080/api/facility-transactions/misc', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+              },
+              body: JSON.stringify({
+                facilityId: facility.facilityId,
+                locationCompanyId: formData.companyId,
+                reason: formData.reason,
+                notes: notes
+              })
+            });
+          }
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `시설물 (ID: ${facility.facilityId}) 기타 트랜잭션 처리 중 오류가 발생했습니다.`);
+          }
+          
+          // 각 시설물 처리 후 0.5초 지연 (서버 부하 방지 및 중복 생성 방지)
+          await new Promise(resolve => setTimeout(resolve, 500));
+          successCount++;
+        } catch (error) {
+          console.error(`시설물 (${facility.facilityTypeName} / ${facility.managementNumber}) 기타 트랜잭션 처리 실패:`, error);
+          failedFacilities.push({
+            ...facility,
+            errorMessage: error.message
+          });
+        }
+      }
+      
+      if (successCount > 0) {
+        showSnackbar(`${successCount}개의 시설물 기타 트랜잭션이 성공적으로 처리되었습니다.${failedFacilities.length > 0 ? ' 일부 시설물은 처리에 실패했습니다.' : ''}`, 'success');
+        
+        // 이미지 관련 상태 초기화
+        setCurrentFacilityId(null);
+        setImageUploadError('');
+      }
+      
+      if (failedFacilities.length > 0) {
+        console.error('기타 트랜잭션 처리 실패한 시설물:', failedFacilities);
+        // 실패한 시설물만 남기고 성공한 것은 제거
+        
+        // 미리보기 URL 해제
+        const successFacilities = selectedFacilities.filter(
+          facility => !failedFacilities.some(
+            failedFacility => String(failedFacility.facilityId) === String(facility.facilityId)
+          )
+        );
+        
+        successFacilities.forEach(facility => {
+          facility.previewUrls.forEach(url => URL.revokeObjectURL(url));
+        });
+        
+        setSelectedFacilities(failedFacilities);
+      } else {
+        // 모두 성공하면 초기화
+        
+        // 미리보기 URL 해제
+        selectedFacilities.forEach(facility => {
+          facility.previewUrls.forEach(url => URL.revokeObjectURL(url));
+        });
+        
+        setFormData({
+          sourceCompanyId: '',
+          sourceCompanyName: '',
+          facilityId: '',
+          facilityName: '',
+          destinationCompanyId: '',
+          destinationCompanyName: '',
+          companyId: '',
+          companyName: '',
+          notes: '',
+          reason: '',
+          locationCompanyId: '',
+          currentSourceCompanyId: '',
+          currentSourceCompanyName: ''
+        });
+        setSelectedFacilities([]);
+        setFacilities([]);
+      }
+    } catch (error) {
+      console.error('기타 트랜잭션 처리 중 오류 발생:', error);
+      showSnackbar(error.message || '기타 트랜잭션 처리 중 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
       setConfirmDialog({ ...confirmDialog, open: false });
@@ -989,490 +1336,13 @@ const FacilityTransfer = () => {
     navigate('/facility-list');
   };
 
-  // 이동 작업 폼 렌더링
-  const renderMoveForm = () => (
-    <Grid container spacing={2}>
-      <Grid item xs={12} md={6}>
-        <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-          출발지 수탁업체 *
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder={isUserRole ? "자동 선택됨" : "출발지 수탁업체 선택"}
-          value={formData.sourceCompanyName || ''}
-          onClick={() => handleOpenCompanyDialog('source')}
-          InputProps={{
-            readOnly: true,
-            startAdornment: (
-              <SearchIcon sx={{ color: '#999', mr: 1 }} />
-            ),
-          }}
-          sx={{
-            backgroundColor: isUserRole ? '#f0f0f0' : '#F8F9FA',
-            cursor: isUserRole ? 'default' : 'pointer',
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: '#E0E0E0',
-              },
-            },
-          }}
-        />
-      </Grid>
-      
-      <Grid item xs={12} md={6}>
-        <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-          목적지 수탁업체 *
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="목적지 수탁업체 선택"
-          value={formData.destinationCompanyName || ''}
-          onClick={() => formData.sourceCompanyId ? handleOpenCompanyDialog('destination') : null}
-          InputProps={{
-            readOnly: true,
-            startAdornment: (
-              <SearchIcon sx={{ color: '#999', mr: 1 }} />
-            ),
-          }}
-          sx={{
-            backgroundColor: '#F8F9FA',
-            cursor: formData.sourceCompanyId ? 'pointer' : 'not-allowed',
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: '#E0E0E0',
-              },
-            },
-          }}
-        />
-        {!formData.sourceCompanyId && (
-          <FormHelperText>출발지 수탁업체를 먼저 선택해주세요.</FormHelperText>
-        )}
-      </Grid>
-      
-      <Grid item xs={12}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="caption" sx={{ color: '#666' }}>
-            이동할 시설물 목록 *
-          </Typography>
-          <Button
-            size="small"
-            startIcon={<AddIcon />}
-            disabled={!formData.sourceCompanyId || !formData.destinationCompanyId}
-            onClick={handleAddFacility}
-            sx={{ fontSize: '0.75rem' }}
-          >
-            시설물 추가
-          </Button>
-        </Box>
-        
-        <Card variant="outlined" sx={{ minHeight: '120px', backgroundColor: '#F8F9FA' }}>
-          <CardContent sx={{ py: 1 }}>
-            {selectedFacilities.length === 0 ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80px', color: 'text.secondary' }}>
-                <Typography variant="body2">
-                  {!formData.sourceCompanyId 
-                    ? '출발지 수탁업체를 먼저 선택해주세요.' 
-                    : !formData.destinationCompanyId
-                    ? '목적지 수탁업체를 선택해주세요.'
-                    : '시설물 추가 버튼을 클릭하여 이동할 시설물을 선택해주세요.'}
-                </Typography>
-              </Box>
-            ) : (
-              <List dense disablePadding>
-                {selectedFacilities.map((facility, index) => (
-                  <React.Fragment key={facility.facilityId}>
-                    <ListItem disablePadding sx={{ py: 0.5 }}>
-                      <ListItemText 
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="body2" component="span" sx={{ mr: 1 }}>
-                              {facility.facilityTypeName}
-                            </Typography>
-                            <Chip 
-                              label={facility.managementNumber} 
-                              size="small" 
-                              sx={{ 
-                                height: '20px', 
-                                backgroundColor: '#E3F2FD', 
-                                fontSize: '0.7rem'
-                              }} 
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              {facility.sourceCompanyName} → {facility.destinationCompanyName}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              상태: {facility.statusName || '-'}
-                            </Typography>
-                            
-                            {/* 이미지 업로드 컴포넌트 */}
-                            <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
-                              <input
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                id={`upload-image-${facility.facilityId}`}
-                                multiple
-                                type="file"
-                                onChange={(e) => handleImageUpload(e, facility.facilityId)}
-                                disabled={facility.images.length >= MAX_IMAGE_COUNT}
-                              />
-                              <label htmlFor={`upload-image-${facility.facilityId}`}>
-                                <Button
-                                  variant="outlined"
-                                  component="span"
-                                  size="small"
-                                  startIcon={<AddPhotoAlternateIcon />}
-                                  disabled={facility.images.length >= MAX_IMAGE_COUNT}
-                                  sx={{ 
-                                    height: '24px',
-                                    fontSize: '0.7rem',
-                                    borderColor: '#ccc',
-                                    color: '#666',
-                                    p: '4px 8px',
-                                    minWidth: 'auto',
-                                    mr: 1,
-                                    '&:hover': {
-                                      borderColor: '#999',
-                                      backgroundColor: 'rgba(0,0,0,0.04)'
-                                    }
-                                  }}
-                                >
-                                  이미지 추가
-                                </Button>
-                              </label>
-                              
-                              <Typography variant="caption" color="text.secondary">
-                                {facility.images.length > 0 
-                                  ? `${facility.images.length}개 이미지 첨부됨` 
-                                  : '이미지 없음'}
-                              </Typography>
-                            </Box>
-                            
-                            {/* 이미지 미리보기 */}
-                            {facility.previewUrls.length > 0 && (
-                              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {facility.previewUrls.map((url, index) => (
-                                  <Box 
-                                    key={index} 
-                                    sx={{ 
-                                      position: 'relative',
-                                      width: 40, 
-                                      height: 40, 
-                                      overflow: 'hidden',
-                                      borderRadius: 1,
-                                      border: '1px solid #ddd'
-                                    }}
-                                  >
-                                    <Box
-                                      component="img"
-                                      src={url}
-                                      sx={{ 
-                                        width: '100%', 
-                                        height: '100%', 
-                                        objectFit: 'cover' 
-                                      }}
-                                    />
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => handleRemoveImage(facility.facilityId, index)}
-                                      sx={{
-                                        position: 'absolute',
-                                        top: -8,
-                                        right: -8,
-                                        width: 18,
-                                        height: 18,
-                                        p: 0,
-                                        backgroundColor: 'rgba(0,0,0,0.5)',
-                                        color: 'white',
-                                        '&:hover': {
-                                          backgroundColor: 'rgba(0,0,0,0.7)',
-                                        }
-                                      }}
-                                    >
-                                      <DeleteIcon sx={{ fontSize: 12 }} />
-                                    </IconButton>
-                                  </Box>
-                                ))}
-                              </Box>
-                            )}
-                          </Box>
-                        }
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton 
-                          edge="end" 
-                          size="small" 
-                          onClick={() => handleRemoveFacility(facility.facilityId)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                    {index < selectedFacilities.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-            )}
-          </CardContent>
-        </Card>
-      </Grid>
-      
-      <Grid item xs={12}>
-        <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-          비고
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          name="notes"
-          placeholder="이동 사유 또는 기타 참고사항"
-          value={formData.notes || ''}
-          onChange={handleChange}
-          multiline
-          rows={2}
-          sx={{ 
-            backgroundColor: '#F8F9FA',
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: '#E0E0E0',
-              },
-            },
-          }}
-        />
-      </Grid>
-    </Grid>
-  );
-
-  // 폐기 작업 폼 렌더링
-  const renderDisposeForm = () => (
-    <Grid container spacing={2}>
-      <Grid item xs={12}>
-        <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-          수탁업체 *
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder={isUserRole ? "자동 선택됨" : "수탁업체 선택"}
-          value={formData.companyName || ''}
-          onClick={() => handleOpenCompanyDialog('company')}
-          InputProps={{
-            readOnly: true,
-            startAdornment: (
-              <SearchIcon sx={{ color: '#999', mr: 1 }} />
-            ),
-          }}
-          sx={{
-            backgroundColor: isUserRole ? '#f0f0f0' : '#F8F9FA',
-            cursor: isUserRole ? 'default' : 'pointer',
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: '#E0E0E0',
-              },
-            },
-          }}
-        />
-        {isUserRole && (
-          <FormHelperText>현재 로그인한 사용자의 업체가 자동으로 선택됩니다.</FormHelperText>
-        )}
-      </Grid>
-      
-      <Grid item xs={12}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="caption" sx={{ color: '#666' }}>
-            폐기할 시설물 목록 *
-          </Typography>
-          <Button
-            size="small"
-            startIcon={<AddIcon />}
-            disabled={!formData.companyId}
-            onClick={handleAddFacility}
-            sx={{ fontSize: '0.75rem' }}
-          >
-            시설물 추가
-          </Button>
-        </Box>
-        
-        <Card variant="outlined" sx={{ minHeight: '120px', backgroundColor: '#F8F9FA' }}>
-          <CardContent sx={{ py: 1 }}>
-            {selectedFacilities.length === 0 ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80px', color: 'text.secondary' }}>
-                <Typography variant="body2">
-                  {formData.companyId 
-                    ? '시설물 추가 버튼을 클릭하여 폐기할 시설물을 선택해주세요.' 
-                    : '수탁업체를 먼저 선택해주세요.'}
-                </Typography>
-              </Box>
-            ) : (
-              <List dense disablePadding>
-                {selectedFacilities.map((facility, index) => (
-                  <React.Fragment key={facility.facilityId}>
-                    <ListItem disablePadding sx={{ py: 0.5 }}>
-                      <ListItemText 
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="body2" component="span" sx={{ mr: 1 }}>
-                              {facility.facilityTypeName}
-                            </Typography>
-                            <Chip 
-                              label={facility.managementNumber} 
-                              size="small" 
-                              sx={{ 
-                                height: '20px', 
-                                backgroundColor: '#FFEBEE', 
-                                fontSize: '0.7rem'
-                              }} 
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              상태: {facility.statusName || '-'}
-                            </Typography>
-                            
-                            {/* 이미지 업로드 컴포넌트 */}
-                            <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
-                              <input
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                id={`upload-image-dispose-${facility.facilityId}`}
-                                multiple
-                                type="file"
-                                onChange={(e) => handleImageUpload(e, facility.facilityId)}
-                                disabled={facility.images.length >= MAX_IMAGE_COUNT}
-                              />
-                              <label htmlFor={`upload-image-dispose-${facility.facilityId}`}>
-                                <Button
-                                  variant="outlined"
-                                  component="span"
-                                  size="small"
-                                  startIcon={<AddPhotoAlternateIcon />}
-                                  disabled={facility.images.length >= MAX_IMAGE_COUNT}
-                                  sx={{ 
-                                    height: '24px',
-                                    fontSize: '0.7rem',
-                                    borderColor: '#ccc',
-                                    color: '#666',
-                                    p: '4px 8px',
-                                    minWidth: 'auto',
-                                    mr: 1,
-                                    '&:hover': {
-                                      borderColor: '#999',
-                                      backgroundColor: 'rgba(0,0,0,0.04)'
-                                    }
-                                  }}
-                                >
-                                  이미지 추가
-                                </Button>
-                              </label>
-                              
-                              <Typography variant="caption" color="text.secondary">
-                                {facility.images.length > 0 
-                                  ? `${facility.images.length}개 이미지 첨부됨` 
-                                  : '이미지 없음'}
-                              </Typography>
-                            </Box>
-                            
-                            {/* 이미지 미리보기 */}
-                            {facility.previewUrls.length > 0 && (
-                              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {facility.previewUrls.map((url, index) => (
-                                  <Box 
-                                    key={index} 
-                                    sx={{ 
-                                      position: 'relative',
-                                      width: 40, 
-                                      height: 40, 
-                                      overflow: 'hidden',
-                                      borderRadius: 1,
-                                      border: '1px solid #ddd'
-                                    }}
-                                  >
-                                    <Box
-                                      component="img"
-                                      src={url}
-                                      sx={{ 
-                                        width: '100%', 
-                                        height: '100%', 
-                                        objectFit: 'cover' 
-                                      }}
-                                    />
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => handleRemoveImage(facility.facilityId, index)}
-                                      sx={{
-                                        position: 'absolute',
-                                        top: -8,
-                                        right: -8,
-                                        width: 18,
-                                        height: 18,
-                                        p: 0,
-                                        backgroundColor: 'rgba(0,0,0,0.5)',
-                                        color: 'white',
-                                        '&:hover': {
-                                          backgroundColor: 'rgba(0,0,0,0.7)',
-                                        }
-                                      }}
-                                    >
-                                      <DeleteIcon sx={{ fontSize: 12 }} />
-                                    </IconButton>
-                                  </Box>
-                                ))}
-                              </Box>
-                            )}
-                          </Box>
-                        }
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton 
-                          edge="end" 
-                          size="small" 
-                          onClick={() => handleRemoveFacility(facility.facilityId)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                    {index < selectedFacilities.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-            )}
-          </CardContent>
-        </Card>
-      </Grid>
-      
-      <Grid item xs={12}>
-        <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
-          폐기 사유
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          name="notes"
-          placeholder="폐기 사유 입력"
-          value={formData.notes || ''}
-          onChange={handleChange}
-          multiline
-          rows={2}
-          sx={{ 
-            backgroundColor: '#F8F9FA',
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: '#E0E0E0',
-              },
-            },
-          }}
-        />
-      </Grid>
-    </Grid>
-  );
+  // handleDateChange 함수 추가
+  const handleDateChange = (name, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   return (
     <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
@@ -1529,6 +1399,8 @@ const FacilityTransfer = () => {
                     >
                       <MenuItem value="move">시설물 이동</MenuItem>
                       <MenuItem value="dispose">시설물 폐기</MenuItem>
+                      <MenuItem value="lost">시설물 분실</MenuItem>
+                      <MenuItem value="misc">기타</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -1546,7 +1418,9 @@ const FacilityTransfer = () => {
                 mb: 2 
               }}
             >
-              {operationType === 'move' ? '이동 정보' : '폐기 정보'}
+              {operationType === 'move' ? '이동 정보' : 
+               operationType === 'dispose' ? '폐기 정보' : 
+               operationType === 'lost' ? '분실 정보' : '기타 행동이력 정보'}
             </Typography>
 
             <Box sx={{ 
@@ -1555,7 +1429,61 @@ const FacilityTransfer = () => {
               border: '1px solid #EEEEEE',
               p: 3
             }}>
-              {operationType === 'move' ? renderMoveForm() : renderDisposeForm()}
+              {operationType === 'move' ? (
+                <MoveForm
+                  formData={formData}
+                  selectedFacilities={selectedFacilities}
+                  isUserRole={isUserRole}
+                  handleChange={handleChange}
+                  handleOpenCompanyDialog={handleOpenCompanyDialog}
+                  handleAddFacility={handleAddFacility}
+                  handleRemoveFacility={handleRemoveFacility}
+                  handleImageUpload={handleImageUpload}
+                  handleRemoveImage={handleRemoveImage}
+                  MAX_IMAGE_COUNT={MAX_IMAGE_COUNT}
+                />
+              ) : operationType === 'dispose' ? (
+                <DisposeForm
+                  formData={formData}
+                  selectedFacilities={selectedFacilities}
+                  isUserRole={isUserRole}
+                  handleChange={handleChange}
+                  handleOpenCompanyDialog={handleOpenCompanyDialog}
+                  handleAddFacility={handleAddFacility}
+                  handleRemoveFacility={handleRemoveFacility}
+                  handleImageUpload={handleImageUpload}
+                  handleRemoveImage={handleRemoveImage}
+                  MAX_IMAGE_COUNT={MAX_IMAGE_COUNT}
+                />
+              ) : operationType === 'lost' ? (
+                <LostForm
+                  formData={formData}
+                  selectedFacilities={selectedFacilities}
+                  companies={companies}
+                  isUserRole={isUserRole}
+                  handleChange={handleChange}
+                  handleDateChange={handleDateChange}
+                  handleOpenCompanyDialog={handleOpenCompanyDialog}
+                  handleAddFacility={handleAddFacility}
+                  handleRemoveFacility={handleRemoveFacility}
+                  handleImageUpload={handleImageUpload}
+                  handleRemoveImage={handleRemoveImage}
+                  MAX_IMAGE_COUNT={MAX_IMAGE_COUNT}
+                />
+              ) : (
+                <MiscForm
+                  formData={formData}
+                  selectedFacilities={selectedFacilities}
+                  isUserRole={isUserRole}
+                  handleChange={handleChange}
+                  handleOpenCompanyDialog={handleOpenCompanyDialog}
+                  handleAddFacility={handleAddFacility}
+                  handleRemoveFacility={handleRemoveFacility}
+                  handleImageUpload={handleImageUpload}
+                  handleRemoveImage={handleRemoveImage}
+                  MAX_IMAGE_COUNT={MAX_IMAGE_COUNT}
+                />
+              )}
             </Box>
           </Box>
           
@@ -1582,7 +1510,7 @@ const FacilityTransfer = () => {
                 <Typography variant="body2" color="text.secondary">
                   * 시설물 이동 처리 시 시설물의 모든 이력과 데이터는 함께 이동됩니다.
                 </Typography>
-              ) : (
+              ) : operationType === 'dispose' ? (
                 <>
                   <Typography variant="body2" color="text.secondary">
                     * 폐기된 시설물은 복구할 수 없으며, 관련 데이터는 보관됩니다.
@@ -1591,6 +1519,19 @@ const FacilityTransfer = () => {
                     * 시설물 폐기는 되돌릴 수 없으므로 신중하게 처리해주세요.
                   </Typography>
                 </>
+              ) : operationType === 'lost' ? (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    * 분실된 시설물은 분실 상태로 전환되며, 관련 데이터는 보관됩니다.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    * 분실된 시설물이 발견될 경우 시설물 상세 화면에서 상태를 변경할 수 있습니다.
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  * 시설물 데이터의 일관성을 위한 작업입니다.
+                </Typography>
               )}
             </Box>
           </Box>
@@ -1619,13 +1560,23 @@ const FacilityTransfer = () => {
               type="submit"
               variant="contained"
               disabled={loading}
-              color={operationType === 'move' ? 'primary' : 'error'}
+              color={
+                operationType === 'move' ? 'primary' : 
+                operationType === 'dispose' ? 'error' : 
+                operationType === 'lost' ? 'warning' : 'info'
+              }
               sx={{
                 px: 4,
                 py: 1,
-                backgroundColor: operationType === 'move' ? '#1976d2' : '#d32f2f',
+                backgroundColor: 
+                  operationType === 'move' ? '#1976d2' : 
+                  operationType === 'dispose' ? '#d32f2f' : 
+                  operationType === 'lost' ? '#ed6c02' : '#0288d1',
                 '&:hover': {
-                  backgroundColor: operationType === 'move' ? '#1565c0' : '#b71c1c',
+                  backgroundColor: 
+                    operationType === 'move' ? '#1565c0' : 
+                    operationType === 'dispose' ? '#b71c1c' : 
+                    operationType === 'lost' ? '#e65100' : '#01579b',
                 },
               }}
             >
@@ -1634,7 +1585,9 @@ const FacilityTransfer = () => {
                   <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
                   처리 중...
                 </>
-              ) : operationType === 'move' ? '이동 처리' : '폐기 처리'}
+              ) : operationType === 'move' ? '이동 처리' : 
+                 operationType === 'dispose' ? '폐기 처리' : 
+                 operationType === 'lost' ? '분실 처리' : '처리'}
             </Button>
           </Box>
         </form>
