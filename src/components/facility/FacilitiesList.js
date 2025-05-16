@@ -412,7 +412,7 @@ const FacilitiesList = () => {
       setSelectedInventoryItem(inventoryItem);
       
       // API 호출
-      fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&facilityTypeCode=${typeCode}&page=0&size=10`, {
+      fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&facilityTypeCode=${typeCode}&page=0&size=10&isActive=true`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -464,7 +464,7 @@ const FacilitiesList = () => {
       setSelectedInventoryItem(null); // 전표 정보 초기화
       
       // API 호출
-      fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&page=0&size=10`, {
+      fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&page=0&size=10&isActive=true`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -513,7 +513,7 @@ const FacilitiesList = () => {
       
       if (selectedType) {
         // 특정 회사의 특정 시설물 유형에 대한 페이징
-        fetch(`http://localhost:8080/api/facilities?companyId=${selectedCompany}&facilityTypeCode=${selectedType}&page=${pageIndex}&size=10`, {
+        fetch(`http://localhost:8080/api/facilities?companyId=${selectedCompany}&facilityTypeCode=${selectedType}&page=${pageIndex}&size=10&isActive=true`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -541,7 +541,7 @@ const FacilitiesList = () => {
           });
       } else {
         // 특정 회사의 모든 시설물에 대한 페이징
-        fetch(`http://localhost:8080/api/facilities?companyId=${selectedCompany}&page=${pageIndex}&size=10`, {
+        fetch(`http://localhost:8080/api/facilities?companyId=${selectedCompany}&page=${pageIndex}&size=10&isActive=true`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
@@ -1075,7 +1075,7 @@ const FacilitiesList = () => {
         mb: 3 
       }}>
         <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          시설물 관리
+          현재 재고 현황
         </Typography>
       </Box>
 

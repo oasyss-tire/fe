@@ -127,7 +127,7 @@ const FacilityTypeList = () => {
     setFacilitiesLoading(true);
     try {
       // 최근등록순으로 정렬 (createdAt 기준 내림차순)
-      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&page=${pageNum}&size=${pageSize}&sortBy=createdAt&sortDir=DESC`, {
+      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&page=${pageNum}&size=${pageSize}&sortBy=createdAt&sortDir=DESC&isActive=true`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -164,7 +164,7 @@ const FacilityTypeList = () => {
     setFacilitiesLoading(true);
     try {
       // 모든 데이터를 가져오기 위해 큰 size 값 사용 (최근등록순)
-      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&size=1000&sortBy=createdAt&sortDir=DESC`, {
+      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&size=1000&sortBy=createdAt&sortDir=DESC&isActive=true`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }

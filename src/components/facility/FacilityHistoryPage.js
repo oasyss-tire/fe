@@ -23,12 +23,18 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
-  Pagination
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { 
   Search as SearchIcon,
   Refresh as RefreshIcon,
-  CalendarToday as CalendarIcon
+  CalendarToday as CalendarIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, subMonths } from 'date-fns';
 import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
@@ -94,6 +100,12 @@ const FacilityHistoryPage = () => {
 
   // 모든 시설물 이동 이력 데이터
   const [allFacilityTransactions, setAllFacilityTransactions] = useState([]);
+  
+  // 트랜잭션 취소 관련 상태 추가
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancellationProcessing, setCancellationProcessing] = useState(false);
   
   // 필터링된 데이터 계산 (useMemo 사용)
   const filteredFacilityTransactions = useMemo(() => {
@@ -350,6 +362,67 @@ const FacilityHistoryPage = () => {
     setExpandedRow(expandedRow === voucherId ? null : voucherId);
   };
 
+  // 트랜잭션 취소 다이얼로그 열기 핸들러
+  const handleOpenCancellationDialog = (transaction) => {
+    setSelectedTransaction(transaction);
+    setCancellationDialogOpen(true);
+    setCancellationReason('');
+  };
+
+  // 트랜잭션 취소 다이얼로그 닫기 핸들러
+  const handleCloseCancellationDialog = () => {
+    setCancellationDialogOpen(false);
+    setSelectedTransaction(null);
+    setCancellationReason('');
+  };
+
+  // 취소 이유 변경 핸들러
+  const handleCancellationReasonChange = (e) => {
+    setCancellationReason(e.target.value);
+  };
+
+  // 트랜잭션 취소 요청 제출 핸들러
+  const handleSubmitCancellation = async () => {
+    if (!selectedTransaction || !cancellationReason.trim()) {
+      showSnackbar('취소 이유를 입력해주세요.', 'warning');
+      return;
+    }
+
+    setCancellationProcessing(true);
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/facility-transactions/cancel/${selectedTransaction.transactionId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reason: cancellationReason
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('트랜잭션 취소에 실패했습니다.');
+      }
+
+      const result = await response.json();
+      
+      showSnackbar('트랜잭션이 성공적으로 취소되었습니다.', 'success');
+      
+      // 취소 후 목록 갱신
+      fetchAllFacilityTransactions();
+      
+      // 다이얼로그 닫기
+      handleCloseCancellationDialog();
+    } catch (error) {
+      console.error('트랜잭션 취소 실패:', error);
+      showSnackbar('트랜잭션 취소 처리 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setCancellationProcessing(false);
+    }
+  };
+
   // 검색 필터 UI 렌더링
   const renderSearchFilters = () => (
     <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -490,49 +563,77 @@ const FacilityHistoryPage = () => {
     return (
       <Paper sx={{ width: '100%', mb: 2, overflow: 'hidden' }}>
         <TableContainer sx={{ overflowX: 'auto', maxHeight: '600px' }}>
-          <Table sx={{ minWidth: 1200, tableLayout: 'fixed' }} stickyHeader>
+          <Table sx={{ minWidth: 1400, tableLayout: 'fixed' }} stickyHeader>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell width={60} sx={{ px: 2 }}>No.</TableCell>
-                <TableCell width={200} sx={{ px: 2 }}>시설물 정보</TableCell>
+                <TableCell width={50} sx={{ px: 2 }}>No.</TableCell>
+                <TableCell width={180} sx={{ px: 2 }}>시설물 정보</TableCell>
                 <TableCell width={100} sx={{ px: 2 }}>유형</TableCell>
-                <TableCell width={150} sx={{ px: 2 }}>변경 전/후 상태</TableCell>
+                <TableCell width={140} sx={{ px: 2 }}>변경 전/후 상태</TableCell>
                 <TableCell width={120} sx={{ px: 2 }}>출발 수탁업체명</TableCell>
                 <TableCell width={120} sx={{ px: 2 }}>도착 수탁업체명</TableCell>
                 <TableCell width={120} sx={{ px: 2 }}>처리일자</TableCell>
-                <TableCell width={100} sx={{ px: 2 }}>처리자</TableCell>
-                <TableCell width={150} sx={{ px: 2 }}>비고</TableCell>
+                <TableCell width={90} sx={{ px: 2 }}>처리자</TableCell>
+                <TableCell width={140} sx={{ px: 2 }}>비고</TableCell>
+                <TableCell width={120} sx={{ px: 2, textAlign: 'center' }}>행동</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                     <CircularProgress size={40} />
                     <Typography variant="body2" sx={{ mt: 2 }}>데이터를 불러오는 중입니다...</Typography>
                   </TableCell>
                 </TableRow>
               ) : filteredFacilityTransactions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                     <Typography variant="body2">데이터가 없습니다.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedFacilityTransactions.map((transaction, index) => (
-                  <TableRow key={transaction.transactionId} hover>
+                  <TableRow 
+                    key={transaction.transactionId} 
+                    hover
+                    sx={{ 
+                      ...(transaction.isCancelled && {
+                        backgroundColor: '#f9f9f9',
+                        opacity: 0.8,
+                        '& td': {
+                          position: 'relative',
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            top: '50%',
+                            height: '1px',
+                            backgroundColor: '#e57373',
+                            zIndex: 1
+                          }
+                        }
+                      })
+                    }}
+                  >
                     <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
                       {filteredFacilityTransactions.length - (page * rowsPerPage + index)}
                     </TableCell>
                     <TableCell sx={{ px: 2 }}>
                       <Box>
-                        <Typography variant="body2">{transaction.facilityTypeName}</Typography>
-                        <Typography variant="caption" color="text.secondary">품목: {transaction.brandCodeName}<br/></Typography>
-                        <Typography variant="caption" color="text.secondary">관리번호: {transaction.managementNumber}</Typography>
+                        <Typography variant="body2" noWrap>{transaction.facilityTypeName}</Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap>품목: {transaction.brandCodeName}</Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap>관리번호: {transaction.managementNumber}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
                       {transaction.transactionTypeName}
+                      {transaction.isCancelled && (
+                        <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                          취소됨
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
                       {transaction.statusBeforeName && transaction.statusAfterName 
@@ -543,13 +644,51 @@ const FacilityHistoryPage = () => {
                     <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.toCompanyName || '-'}</TableCell>
                     <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{formatDate(transaction.transactionDate)}</TableCell>
                     <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.performedByName || transaction.createdByName}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.notes || '-'}</TableCell>
+                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {transaction.notes || '-'}
+                      {transaction.isCancelled && transaction.cancellationReason && (
+                        <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                          취소 사유: {transaction.cancellationReason}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ px: 2, textAlign: 'center' }}>
+                      {/* 취소 버튼 - 취소되지 않은 트랜잭션에만 표시 */}
+                      {!transaction.isCancelled && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenCancellationDialog(transaction);
+                          }}
+                          startIcon={<DeleteIcon />}
+                          sx={{ 
+                            py: 0.5, 
+                            fontSize: '0.75rem',
+                            minWidth: '80px',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          취소
+                        </Button>
+                      )}
+                      {transaction.isCancelled && (
+                        <Chip 
+                          label="취소됨" 
+                          size="small" 
+                          color="default"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={9} />
+                  <TableCell colSpan={10} />
                 </TableRow>
               )}
             </TableBody>
@@ -613,6 +752,79 @@ const FacilityHistoryPage = () => {
         {/* 시설물 이동 이력 테이블 */}
         {renderFacilityTransactionTable()}
       </Box>
+
+      {/* 트랜잭션 취소 다이얼로그 */}
+      <Dialog
+        open={cancellationDialogOpen}
+        onClose={!cancellationProcessing ? handleCloseCancellationDialog : undefined}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>행동이력 취소</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            {selectedTransaction && (
+              <Box>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  다음 행동이력을 취소하시겠습니까?
+                </Typography>
+                <Box sx={{ mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary">시설물 정보:</Typography>
+                  <Typography variant="body2">
+                    {selectedTransaction.facilityTypeName} - {selectedTransaction.brandCodeName} (관리번호: {selectedTransaction.managementNumber})
+                  </Typography>
+                </Box>
+                <Box sx={{ mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary">유형:</Typography>
+                  <Typography variant="body2">{selectedTransaction.transactionTypeName}</Typography>
+                </Box>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary">처리일자:</Typography>
+                  <Typography variant="body2">
+                    {formatDate(selectedTransaction.transactionDate)}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            <Typography variant="body2" sx={{ color: 'error.main', mb: 2 }}>
+              이 작업은 취소할 수 없습니다. 취소 이유를 입력해주세요.
+            </Typography>
+          </DialogContentText>
+          
+          <TextField
+            autoFocus
+            label="취소 이유"
+            multiline
+            rows={3}
+            fullWidth
+            value={cancellationReason}
+            onChange={handleCancellationReasonChange}
+            variant="outlined"
+            placeholder="취소 이유를 입력해주세요"
+            disabled={cancellationProcessing}
+            required
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={handleCloseCancellationDialog} 
+            color="inherit" 
+            disabled={cancellationProcessing}
+          >
+            취소
+          </Button>
+          <Button 
+            onClick={handleSubmitCancellation} 
+            color="error" 
+            variant="contained" 
+            startIcon={cancellationProcessing ? <CircularProgress size={18} color="inherit" /> : null}
+            disabled={cancellationProcessing || !cancellationReason.trim()}
+            sx={{ boxShadow: 'none' }}
+          >
+            {cancellationProcessing ? "처리 중..." : "확인"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 알림 스낵바 */}
       <Snackbar

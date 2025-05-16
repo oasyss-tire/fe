@@ -354,7 +354,7 @@ const ClosingManagementPage = () => {
       {/* 상단 헤더 */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          재고 마감 관리
+          수불 마감
         </Typography>
       </Box>
       

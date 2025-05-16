@@ -320,7 +320,7 @@ const ClosingInventoryPage = () => {
       {/* 상단 헤더 */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          재고 마감 데이터 조회
+          마감 재고 조회
         </Typography>
       </Box>
       
