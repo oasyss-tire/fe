@@ -22,7 +22,9 @@ import {
   Snackbar,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  Card,
+  CardContent
 } from '@mui/material';
 import { 
   Search as SearchIcon,
@@ -121,6 +123,10 @@ const FacilitiesList = () => {
   // 고장/수리중 상태 시설물 정보
   const [failedFacilities, setFailedFacilities] = useState({});
 
+  // 시설물 유형별 총 수량 상태 추가
+  const [facilityCounts, setFacilityCounts] = useState({});
+  const [totalCountsLoading, setTotalCountsLoading] = useState(false);
+
   // 알림 상태
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -176,6 +182,9 @@ const FacilitiesList = () => {
         // sortOrder 기준으로 정렬
         const sortedTypesData = typesData.sort((a, b) => a.sortOrder - b.sortOrder);
         setFacilityTypes(sortedTypesData);
+        
+        // 시설물 유형별 총 수량 조회
+        await fetchFacilityCountsByType();
         
         // 회사 목록 조회 - 사용자 권한에 따라 다르게 처리
         let companiesData = [];
@@ -240,6 +249,30 @@ const FacilitiesList = () => {
     
     loadInitialData();
   }, [authUser]);
+
+  // 시설물 유형별 총 수량 조회
+  const fetchFacilityCountsByType = async () => {
+    setTotalCountsLoading(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/facilities/counts-by-type', {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('시설물 유형별 수량을 불러오는데 실패했습니다.');
+      }
+
+      const data = await response.json();
+      setFacilityCounts(data);
+    } catch (error) {
+      console.error('시설물 유형별 수량 조회 실패:', error);
+      showSnackbar('시설물 유형별 수량을 불러오는데 실패했습니다.', 'error');
+    } finally {
+      setTotalCountsLoading(false);
+    }
+  };
 
   // 회사 목록 조회 (초기 로딩에서 처리하므로 제거)
   const fetchCompanies = async () => {
@@ -830,6 +863,94 @@ const FacilitiesList = () => {
           </Button>
         )}
       </Box>
+
+      {/* 시설물 유형별 총 수량 표시 */}
+      {totalCountsLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+          <CircularProgress size={24} />
+        </Box>
+      ) : facilityCounts && Object.keys(facilityCounts).length > 0 ? (
+        <Box sx={{ mb: 4 }}>
+          <Card variant="outlined" sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+            <CardContent>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                시설물 유형별 총 수량
+              </Typography>
+              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2, borderRadius: '8px', overflow: 'hidden' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                      {Object.keys(facilityCounts)
+                        .filter(key => key !== 'total')
+                        .map((key) => (
+                          <TableCell 
+                            key={key} 
+                            align="center" 
+                            sx={{ 
+                              fontWeight: 'bold', 
+                              fontSize: '0.85rem',
+                              py: 1.5,
+                              borderRight: '1px solid #e0e0e0',
+                              width: `${100 / (Object.keys(facilityCounts).length)}%`, // 동일한 너비 적용
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {facilityCounts[key].facilityTypeName}
+                          </TableCell>
+                        ))}
+                      <TableCell 
+                        align="center" 
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          fontSize: '0.85rem',
+                          backgroundColor: '#e3f2fd',
+                          py: 1.5,
+                          width: `${100 / (Object.keys(facilityCounts).length)}%` // 동일한 너비 적용
+                        }}
+                      >
+                        총계
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      {Object.keys(facilityCounts)
+                        .filter(key => key !== 'total')
+                        .map((key) => (
+                          <TableCell 
+                            key={key} 
+                            align="center" 
+                            sx={{ 
+                              fontSize: '0.95rem',
+                              fontWeight: 500,
+                              py: 2,
+                              borderRight: '1px solid #e0e0e0'
+                            }}
+                          >
+                            {facilityCounts[key].count}개
+                          </TableCell>
+                        ))}
+                      <TableCell 
+                        align="center" 
+                        sx={{ 
+                          fontSize: '0.95rem',
+                          fontWeight: 700,
+                          backgroundColor: '#e3f2fd',
+                          py: 2
+                        }}
+                      >
+                        {facilityCounts.total && facilityCounts.total.count}개
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Box>
+      ) : null}
 
       {/* 메인 테이블 */}
       <Box sx={{ mb: 3, overflow: 'auto' }}>

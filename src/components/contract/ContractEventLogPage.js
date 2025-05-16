@@ -61,20 +61,38 @@ const ContractEventLogPage = () => {
   });
 
   // 이벤트 타입 목록
-  const eventTypes = [
-    { value: '001005_0001', label: '계약 생성' },
-    { value: '001005_0002', label: '계약 수정' },
-    { value: '001005_0003', label: '상태 변경' },
-    { value: '001005_0004', label: '계약 승인' },
-    { value: '001005_0005', label: '계약 거부' },
-    { value: '001005_0006', label: '계약 비활성화' },
-    { value: '001005_0007', label: '참여자 서명 완료' },
-    { value: '001005_0008', label: '재서명 요청(관리자→참여자)' },
-    { value: '001005_0009', label: '재서명 승인' },
-    { value: '001005_0010', label: '재서명 완료' },
-    { value: '001005_0011', label: '재서명 요청(참여자→관리자)' },
-    { value: '001005_0012', label: '참여자 문서 업로드' }
-  ];
+  const [eventTypes, setEventTypes] = useState([]);
+  const [eventTypesLoading, setEventTypesLoading] = useState(false);
+
+  // 이벤트 타입 코드 조회
+  useEffect(() => {
+    const fetchEventTypes = async () => {
+      setEventTypesLoading(true);
+      try {
+        const response = await fetch('http://localhost:8080/api/codes/groups/001005/codes/active', {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('이벤트 타입 코드를 불러오는데 실패했습니다.');
+        }
+
+        const data = await response.json();
+        // sortOrder 기준으로 정렬
+        const sortedData = data.sort((a, b) => a.sortOrder - b.sortOrder);
+        setEventTypes(sortedData);
+      } catch (error) {
+        console.error('이벤트 타입 코드 조회 실패:', error);
+        setError('이벤트 타입 코드를 불러오는데 실패했습니다.');
+      } finally {
+        setEventTypesLoading(false);
+      }
+    };
+
+    fetchEventTypes();
+  }, []);
 
   // 수탁업체와 계약 선택 처리
   const handleSelectCompanyAndContract = (company, contract) => {
@@ -208,94 +226,124 @@ const ContractEventLogPage = () => {
   const dateKeys = Object.keys(logsByDate).sort().reverse(); // 최신 날짜순
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        계약 이벤트 로그
-      </Typography>
+    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
+      {/* 상단 헤더 */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
+          계약 이벤트 로그
+        </Typography>
+      </Box>
       
-      {/* 검색 필터 영역 - 레이아웃 심플하게 수정 */}
-      <Paper sx={{ mb: 3, overflow: 'hidden', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          p: 2, 
-          borderBottom: '1px solid #eee',
-          bgcolor: '#f8f9fa'
-        }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-            검색 필터
-          </Typography>
-        </Box>
-        
-        <Box sx={{ p: 2 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setOpenContractDialog(true)}
-                startIcon={<BusinessIcon />}
-                sx={{ 
-                  justifyContent: 'flex-start', 
-                  textAlign: 'left',
-                  height: '40px',
-                  borderColor: '#e0e0e0'
-                }}
-              >
-                {selectedCompany && selectedContract ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
-                      {selectedCompany.storeName || selectedCompany.companyName} / {selectedContract.contractNumber}
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    업체 및 계약 선택하기
+      {/* 검색 필터 영역 */}
+      <Box sx={{ 
+        backgroundColor: 'white',
+        borderRadius: 2,
+        border: '1px solid #EEEEEE',
+        p: 3,
+        mb: 3
+      }}>
+        <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          {/* 업체 및 계약 선택 */}
+          <Box sx={{ flex: 1, minWidth: '300px' }}>
+            <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+              업체 및 계약 선택
+            </Typography>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => setOpenContractDialog(true)}
+              startIcon={<BusinessIcon />}
+              sx={{ 
+                height: '40px',
+                justifyContent: 'flex-start',
+                textAlign: 'left',
+                color: 'rgba(30, 30, 30, 0.87)',
+                borderColor: '#E0E0E0',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {selectedCompany && selectedContract ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'text.primary' }}>
+                    {selectedCompany.storeName || selectedCompany.companyName} / {selectedContract.contractNumber}
                   </Typography>
-                )}
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={3}>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  업체 및 계약 선택하기
+                </Typography>
+              )}
+            </Button>
+          </Box>
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* 이벤트 유형 필터 */}
+            <Box sx={{ width: '200px' }}>
+              <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
+                이벤트 유형
+              </Typography>
               <TextField
                 fullWidth
-                label="이벤트 유형"
-                variant="outlined"
-                size="small"
                 select
+                size="small"
                 value={filters.eventTypeCodeId}
                 onChange={(e) => setFilters({...filters, eventTypeCodeId: e.target.value})}
+                disabled={eventTypesLoading}
+                sx={{ 
+                  backgroundColor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#E0E0E0',
+                    },
+                  },
+                }}
               >
                 <MenuItem value="">모든 이벤트</MenuItem>
                 {eventTypes.map((type) => (
-                  <MenuItem key={type.value} value={type.value}>
-                    {type.label}
+                  <MenuItem key={type.codeId} value={type.codeId}>
+                    {type.codeName}
                   </MenuItem>
                 ))}
               </TextField>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button 
-                  variant="contained" 
-                  onClick={handleApplyFilter}
-                  disabled={!selectedContract || loading}
-                  sx={{ flex: 1 }}
-                >
-                  {loading ? <CircularProgress size={24} /> : '조회하기'}
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleResetFilter}
-                  disabled={loading}
-                >
-                  초기화
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
+            </Box>
+            
+            {/* 검색 버튼 */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleApplyFilter}
+                disabled={loading}
+                sx={{ height: '40px' }}
+              >
+                {loading ? <CircularProgress size={24} /> : '조회하기'}
+              </Button>
+            </Box>
+          </Box>
         </Box>
-      </Paper>
+        
+        {/* 필터 초기화 버튼 */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleResetFilter}
+            disabled={loading}
+            sx={{
+              color: '#666',
+              borderColor: '#ccc',
+              '&:hover': {
+                borderColor: '#1976d2',
+                color: '#1976d2'
+              }
+            }}
+          >
+            검색조건 초기화
+          </Button>
+        </Box>
+      </Box>
       
       {/* 계약 선택 다이얼로그 */}
       <ContractSelectDialog 
@@ -309,7 +357,7 @@ const ContractEventLogPage = () => {
         open={!!error} 
         autoHideDuration={6000} 
         onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert severity="error" onClose={() => setError(null)}>
           {error}
@@ -325,52 +373,50 @@ const ContractEventLogPage = () => {
       
       {/* 검색 전 안내 메시지 */}
       {!searchApplied && !loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        <Paper sx={{ p: 4, textAlign: 'center', mb: 3, borderRadius: 2, border: '1px solid #EEEEEE' }}>
           <Typography color="text.secondary">업체와 계약을 선택한 후 조회하기 버튼을 클릭하세요.</Typography>
-        </Box>
+        </Paper>
       )}
       
       {/* 검색 결과 없음 */}
       {searchApplied && !loading && logs.length === 0 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        <Paper sx={{ p: 4, textAlign: 'center', mb: 3, borderRadius: 2, border: '1px solid #EEEEEE' }}>
           <Typography color="text.secondary">검색 결과가 없습니다. 다른 계약을 선택해보세요.</Typography>
-        </Box>
+        </Paper>
       )}
       
-      {/* 검색 결과 헤더 및 계약 정보 - 카운트 부분 제거 */}
+      {/* 검색 결과 헤더 및 계약 정보 */}
       {searchApplied && !loading && logs.length > 0 && logs[0] && (
-        <Box sx={{ mb: 3 }}>
-          <Paper sx={{ p: 2, mb: 2, border: '1px solid #e0e0e0' }}>
-            <Box>
-              <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: '500', color: 'text.primary' }}>
-                {selectedCompany.storeName || selectedCompany.companyName} / {selectedContract.contractNumber}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                총 {logs.length}건의 이벤트 로그가 있습니다.
-                {filters.eventTypeCodeId && ` (이벤트 유형 필터 적용됨)`}
-              </Typography>
-              
-              {/* 색상 설명 추가 */}
-              <Box sx={{ mt: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 16, height: 16, borderRadius: 1, bgcolor: '#e1f5fe' }}></Box>
-                  <Typography variant="caption">관리자 로그</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 16, height: 16, borderRadius: 1, bgcolor: '#fff3e0' }}></Box>
-                  <Typography variant="caption">계약자 로그</Typography>
-                </Box>
+        <Paper sx={{ p: 3, mb: 3, borderRadius: 2, border: '1px solid #EEEEEE' }}>
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: '500', color: 'text.primary' }}>
+              {selectedCompany.storeName || selectedCompany.companyName} / {selectedContract.contractNumber}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              총 {logs.length}건의 이벤트 로그가 있습니다.
+              {filters.eventTypeCodeId && ` (이벤트 유형 필터 적용됨)`}
+            </Typography>
+            
+            {/* 색상 설명 추가 */}
+            <Box sx={{ mt: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 16, height: 16, borderRadius: 1, bgcolor: '#e1f5fe' }}></Box>
+                <Typography variant="caption">관리자 로그</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 16, height: 16, borderRadius: 1, bgcolor: '#fff3e0' }}></Box>
+                <Typography variant="caption">계약자 로그</Typography>
               </Box>
             </Box>
-          </Paper>
-        </Box>
+          </Box>
+        </Paper>
       )}
       
       {/* 날짜별 로그 타임라인 */}
       {searchApplied && !loading && logs.length > 0 && (
         <Box>
           {dateKeys.map(dateKey => (
-            <Paper key={dateKey} sx={{ mb: 3, p: 0, overflow: 'hidden', boxShadow: 'none', border: '1px solid #eee' }}>
+            <Paper key={dateKey} sx={{ mb: 3, overflow: 'hidden', borderRadius: 2, border: '1px solid #EEEEEE' }}>
               <Box sx={{ bgcolor: '#f5f5f5', p: 1.5, borderBottom: '1px solid #eee' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
                   {dateKey}
@@ -428,7 +474,7 @@ const ContractEventLogPage = () => {
                           <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             <PersonIcon fontSize="small" sx={{ color: iconColor }} />
                             {log.participantName ? 
-                              <>수탁자: <f>{log.participantName}</f></> : 
+                              <>수탁자: <span style={{ fontWeight: 500 }}>{log.participantName}</span></> : 
                               <>액터: {log.actorName} ({log.actorTypeName})</>
                             }
                           </Typography>

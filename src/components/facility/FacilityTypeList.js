@@ -24,7 +24,9 @@ import {
   Grid,
   Card,
   CardContent,
-  Divider
+  Divider,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +57,7 @@ const FacilityTypeList = () => {
   const [allFacilities, setAllFacilities] = useState([]);
   const [facilityCounts, setFacilityCounts] = useState({});
   const [totalCountsLoading, setTotalCountsLoading] = useState(false);
+  const [isActiveFilter, setIsActiveFilter] = useState(true);
   const baseUrl = 'http://localhost:8080';
 
   // 알림 상태
@@ -121,13 +124,13 @@ const FacilityTypeList = () => {
   };
 
   // 특정 시설물 유형의 시설물 목록 조회
-  const fetchFacilitiesByType = async (typeCode, pageNum = 0) => {
+  const fetchFacilitiesByType = async (typeCode, pageNum = 0, isActive = isActiveFilter) => {
     if (!typeCode) return;
     
     setFacilitiesLoading(true);
     try {
       // 최근등록순으로 정렬 (createdAt 기준 내림차순)
-      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&page=${pageNum}&size=${pageSize}&sortBy=createdAt&sortDir=DESC&isActive=true`, {
+      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&page=${pageNum}&size=${pageSize}&sortBy=createdAt&sortDir=DESC&isActive=${isActive}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -158,13 +161,13 @@ const FacilityTypeList = () => {
   };
 
   // 특정 시설물 유형의 모든 시설물 목록 조회 (검색용)
-  const fetchAllFacilitiesByType = async (typeCode) => {
+  const fetchAllFacilitiesByType = async (typeCode, isActive = isActiveFilter) => {
     if (!typeCode) return;
     
     setFacilitiesLoading(true);
     try {
       // 모든 데이터를 가져오기 위해 큰 size 값 사용 (최근등록순)
-      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&size=1000&sortBy=createdAt&sortDir=DESC&isActive=true`, {
+      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&size=1000&sortBy=createdAt&sortDir=DESC&isActive=${isActive}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -219,7 +222,7 @@ const FacilityTypeList = () => {
       setSelectedTypeName(selectedType ? selectedType.codeName : '');
       
       // 시설물 유형이 선택되면 모든 데이터를 미리 가져옴
-      const allData = await fetchAllFacilitiesByType(typeCode);
+      const allData = await fetchAllFacilitiesByType(typeCode, isActiveFilter);
       
       // 첫 페이지 데이터 표시
       const firstPageData = allData.slice(0, pageSize);
@@ -236,6 +239,27 @@ const FacilityTypeList = () => {
     
     // 검색어 초기화
     setSearchKeyword('');
+  };
+
+  // 활성화 상태 필터 변경 핸들러
+  const handleActiveFilterChange = async (isActive) => {
+    // 상태 변경
+    setIsActiveFilter(isActive);
+    
+    if (selectedTypeCode) {
+      // 필터 변경 시 데이터 다시 로드 (isActive 값을 직접 전달)
+      const allData = await fetchAllFacilitiesByType(selectedTypeCode, isActive);
+      
+      // 첫 페이지 데이터 표시
+      const firstPageData = allData.slice(0, pageSize);
+      setFacilities(firstPageData);
+      setFilteredFacilities(firstPageData);
+      setTotalPages(Math.ceil(allData.length / pageSize) || 1);
+      setPage(0);
+      
+      // 검색어 초기화
+      setSearchKeyword('');
+    }
   };
 
   // 페이지 변경 핸들러
@@ -318,18 +342,7 @@ const FacilityTypeList = () => {
   };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
-      {/* 상단 헤더 */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 3 
-      }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#3A3A3A' }}>
-          시설물별 조회
-        </Typography>
-      </Box>
+    <Box sx={{ pt: 3, backgroundColor: '#F8F8FE', minHeight: '100vh' }}>
 
       {/* 시설물 유형별 총 수량 표시 */}
       {totalCountsLoading ? (
@@ -338,65 +351,77 @@ const FacilityTypeList = () => {
         </Box>
       ) : facilityCounts && Object.keys(facilityCounts).length > 0 ? (
         <Box sx={{ mb: 4 }}>
-          <Card variant="outlined">
+          <Card variant="outlined" sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <CardContent>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 시설물 유형별 총 수량
               </Typography>
-              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2, borderRadius: '8px', overflow: 'hidden' }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell align="center" colSpan={4} sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                        시설물 수량 현황
+                      {Object.keys(facilityCounts)
+                        .filter(key => key !== 'total')
+                        .map((key) => (
+                          <TableCell 
+                            key={key} 
+                            align="center" 
+                            sx={{ 
+                              fontWeight: 'bold', 
+                              fontSize: '0.85rem',
+                              py: 1.5,
+                              borderRight: '1px solid #e0e0e0',
+                              width: `${100 / (Object.keys(facilityCounts).length)}%`, // 동일한 너비 적용
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {facilityCounts[key].facilityTypeName}
+                          </TableCell>
+                        ))}
+                      <TableCell 
+                        align="center" 
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          fontSize: '0.85rem',
+                          backgroundColor: '#e3f2fd',
+                          py: 1.5,
+                          width: `${100 / (Object.keys(facilityCounts).length)}%` // 동일한 너비 적용
+                        }}
+                      >
+                        총계
                       </TableCell>
-                    </TableRow>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell width="25%" align="center" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>시설물 유형</TableCell>
-                      <TableCell width="25%" align="center" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>수량</TableCell>
-                      <TableCell width="25%" align="center" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>시설물 유형</TableCell>
-                      <TableCell width="25%" align="center" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>수량</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {/* 나머지 시설물 유형들을 2열로 표시 */}
-                    {(() => {
-                      const typeKeys = Object.keys(facilityCounts).filter(key => key !== 'total');
-                      const rows = [];
-                      
-                      // 2개씩 묶어서 행으로 표시
-                      for (let i = 0; i < typeKeys.length; i += 2) {
-                        const firstKey = typeKeys[i];
-                        const secondKey = i + 1 < typeKeys.length ? typeKeys[i + 1] : null;
-                        
-                        rows.push(
-                          <TableRow key={firstKey}>
-                            <TableCell align="center" sx={{ fontSize: '0.9rem' }}>{facilityCounts[firstKey].facilityTypeName}</TableCell>
-                            <TableCell align="center" sx={{ fontSize: '0.9rem' }}>{facilityCounts[firstKey].count}개</TableCell>
-                            {secondKey ? (
-                              <>
-                                <TableCell align="center" sx={{ fontSize: '0.9rem' }}>{facilityCounts[secondKey].facilityTypeName}</TableCell>
-                                <TableCell align="center" sx={{ fontSize: '0.9rem' }}>{facilityCounts[secondKey].count}개</TableCell>
-                              </>
-                            ) : (
-                              <>
-                                <TableCell align="center"></TableCell>
-                                <TableCell align="center"></TableCell>
-                              </>
-                            )}
-                          </TableRow>
-                        );
-                      }
-                      
-                      return rows;
-                    })()}
-                    
-                    {/* 전체 행을 하단에 추가 */}
                     <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{ backgroundColor: '#e3f2fd', fontWeight: 'bold' }}>
-                        {facilityCounts.total && 
-                          `${facilityCounts.total.facilityTypeName}: ${facilityCounts.total.count}개`
-                        }
+                      {Object.keys(facilityCounts)
+                        .filter(key => key !== 'total')
+                        .map((key) => (
+                          <TableCell 
+                            key={key} 
+                            align="center" 
+                            sx={{ 
+                              fontSize: '0.95rem',
+                              fontWeight: 500,
+                              py: 2,
+                              borderRight: '1px solid #e0e0e0'
+                            }}
+                          >
+                            {facilityCounts[key].count}개
+                          </TableCell>
+                        ))}
+                      <TableCell 
+                        align="center" 
+                        sx={{ 
+                          fontSize: '0.95rem',
+                          fontWeight: 700,
+                          backgroundColor: '#e3f2fd',
+                          py: 2
+                        }}
+                      >
+                        {facilityCounts.total && facilityCounts.total.count}개
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -409,7 +434,7 @@ const FacilityTypeList = () => {
 
       {/* 시설물 유형 선택 */}
       <Box sx={{ mb: 4 }}>
-        <FormControl fullWidth sx={{ maxWidth: '400px' }}>
+        <FormControl sx={{ maxWidth: '400px', width: '100%' }}>
           <InputLabel id="facility-type-select-label">시설물 유형 선택</InputLabel>
           <Select
             labelId="facility-type-select-label"
@@ -433,19 +458,35 @@ const FacilityTypeList = () => {
 
       {/* 선택된 시설물 유형의 시설물 목록 */}
       {selectedTypeCode && (
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper sx={{ p: 3, mb: 3, overflow: 'auto' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {selectedTypeName} 목록
             </Typography>
-            <Box sx={{ width: '300px' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Button 
+                variant={isActiveFilter ? "contained" : "outlined"} 
+                color="primary"
+                onClick={() => handleActiveFilterChange(true)}
+                sx={{ minWidth: '120px' }}
+              >
+                사용중인 시설물
+              </Button>
+              <Button 
+                variant={!isActiveFilter ? "contained" : "outlined"} 
+                color="secondary"
+                onClick={() => handleActiveFilterChange(false)}
+                sx={{ minWidth: '150px' }}
+              >
+                폐기/분실 시설물
+              </Button>
               <TextField
                 placeholder="관리번호, 품목, 매장명 검색"
                 size="small"
                 value={searchKeyword}
                 onChange={handleSearchChange}
-                fullWidth
                 sx={{ 
+                  width: '300px',
                   backgroundColor: 'white',
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
@@ -475,11 +516,11 @@ const FacilityTypeList = () => {
                   {searchKeyword ? (
                     `총 ${facilities.length}개 시설물 중 ${filteredFacilities.length}개 표시`
                   ) : (
-                    `총 ${totalItems}개 시설물 중 ${filteredFacilities.length}개 표시`
+                    `총 ${totalItems}개 시설물 중 ${filteredFacilities.length}개 표시 ${isActiveFilter ? '(사용중인 시설물)' : '(폐기/분실 시설물)'}`
                   )}
                 </Typography>
               </Box>
-              <TableContainer sx={{ maxHeight: '60vh' }}>
+              <TableContainer sx={{ maxHeight: '60vh', overflow: 'auto' }}>
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
