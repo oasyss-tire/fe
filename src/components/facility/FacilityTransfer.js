@@ -55,6 +55,7 @@ const FacilityTransfer = () => {
   
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [processingFlag, setProcessingFlag] = useState(false); // 중복 처리 방지 플래그
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -618,6 +619,10 @@ const FacilityTransfer = () => {
 
   // 이동 확인 처리
   const confirmTransfer = async () => {
+    if (processingFlag) return;
+    setProcessingFlag(true);
+    // 즉시 다이얼로그 닫기
+    setConfirmDialog({ ...confirmDialog, open: false });
     setLoading(true);
     try {
       // notes 값 추출
@@ -765,12 +770,16 @@ const FacilityTransfer = () => {
       showSnackbar(error.message || '시설물 이동 처리 중 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
-      setConfirmDialog({ ...confirmDialog, open: false });
+      setProcessingFlag(false);
     }
   };
 
   // 폐기 확인 처리
   const confirmDisposal = async () => {
+    if (processingFlag) return;
+    setProcessingFlag(true);
+    // 즉시 다이얼로그 닫기
+    setConfirmDialog({ ...confirmDialog, open: false });
     setLoading(true);
     try {
       // notes 값 추출
@@ -898,12 +907,16 @@ const FacilityTransfer = () => {
       showSnackbar(error.message || '시설물 폐기 처리 중 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
-      setConfirmDialog({ ...confirmDialog, open: false });
+      setProcessingFlag(false);
     }
   };
 
   // 분실 확인 처리 함수 추가
   const confirmLost = async () => {
+    if (processingFlag) return;
+    setProcessingFlag(true);
+    // 즉시 다이얼로그 닫기
+    setConfirmDialog({ ...confirmDialog, open: false });
     setLoading(true);
     try {
       // notes 값 추출
@@ -1051,12 +1064,16 @@ const FacilityTransfer = () => {
       showSnackbar(error.message || '시설물 분실 처리 중 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
-      setConfirmDialog({ ...confirmDialog, open: false });
+      setProcessingFlag(false);
     }
   };
 
   // 기타 트랜잭션 확인 처리
   const confirmMisc = async () => {
+    if (processingFlag) return;
+    setProcessingFlag(true);
+    // 즉시 다이얼로그 닫기
+    setConfirmDialog({ ...confirmDialog, open: false });
     setLoading(true);
     try {
       // notes 값 추출
@@ -1204,7 +1221,7 @@ const FacilityTransfer = () => {
       showSnackbar(error.message || '기타 트랜잭션 처리 중 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
-      setConfirmDialog({ ...confirmDialog, open: false });
+      setProcessingFlag(false);
     }
   };
 
@@ -1617,11 +1634,20 @@ const FacilityTransfer = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
+          <Button 
+            onClick={handleCloseDialog} 
+            color="primary"
+            disabled={loading}
+          >
             취소
           </Button>
-          <Button onClick={confirmDialog.onConfirm} color="primary" autoFocus>
-            확인
+          <Button 
+            onClick={confirmDialog.onConfirm} 
+            color="primary" 
+            disabled={loading}
+            autoFocus
+          >
+            {loading ? '처리 중...' : '확인'}
           </Button>
         </DialogActions>
       </Dialog>
