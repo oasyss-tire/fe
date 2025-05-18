@@ -34,7 +34,9 @@ import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
   CalendarToday as CalendarIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Image as ImageIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { format, subMonths } from 'date-fns';
 import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
@@ -57,6 +59,19 @@ const formatCurrency = (amount) => {
     style: 'currency',
     currency: 'KRW'
   }).format(amount);
+};
+
+// 이미지 URL 변환 함수 추가
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  
+  // URL이 /facility-transaction/ 형식으로 시작하면 컨트롤러 경로로 변환
+  if (imageUrl.startsWith('/facility-transaction/')) {
+    const fileName = imageUrl.split('/').pop();
+    return `http://localhost:8080/api/facility-images/facility-transaction/${fileName}`;
+  }
+  
+  return `http://localhost:8080${imageUrl}`;
 };
 
 const FacilityHistoryPage = () => {
@@ -106,6 +121,13 @@ const FacilityHistoryPage = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancellationProcessing, setCancellationProcessing] = useState(false);
+  
+  // 이미지 모달 상태
+  const [imageModal, setImageModal] = useState({
+    open: false,
+    imageUrl: '',
+    title: ''
+  });
   
   // 필터링된 데이터 계산 (useMemo 사용)
   const filteredFacilityTransactions = useMemo(() => {
@@ -231,12 +253,12 @@ const FacilityHistoryPage = () => {
     }
   };
 
-  // 모든 시설물 이동 이력 데이터 로드
+  // 모든 시설물 이동 이력 데이터 로드 (이미지 포함)
   const fetchAllFacilityTransactions = async () => {
     setLoading(true);
     try {
-      // API 요청 - 날짜 필터 제거
-      const url = new URL('http://localhost:8080/api/facility-transactions');
+      // 새로운 API URL로 변경
+      const url = new URL('http://localhost:8080/api/facility-transactions/paging-with-images');
       
       const response = await fetch(url, {
         headers: {
@@ -250,7 +272,47 @@ const FacilityHistoryPage = () => {
       
       const data = await response.json();
       
-      setAllFacilityTransactions(data);
+      // API 응답 구조 확인
+      console.log('API 응답 데이터 구조:', data);
+      
+      // 데이터 구조 변환 - API 응답을 기존 코드와 호환되는 형태로 변환
+      let transformedData = [];
+      
+      // 응답이 배열인 경우
+      if (Array.isArray(data)) {
+        transformedData = data.map(item => {
+          const transaction = { 
+            ...item.transaction,
+            images: item.images || [] 
+          };
+          return transaction;
+        });
+      } 
+      // 응답이 단일 객체인 경우 (단일 트랜잭션)
+      else if (data && data.transaction) {
+        const transaction = {
+          ...data.transaction,
+          images: data.images || []
+        };
+        transformedData = [transaction];
+      }
+      // 응답이 페이지 네이션 객체인 경우
+      else if (data && data.content && Array.isArray(data.content)) {
+        transformedData = data.content.map(item => {
+          const transaction = { 
+            ...item.transaction,
+            images: item.images || [] 
+          };
+          return transaction;
+        });
+      }
+      // 기타 응답 형태 처리
+      else {
+        console.warn('예상치 못한 API 응답 형식:', data);
+        transformedData = [];
+      }
+      
+      setAllFacilityTransactions(transformedData);
       setPage(0); // 데이터 로드 후 첫 페이지로 이동
     } catch (error) {
       console.error('시설물 이동 이력 로드 실패:', error);
@@ -423,6 +485,23 @@ const FacilityHistoryPage = () => {
     }
   };
 
+  // 이미지 모달 열기 핸들러
+  const handleOpenImageModal = (imageUrl, title) => {
+    setImageModal({
+      open: true,
+      imageUrl,
+      title
+    });
+  };
+
+  // 이미지 모달 닫기 핸들러
+  const handleCloseImageModal = () => {
+    setImageModal({
+      ...imageModal,
+      open: false
+    });
+  };
+
   // 검색 필터 UI 렌더링
   const renderSearchFilters = () => (
     <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -593,98 +672,126 @@ const FacilityHistoryPage = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedFacilityTransactions.map((transaction, index) => (
-                  <TableRow 
-                    key={transaction.transactionId} 
-                    hover
-                    sx={{ 
-                      ...(transaction.isCancelled && {
-                        backgroundColor: '#f9f9f9',
-                        opacity: 0.8,
-                        '& td': {
-                          position: 'relative',
-                          '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                            top: '50%',
-                            height: '1px',
-                            backgroundColor: '#e57373',
-                            zIndex: 1
+                paginatedFacilityTransactions.map((transaction, index) => {
+                  const hasImages = transaction.images && transaction.images.length > 0;
+                  
+                  return (
+                    <TableRow 
+                      key={transaction.transactionId} 
+                      hover
+                      sx={{ 
+                        ...(transaction.isCancelled && {
+                          backgroundColor: '#f9f9f9',
+                          opacity: 0.8,
+                          '& td': {
+                            position: 'relative',
+                            '&::after': {
+                              content: '""',
+                              position: 'absolute',
+                              left: 0,
+                              right: 0,
+                              top: '50%',
+                              height: '1px',
+                              backgroundColor: '#e57373',
+                              zIndex: 1
+                            }
                           }
-                        }
-                      })
-                    }}
-                  >
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
-                      {filteredFacilityTransactions.length - (page * rowsPerPage + index)}
-                    </TableCell>
-                    <TableCell sx={{ px: 2 }}>
-                      <Box>
-                        <Typography variant="body2" noWrap>{transaction.facilityTypeName}</Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>품목: {transaction.brandCodeName}</Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>관리번호: {transaction.managementNumber}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
-                      {transaction.transactionTypeName}
-                      {transaction.isCancelled && (
-                        <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
-                          취소됨
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
-                      {transaction.statusBeforeName && transaction.statusAfterName 
-                        ? `${transaction.statusBeforeName} → ${transaction.statusAfterName}` 
-                        : '-'}
-                    </TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.fromCompanyName || '-'}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.toCompanyName || '-'}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{formatDate(transaction.transactionDate)}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.performedByName || transaction.createdByName}</TableCell>
-                    <TableCell sx={{ px: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {transaction.notes || '-'}
-                      {transaction.isCancelled && transaction.cancellationReason && (
-                        <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
-                          취소 사유: {transaction.cancellationReason}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ px: 2, textAlign: 'center' }}>
-                      {/* 취소 버튼 - 취소되지 않은 트랜잭션에만 표시 */}
-                      {!transaction.isCancelled && (
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenCancellationDialog(transaction);
-                          }}
-                          startIcon={<DeleteIcon />}
-                          sx={{ 
-                            py: 0.5, 
-                            fontSize: '0.75rem',
-                            minWidth: '80px',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          취소
-                        </Button>
-                      )}
-                      {transaction.isCancelled && (
-                        <Chip 
-                          label="취소됨" 
-                          size="small" 
-                          color="default"
-                          sx={{ fontSize: '0.7rem' }}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                        })
+                      }}
+                    >
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
+                        {filteredFacilityTransactions.length - (page * rowsPerPage + index)}
+                      </TableCell>
+                      <TableCell sx={{ px: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" noWrap>{transaction.facilityTypeName}</Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap>품목: {transaction.brandCodeName}</Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap>관리번호: {transaction.managementNumber}</Typography>
+                          </Box>
+                          {hasImages && (
+                            <IconButton
+                              aria-label="이미지 보기"
+                              size="small"
+                              color="primary"
+                              onClick={() => {
+                                if (transaction.images.length === 1) {
+                                  // 이미지가 하나면 바로 모달로 표시
+                                  const image = transaction.images[0];
+                                  handleOpenImageModal(
+                                    getImageUrl(image.imageUrl),
+                                    image.imageTypeName || '시설물 이미지'
+                                  );
+                                } else if (transaction.images.length > 1) {
+                                  // 여러 이미지가 있으면 확장 행 토글
+                                  setExpandedRow(expandedRow === transaction.transactionId ? null : transaction.transactionId);
+                                }
+                              }}
+                            >
+                              <ImageIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
+                        {transaction.transactionTypeName}
+                        {transaction.isCancelled && (
+                          <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                            취소됨
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>
+                        {transaction.statusBeforeName && transaction.statusAfterName 
+                          ? `${transaction.statusBeforeName} → ${transaction.statusAfterName}` 
+                          : '-'}
+                      </TableCell>
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.fromCompanyName || '-'}</TableCell>
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.toCompanyName || '-'}</TableCell>
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{formatDate(transaction.transactionDate)}</TableCell>
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap' }}>{transaction.performedByName || transaction.createdByName}</TableCell>
+                      <TableCell sx={{ px: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {transaction.notes || '-'}
+                        {transaction.isCancelled && transaction.cancellationReason && (
+                          <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                            취소 사유: {transaction.cancellationReason}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ px: 2, textAlign: 'center' }}>
+                        {/* 취소 버튼 - 취소되지 않은 트랜잭션에만 표시 */}
+                        {!transaction.isCancelled && (
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenCancellationDialog(transaction);
+                            }}
+                            startIcon={<DeleteIcon />}
+                            sx={{ 
+                              py: 0.5, 
+                              fontSize: '0.75rem',
+                              minWidth: '80px',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            취소
+                          </Button>
+                        )}
+                        {transaction.isCancelled && (
+                          <Chip 
+                            label="취소됨" 
+                            size="small" 
+                            color="default"
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
@@ -707,6 +814,73 @@ const FacilityHistoryPage = () => {
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
         />
       </Paper>
+    );
+  };
+
+  // 이미지 목록 다이얼로그 렌더링
+  const renderImageListDialog = () => {
+    if (!expandedRow) return null;
+    
+    const transaction = allFacilityTransactions.find(t => t.transactionId === expandedRow);
+    if (!transaction || !transaction.images || transaction.images.length === 0) return null;
+    
+    return (
+      <Dialog 
+        open={!!expandedRow} 
+        onClose={() => setExpandedRow(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          트랜잭션 첨부 이미지
+          <IconButton
+            aria-label="닫기"
+            onClick={() => setExpandedRow(null)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2}>
+            {transaction.images.map((image) => (
+              <Grid item xs={12} sm={6} md={4} key={image.imageId}>
+                <Box
+                  sx={{ 
+                    cursor: 'pointer',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    boxShadow: '0 1px 5px rgba(0,0,0,0.15)',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                  onClick={() => handleOpenImageModal(
+                    getImageUrl(image.imageUrl),
+                    image.imageTypeName || '시설물 이미지'
+                  )}
+                >
+                  <Box
+                    component="img"
+                    src={getImageUrl(image.imageUrl)}
+                    alt={image.imageTypeName || '시설물 이미지'}
+                    sx={{
+                      width: '100%',
+                      height: 200,
+                      objectFit: 'cover',
+                    }}
+                  />
+                  <Box sx={{ p: 1, bgcolor: '#f5f5f5' }}>
+                    <Typography variant="body2" align="center">
+                      {image.imageTypeName || '시설물 이미지'}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
+      </Dialog>
     );
   };
 
@@ -752,6 +926,62 @@ const FacilityHistoryPage = () => {
         {/* 시설물 이동 이력 테이블 */}
         {renderFacilityTransactionTable()}
       </Box>
+
+      {/* 이미지 목록 다이얼로그 */}
+      {renderImageListDialog()}
+
+      {/* 이미지 모달 */}
+      <Dialog 
+        open={imageModal.open} 
+        onClose={handleCloseImageModal}
+        maxWidth="md"
+        PaperProps={{
+          sx: { 
+            minHeight: '400px',
+            maxHeight: '70vh',
+            width: 'auto',
+            m: 2
+          }
+        }}
+      >
+        <DialogTitle>
+          {imageModal.title}
+          <IconButton
+            aria-label="닫기"
+            onClick={handleCloseImageModal}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center', overflow: 'hidden' }}>
+          {imageModal.imageUrl && (
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                height: '400px',
+                width: '400px',
+                margin: '0 auto'
+              }}
+            >
+              <img 
+                src={imageModal.imageUrl} 
+                alt={imageModal.title}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  width: '400px',
+                  height: '400px',
+                  objectFit: 'contain',
+                  borderRadius: '4px'
+                }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* 트랜잭션 취소 다이얼로그 */}
       <Dialog

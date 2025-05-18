@@ -25,7 +25,8 @@ import {
   Tooltip,
   Modal,
   TextField,
-  FormHelperText
+  FormHelperText,
+  Backdrop
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
@@ -70,6 +71,12 @@ const FacilitiesDetail = () => {
   const [usefulLifeUpdateReason, setUsefulLifeUpdateReason] = useState('');
   const [updatingUsefulLife, setUpdatingUsefulLife] = useState(false);
   const [usefulLifeError, setUsefulLifeError] = useState('');
+  // 이미지 편집을 위한 상태 추가
+  const [imageEditMode, setImageEditMode] = useState(false);
+  const [selectedFileForUpload, setSelectedFileForUpload] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageTypeForUpload, setImageTypeForUpload] = useState('');
+  const [imageIdToEdit, setImageIdToEdit] = useState(null);
 
   // 스낵바 메시지 표시
   const showSnackbar = (message, severity = 'info') => {
@@ -419,6 +426,112 @@ const FacilitiesDetail = () => {
     .catch(error => {
       console.error('QR 코드 다운로드 오류:', error);
       showSnackbar('QR 코드 다운로드 중 오류가 발생했습니다.', 'error');
+    });
+  };
+
+  // 이미지 업로드/수정 핸들러 함수 추가
+  const handleImageEdit = (imageTypeCode, imageId = null) => {
+    setImageTypeForUpload(imageTypeCode);
+    setImageIdToEdit(imageId);
+    // 파일 선택 다이얼로그 트리거
+    document.getElementById('image-upload-input').click();
+  };
+
+  // 파일 선택 변경 핸들러
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFileForUpload(e.target.files[0]);
+      
+      // 파일이 선택되면 바로 업로드 진행
+      uploadImage(e.target.files[0]);
+    }
+  };
+
+  // 이미지 업로드/수정 함수
+  const uploadImage = async (file) => {
+    if (!file) return;
+    
+    setUploadingImage(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('imageTypeCode', imageTypeForUpload);
+      
+      let response;
+      
+      if (imageIdToEdit) {
+        // 이미지 수정
+        response = await fetch(`http://localhost:8080/api/facility-images/${imageIdToEdit}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          },
+          body: formData
+        });
+      } else {
+        // 새 이미지 업로드
+        response = await fetch(`http://localhost:8080/api/facility-images/facility/${id}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          },
+          body: formData
+        });
+      }
+      
+      if (!response.ok) {
+        throw new Error('이미지 업로드에 실패했습니다.');
+      }
+      
+      // 성공 시 이미지 새로고침
+      fetchFacilityImages();
+      showSnackbar('이미지가 성공적으로 업데이트되었습니다.', 'success');
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      showSnackbar('이미지 업로드 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setUploadingImage(false);
+      setSelectedFileForUpload(null);
+      setImageIdToEdit(null);
+      
+      // 파일 입력 요소 리셋
+      const fileInput = document.getElementById('image-upload-input');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  };
+
+  // 이미지 삭제 핸들러
+  const handleDeleteImage = async (imageId) => {
+    setConfirmDialog({
+      open: true,
+      title: '이미지 삭제',
+      message: '이 이미지를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`http://localhost:8080/api/facility-images/${imageId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('이미지 삭제에 실패했습니다.');
+          }
+          
+          // 성공 시 이미지 새로고침
+          fetchFacilityImages();
+          showSnackbar('이미지가 성공적으로 삭제되었습니다.', 'success');
+        } catch (error) {
+          console.error('이미지 삭제 실패:', error);
+          showSnackbar('이미지 삭제 중 오류가 발생했습니다.', 'error');
+        }
+        
+        handleCloseDialog();
+      }
     });
   };
 
@@ -963,6 +1076,46 @@ const FacilitiesDetail = () => {
                       }
                     }}
                   >
+                    {/* 이미지 수정/삭제 버튼 */}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        display: 'flex',
+                        gap: 1
+                      }}
+                      onClick={(e) => e.stopPropagation()} // 모달 열리지 않게 이벤트 중지
+                    >
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0001')?.imageId;
+                          handleImageEdit('002005_0001', imageId);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0001')?.imageId;
+                          if (imageId) handleDeleteImage(imageId);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                     <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
                   </Box>
                 </>
@@ -975,14 +1128,25 @@ const FacilitiesDetail = () => {
                     width: '100%',
                     height: '100%',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#EEEEEE'
                   }}
                 >
-                  <Typography sx={{ color: '#888', fontSize: '0.875rem' }}>
+                  <Typography sx={{ color: '#888', fontSize: '0.875rem', mb: 1 }}>
                     이미지없음
                   </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageEdit('002005_0001');
+                    }}
+                  >
+                    이미지 추가
+                  </Button>
                 </Box>
               )}
               <Typography
@@ -1052,6 +1216,46 @@ const FacilitiesDetail = () => {
                       }
                     }}
                   >
+                    {/* 이미지 수정/삭제 버튼 */}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        display: 'flex',
+                        gap: 1
+                      }}
+                      onClick={(e) => e.stopPropagation()} // 모달 열리지 않게 이벤트 중지
+                    >
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0002')?.imageId;
+                          handleImageEdit('002005_0002', imageId);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0002')?.imageId;
+                          if (imageId) handleDeleteImage(imageId);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                     <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
                   </Box>
                 </>
@@ -1064,14 +1268,25 @@ const FacilitiesDetail = () => {
                     width: '100%',
                     height: '100%',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#EEEEEE'
                   }}
                 >
-                  <Typography sx={{ color: '#888', fontSize: '0.875rem' }}>
+                  <Typography sx={{ color: '#888', fontSize: '0.875rem', mb: 1 }}>
                     이미지없음
                   </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageEdit('002005_0002');
+                    }}
+                  >
+                    이미지 추가
+                  </Button>
                 </Box>
               )}
               <Typography
@@ -1141,6 +1356,46 @@ const FacilitiesDetail = () => {
                       }
                     }}
                   >
+                    {/* 이미지 수정/삭제 버튼 */}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        display: 'flex',
+                        gap: 1
+                      }}
+                      onClick={(e) => e.stopPropagation()} // 모달 열리지 않게 이벤트 중지
+                    >
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0003')?.imageId;
+                          handleImageEdit('002005_0003', imageId);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0003')?.imageId;
+                          if (imageId) handleDeleteImage(imageId);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                     <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
                   </Box>
                 </>
@@ -1153,14 +1408,25 @@ const FacilitiesDetail = () => {
                     width: '100%',
                     height: '100%',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#EEEEEE'
                   }}
                 >
-                  <Typography sx={{ color: '#888', fontSize: '0.875rem' }}>
+                  <Typography sx={{ color: '#888', fontSize: '0.875rem', mb: 1 }}>
                     이미지없음
                   </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageEdit('002005_0003');
+                    }}
+                  >
+                    이미지 추가
+                  </Button>
                 </Box>
               )}
               <Typography
@@ -1230,6 +1496,46 @@ const FacilitiesDetail = () => {
                       }
                     }}
                   >
+                    {/* 이미지 수정/삭제 버튼 */}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        display: 'flex',
+                        gap: 1
+                      }}
+                      onClick={(e) => e.stopPropagation()} // 모달 열리지 않게 이벤트 중지
+                    >
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0004')?.imageId;
+                          handleImageEdit('002005_0004', imageId);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'white',
+                          '&:hover': { bgcolor: 'white', opacity: 0.9 }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const imageId = facilityImages.find(img => img.imageTypeCode === '002005_0004')?.imageId;
+                          if (imageId) handleDeleteImage(imageId);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                     <ZoomInIcon sx={{ color: 'white', fontSize: '2rem' }} />
                   </Box>
                 </>
@@ -1242,14 +1548,25 @@ const FacilitiesDetail = () => {
                     width: '100%',
                     height: '100%',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#EEEEEE'
                   }}
                 >
-                  <Typography sx={{ color: '#888', fontSize: '0.875rem' }}>
+                  <Typography sx={{ color: '#888', fontSize: '0.875rem', mb: 1 }}>
                     이미지없음
                   </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageEdit('002005_0004');
+                    }}
+                  >
+                    이미지 추가
+                  </Button>
                 </Box>
               )}
               <Typography
@@ -1683,6 +2000,25 @@ const FacilitiesDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 숨겨진 파일 업로드 입력 */}
+      <input
+        id="image-upload-input"
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
+      {/* 업로드 중 로딩 표시 */}
+      {uploadingImage && (
+        <Backdrop open={true} sx={{ zIndex: 9999 }}>
+          <Box sx={{ textAlign: 'center', color: 'white' }}>
+            <CircularProgress color="inherit" />
+            <Typography sx={{ mt: 2 }}>이미지 업로드 중...</Typography>
+          </Box>
+        </Backdrop>
+      )}
     </Box>
   );
 };
