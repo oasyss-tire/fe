@@ -55,6 +55,10 @@ const ClosingManagementPage = React.lazy(() => import('./components/facility/Clo
 const ContractEventLogPage = React.lazy(() => import('./components/contract/ContractEventLogPage'));
 const EditTemplatePage = React.lazy(() => import('./components/contract/EditTemplatePage'));
 
+// NICE 본인인증 컴포넌트
+const NiceAuth = React.lazy(() => import('./components/nice/NiceAuth'));
+const NiceCallback = React.lazy(() => import('./components/nice/NiceCallback'));
+
 // 로딩 컴포넌트
 const LoadingFallback = () => (
   <Box 
@@ -160,6 +164,8 @@ const AppContent = () => {
               <Route path="/closing-management" element={<ClosingManagementPage />} />
               <Route path="/contract-log" element={<ContractEventLogPage />} />
               <Route path="/edit-template/:templateId" element={<EditTemplatePage />} />
+              <Route path="/nice-auth" element={<NiceAuth />} />
+              <Route path="/nice-callback" element={<NiceCallback />} />
             </Route>
           </Routes>
         </Suspense>
