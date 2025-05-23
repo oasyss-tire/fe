@@ -58,6 +58,7 @@ const EditTemplatePage = React.lazy(() => import('./components/contract/EditTemp
 // NICE 본인인증 컴포넌트
 const NiceAuth = React.lazy(() => import('./components/nice/NiceAuth'));
 const NiceCallback = React.lazy(() => import('./components/nice/NiceCallback'));
+const NiceBridge = React.lazy(() => import('./components/nice/NiceBridge'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -78,7 +79,7 @@ const AppContent = () => {
   const location = useLocation();
   
   const hideSidebarPaths = ['/pdf-editor', '/pdf-viewer', '/login', '/signup', '/contract-correction-request',
-    '/contract-correction-request/:contractId/participant/:participantId', '/correction-request', '/contract-preview', '/edit-template'];
+    '/contract-correction-request/:contractId/participant/:participantId', '/correction-request', '/contract-preview', '/edit-template', '/nice-bridge'];
   const shouldHideSidebar = hideSidebarPaths.some(path => 
     location.pathname.includes(path)
   );
@@ -125,6 +126,11 @@ const AppContent = () => {
             {/* 비회원 재서명 처리 페이지 (인증 불필요) */}
             <Route path="/correction-request" element={<ContractCorrectionResponsePage />} />
             
+            {/* NICE 본인인증 페이지들 (인증 불필요) */}
+            <Route path="/nice-auth" element={<NiceAuth />} />
+            <Route path="/nice-callback" element={<NiceCallback />} />
+            <Route path="/nice-bridge" element={<NiceBridge />} />
+            
             {/* 보호된 라우트 - 인증 필요 */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainHome />} />
@@ -164,8 +170,6 @@ const AppContent = () => {
               <Route path="/closing-management" element={<ClosingManagementPage />} />
               <Route path="/contract-log" element={<ContractEventLogPage />} />
               <Route path="/edit-template/:templateId" element={<EditTemplatePage />} />
-              <Route path="/nice-auth" element={<NiceAuth />} />
-              <Route path="/nice-callback" element={<NiceCallback />} />
             </Route>
           </Routes>
         </Suspense>

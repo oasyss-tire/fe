@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Box, Typography, CircularProgress, Paper, Button } from '@mui/material';
@@ -18,51 +18,67 @@ const NiceCallback = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // 중복 호출 방지를 위한 ref
+  const isProcessingRef = useRef(false);
+  
   useEffect(() => {
+    // 이미 처리 중이면 중복 실행 방지
+    if (isProcessingRef.current) {
+
+      return;
+    }
+    
     // URL 쿼리 파라미터 파싱
     const searchParams = new URLSearchParams(location.search);
     const encData = searchParams.get('enc_data');
     const tokenVersionId = searchParams.get('token_version_id');
     const integrityValue = searchParams.get('integrity_value');
-    const requestNo = searchParams.get('request_no');
+    let requestNo = searchParams.get('request_no');
     
-    // 전체 URL 출력 (디버깅)
-    console.log('콜백 URL:', location.pathname + location.search);
-    console.log('쿼리 파라미터 전체:', Object.fromEntries([...searchParams.entries()]));
+    // URL에 request_no가 없으면 sessionStorage에서 가져오기
+    if (!requestNo) {
+      requestNo = sessionStorage.getItem('nice_request_no');
+
+    }
+
     
     const processVerificationResult = async () => {
+      // 처리 시작 플래그 설정
+      isProcessingRef.current = true;
+      
       try {
         // 파라미터 체크
         if (!encData || !tokenVersionId || !integrityValue) {
           throw new Error('필수 인증 파라미터가 누락되었습니다.');
         }
+
         
-        console.log('인증 결과 파라미터:', {
-          enc_data: encData,
-          token_version_id: tokenVersionId,
-          integrity_value: integrityValue,
-          request_no: requestNo
-        });
-        
-        // 백엔드 API 요청 구성 (백엔드가 GET 방식의 콜백을 지원하고 RequestParam으로 받음)
+        // 백엔드 API 요청 구성 - POST 방식으로 변경
         const token = sessionStorage.getItem('token');
-        let apiUrl = `http://localhost:8080/api/nice/certification/callback?token_version_id=${encodeURIComponent(tokenVersionId)}&enc_data=${encodeURIComponent(encData)}&integrity_value=${encodeURIComponent(integrityValue)}`;
         
-        // requestNo가 있으면 추가
-        if (requestNo) {
-          apiUrl += `&request_no=${encodeURIComponent(requestNo)}`;
-        }
+        // FormData 방식으로 POST 요청 준비
+        const formData = new URLSearchParams();
+        formData.append('token_version_id', tokenVersionId);
+        formData.append('enc_data', encData);
+        formData.append('integrity_value', integrityValue);
         
-        console.log('백엔드 API 호출 URL:', apiUrl);
+        // request_no가 있으면 추가, 없으면 빈 문자열로 전달
+        formData.append('request_no', requestNo || '');
+
         
-        // GET 요청 사용
-        const response = await axios.get(apiUrl, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+        // POST 요청 사용
+        const response = await axios.post(
+          'http://localhost:8080/api/nice/certification/callback',
+          formData,
+          {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            }
+          }
+        );
         
-        // 응답 데이터 출력
-        console.log('인증 검증 응답 전체:', response.data);
-        console.log('응답 객체 필드명:', Object.keys(response.data));
+
         
         if (response.data.success) {
           setSuccess(true);
@@ -77,6 +93,9 @@ const NiceCallback = () => {
             di: response.data.di,
             ci: response.data.ci
           });
+          
+          // 성공 시 sessionStorage 정리
+          sessionStorage.removeItem('nice_request_no');
         } else {
           throw new Error(response.data.message || '본인인증 검증에 실패했습니다.');
         }
@@ -86,11 +105,12 @@ const NiceCallback = () => {
         setError(error.message || '본인인증 결과 처리 중 오류가 발생했습니다.');
       } finally {
         setLoading(false);
+        // 처리 완료 후에도 플래그 유지 (재실행 방지)
       }
     };
     
     processVerificationResult();
-  }, [location]);
+  }, [location.search]); // location.search로 의존성 변경하여 URL 파라미터 변경 시에만 실행
   
   const handleGoToMain = () => {
     navigate('/');
