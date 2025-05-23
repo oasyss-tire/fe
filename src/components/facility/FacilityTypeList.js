@@ -30,6 +30,10 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+
+// 날짜 범위 캘린더 컴포넌트 import
+import DateRangeCalendar, { DateRangeButton } from '../calendar/Calendar';
 
 // 시설물 상태 코드 맵핑
 const statusColorMap = {
@@ -48,16 +52,21 @@ const FacilityTypeList = () => {
   const [selectedTypeCode, setSelectedTypeCode] = useState('');
   const [selectedTypeName, setSelectedTypeName] = useState('');
   const [facilities, setFacilities] = useState([]);
-  const [filteredFacilities, setFilteredFacilities] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [totalItems, setTotalItems] = useState(0);
-  const [allFacilities, setAllFacilities] = useState([]);
   const [facilityCounts, setFacilityCounts] = useState({});
   const [totalCountsLoading, setTotalCountsLoading] = useState(false);
   const [isActiveFilter, setIsActiveFilter] = useState(true);
+  
+  // 설치일자 필터 상태
+  const [installationStartDate, setInstallationStartDate] = useState(null);
+  const [installationEndDate, setInstallationEndDate] = useState(null);
+  const [isInstallationDateFilterActive, setIsInstallationDateFilterActive] = useState(false);
+  const [showInstallationDatePicker, setShowInstallationDatePicker] = useState(false);
+  
   const baseUrl = 'http://localhost:8080';
 
   // 알림 상태
@@ -72,6 +81,23 @@ const FacilityTypeList = () => {
     fetchFacilityTypes();
     fetchFacilityCountsByType();
   }, []);
+
+  // 검색어 변경 시 자동 검색 실행
+  useEffect(() => {
+    if (selectedTypeCode) {
+      // 검색어가 변경될 때마다 자동으로 검색 실행
+      fetchFacilities({
+        facilityTypeCode: selectedTypeCode,
+        isActive: isActiveFilter,
+        search: searchKeyword || undefined,
+        installationStartDate: isInstallationDateFilterActive && installationStartDate ? 
+          format(installationStartDate, 'yyyy-MM-dd\'T\'00:00:00') : undefined,
+        installationEndDate: isInstallationDateFilterActive && installationEndDate ? 
+          format(installationEndDate, 'yyyy-MM-dd\'T\'23:59:59') : undefined,
+        page: 0 // 검색 시 첫 페이지부터 로드
+      });
+    }
+  }, [searchKeyword, isInstallationDateFilterActive, installationStartDate, installationEndDate]); // 설치일자 필터도 의존성에 추가
 
   // 시설물 유형 코드 조회
   const fetchFacilityTypes = async () => {
@@ -123,14 +149,36 @@ const FacilityTypeList = () => {
     }
   };
 
-  // 특정 시설물 유형의 시설물 목록 조회
-  const fetchFacilitiesByType = async (typeCode, pageNum = 0, isActive = isActiveFilter) => {
-    if (!typeCode) return;
-    
+  // 시설물 목록 조회 (페이징 및 필터링 적용)
+  const fetchFacilities = async (params = {}) => {
     setFacilitiesLoading(true);
+    
     try {
-      // 최근등록순으로 정렬 (createdAt 기준 내림차순)
-      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&page=${pageNum}&size=${pageSize}&sortBy=createdAt&sortDir=DESC&isActive=${isActive}`, {
+      // 기본 파라미터 설정
+      const defaultParams = {
+        page: page,
+        size: pageSize,
+        sortBy: 'createdAt',
+        sortDir: 'DESC'
+      };
+      
+      // 기본 파라미터와 전달받은 파라미터 병합
+      const queryParams = { ...defaultParams, ...params };
+      
+      // URL 파라미터 생성
+      const urlParams = new URLSearchParams();
+      
+      // 파라미터 추가
+      Object.keys(queryParams).forEach(key => {
+        if (queryParams[key] !== undefined && queryParams[key] !== null) {
+          urlParams.append(key, queryParams[key].toString());
+        }
+      });
+      
+      const url = `${baseUrl}/api/facilities?${urlParams.toString()}`;
+      console.log('요청 URL:', url); // 디버깅용
+      
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -141,75 +189,18 @@ const FacilityTypeList = () => {
       }
 
       const data = await response.json();
-      const content = data.content || [];
+      console.log('응답 데이터:', data); // 디버깅용
       
-      setFacilities(content);
-      setFilteredFacilities(content);
+      setFacilities(data.content || []);
       setTotalPages(data.totalPages || 1);
-      setPage(pageNum);
-      
-      // 총 시설물 개수 저장
-      if (data.totalElements !== undefined) {
-        setTotalItems(data.totalElements);
-      }
+      setTotalItems(data.totalElements || 0);
+      setPage(queryParams.page); // 현재 페이지 업데이트
     } catch (error) {
       console.error('시설물 목록 조회 실패:', error);
       showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
     } finally {
       setFacilitiesLoading(false);
     }
-  };
-
-  // 특정 시설물 유형의 모든 시설물 목록 조회 (검색용)
-  const fetchAllFacilitiesByType = async (typeCode, isActive = isActiveFilter) => {
-    if (!typeCode) return;
-    
-    setFacilitiesLoading(true);
-    try {
-      // 모든 데이터를 가져오기 위해 큰 size 값 사용 (최근등록순)
-      const response = await fetch(`${baseUrl}/api/facilities?facilityTypeCode=${typeCode}&size=1000&sortBy=createdAt&sortDir=DESC&isActive=${isActive}`, {
-        headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('시설물 목록을 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
-      const allContent = data.content || [];
-      
-      // 모든 시설물 데이터 저장
-      setAllFacilities(allContent);
-      
-      // 총 시설물 개수 저장
-      if (data.totalElements !== undefined) {
-        setTotalItems(data.totalElements);
-      }
-      
-      return allContent;
-    } catch (error) {
-      console.error('시설물 목록 조회 실패:', error);
-      showSnackbar('시설물 목록을 불러오는데 실패했습니다.', 'error');
-      return [];
-    } finally {
-      setFacilitiesLoading(false);
-    }
-  };
-
-  // 시설물 데이터 필터링 함수
-  const filterFacilities = (data, keyword) => {
-    if (!keyword || keyword.trim() === '') {
-      return data;
-    }
-    
-    const searchLower = keyword.toLowerCase();
-    return data.filter(facility => 
-      (facility.managementNumber && facility.managementNumber.toLowerCase().includes(searchLower)) ||
-      (facility.brandName && facility.brandName.toLowerCase().includes(searchLower)) ||
-      (facility.locationStoreName && facility.locationStoreName.toLowerCase().includes(searchLower))
-    );
   };
 
   // 시설물 유형 선택 핸들러
@@ -221,24 +212,27 @@ const FacilityTypeList = () => {
       const selectedType = facilityTypes.find(type => type.codeId === typeCode);
       setSelectedTypeName(selectedType ? selectedType.codeName : '');
       
-      // 시설물 유형이 선택되면 모든 데이터를 미리 가져옴
-      const allData = await fetchAllFacilitiesByType(typeCode, isActiveFilter);
-      
-      // 첫 페이지 데이터 표시
-      const firstPageData = allData.slice(0, pageSize);
-      setFacilities(firstPageData);
-      setFilteredFacilities(firstPageData);
-      setTotalPages(Math.ceil(allData.length / pageSize) || 1);
-      setPage(0);
+      // 시설물 유형이 선택되면 해당 유형의 첫 페이지 데이터 로드
+      fetchFacilities({
+        facilityTypeCode: typeCode,
+        isActive: isActiveFilter,
+        search: searchKeyword || undefined,
+        installationStartDate: isInstallationDateFilterActive && installationStartDate ? 
+          format(installationStartDate, 'yyyy-MM-dd\'T\'00:00:00') : undefined,
+        installationEndDate: isInstallationDateFilterActive && installationEndDate ? 
+          format(installationEndDate, 'yyyy-MM-dd\'T\'23:59:59') : undefined,
+        page: 0 // 첫 페이지부터 로드
+      });
     } else {
       setSelectedTypeName('');
       setFacilities([]);
-      setFilteredFacilities([]);
-      setAllFacilities([]);
+      setTotalItems(0);
+      setTotalPages(1);
     }
     
-    // 검색어 초기화
+    // 검색어와 설치일자 필터 초기화
     setSearchKeyword('');
+    handleResetInstallationDateFilter();
   };
 
   // 활성화 상태 필터 변경 핸들러
@@ -247,63 +241,73 @@ const FacilityTypeList = () => {
     setIsActiveFilter(isActive);
     
     if (selectedTypeCode) {
-      // 필터 변경 시 데이터 다시 로드 (isActive 값을 직접 전달)
-      const allData = await fetchAllFacilitiesByType(selectedTypeCode, isActive);
-      
-      // 첫 페이지 데이터 표시
-      const firstPageData = allData.slice(0, pageSize);
-      setFacilities(firstPageData);
-      setFilteredFacilities(firstPageData);
-      setTotalPages(Math.ceil(allData.length / pageSize) || 1);
-      setPage(0);
-      
-      // 검색어 초기화
-      setSearchKeyword('');
+      // 필터 변경 시 데이터 다시 로드
+      fetchFacilities({
+        facilityTypeCode: selectedTypeCode,
+        isActive: isActive,
+        search: searchKeyword || undefined,
+        installationStartDate: isInstallationDateFilterActive && installationStartDate ? 
+          format(installationStartDate, 'yyyy-MM-dd\'T\'00:00:00') : undefined,
+        installationEndDate: isInstallationDateFilterActive && installationEndDate ? 
+          format(installationEndDate, 'yyyy-MM-dd\'T\'23:59:59') : undefined,
+        page: 0 // 첫 페이지부터 로드
+      });
     }
   };
 
   // 페이지 변경 핸들러
   const handlePageChange = (event, value) => {
-    const pageIndex = value - 1;
-    setPage(pageIndex);
+    const newPage = value - 1; // 0-based 페이지
     
-    if (searchKeyword) {
-      // 검색 모드일 때는 필터링된 데이터에서 페이징
-      const filtered = filterFacilities(allFacilities, searchKeyword);
-      const startIndex = pageIndex * pageSize;
-      const endIndex = Math.min(startIndex + pageSize, filtered.length);
-      const pageData = filtered.slice(startIndex, endIndex);
-      setFilteredFacilities(pageData);
-    } else {
-      // 일반 모드일 때는 전체 데이터에서 페이징
-      const startIndex = pageIndex * pageSize;
-      const endIndex = Math.min(startIndex + pageSize, allFacilities.length);
-      const pageData = allFacilities.slice(startIndex, endIndex);
-      setFilteredFacilities(pageData);
-    }
+    // 현재 필터 상태로 다음 페이지 로드
+    fetchFacilities({
+      facilityTypeCode: selectedTypeCode,
+      isActive: isActiveFilter,
+      search: searchKeyword || undefined,
+      installationStartDate: isInstallationDateFilterActive && installationStartDate ? 
+        format(installationStartDate, 'yyyy-MM-dd\'T\'00:00:00') : undefined,
+      installationEndDate: isInstallationDateFilterActive && installationEndDate ? 
+        format(installationEndDate, 'yyyy-MM-dd\'T\'23:59:59') : undefined,
+      page: newPage
+    });
   };
 
   // 검색어 변경 핸들러
   const handleSearchChange = (e) => {
-    const keyword = e.target.value;
-    setSearchKeyword(keyword);
+    setSearchKeyword(e.target.value);
+  };
+
+  // 설치일자 필터 변경 처리
+  const handleInstallationDateChange = (start, end) => {
+    setInstallationStartDate(start);
+    setInstallationEndDate(end);
+    setIsInstallationDateFilterActive(true);
+    setPage(0); // 페이지 초기화
+  };
+
+  // 설치일자 필터 초기화
+  const handleResetInstallationDateFilter = () => {
+    setInstallationStartDate(null);
+    setInstallationEndDate(null);
+    setIsInstallationDateFilterActive(false);
+    setPage(0); // 페이지 초기화
+  };
+
+  // 설치일자 필터 적용
+  const handleApplyInstallationDateFilter = () => {
+    setShowInstallationDatePicker(false);
+    // 날짜는 이미 handleInstallationDateChange에서 설정됨
+  };
+
+  // 선택된 설치일자 표시 텍스트
+  const getInstallationDateRangeText = () => {
+    if (!isInstallationDateFilterActive || !installationStartDate || !installationEndDate) return '전체';
     
-    if (selectedTypeCode && allFacilities.length > 0) {
-      // 검색어로 필터링
-      const filtered = filterFacilities(allFacilities, keyword);
-      
-      // 필터링된 결과에 대한 페이징 처리
-      setFacilities(filtered);
-      
-      // 페이징 처리
-      const totalFilteredPages = Math.ceil(filtered.length / pageSize);
-      setTotalPages(totalFilteredPages || 1);
-      setPage(0); // 검색 시 첫 페이지로 이동
-      
-      // 현재 페이지에 표시할 데이터만 선택
-      const startIndex = 0;
-      const endIndex = Math.min(pageSize, filtered.length);
-      setFilteredFacilities(filtered.slice(startIndex, endIndex));
+    try {
+      return `${format(installationStartDate, 'yy-MM-dd')} ~ ${format(installationEndDate, 'yy-MM-dd')}`;
+    } catch (error) {
+      console.error('날짜 형식 오류:', error);
+      return '전체';
     }
   };
 
@@ -468,7 +472,10 @@ const FacilityTypeList = () => {
                 variant={isActiveFilter ? "contained" : "outlined"} 
                 color="primary"
                 onClick={() => handleActiveFilterChange(true)}
-                sx={{ minWidth: '120px' }}
+                sx={{ 
+                  minWidth: '120px',
+                  height: '40px'
+                }}
               >
                 사용중인 시설물
               </Button>
@@ -476,10 +483,26 @@ const FacilityTypeList = () => {
                 variant={!isActiveFilter ? "contained" : "outlined"} 
                 color="secondary"
                 onClick={() => handleActiveFilterChange(false)}
-                sx={{ minWidth: '150px' }}
+                sx={{ 
+                  minWidth: '150px',
+                  height: '40px'
+                }}
               >
                 폐기/분실 시설물
               </Button>
+              <DateRangeButton
+                startDate={installationStartDate}
+                endDate={installationEndDate}
+                isActive={isInstallationDateFilterActive}
+                onClick={() => setShowInstallationDatePicker(true)}
+                getDateRangeText={getInstallationDateRangeText}
+                buttonProps={{
+                  sx: { 
+                    minWidth: '140px',
+                    height: '40px'
+                  }
+                }}
+              />
               <TextField
                 placeholder="관리번호, 품목, 매장명 검색"
                 size="small"
@@ -489,6 +512,7 @@ const FacilityTypeList = () => {
                   width: '300px',
                   backgroundColor: 'white',
                   '& .MuiOutlinedInput-root': {
+                    height: '40px',
                     '& fieldset': {
                       borderColor: '#E0E0E0',
                     },
@@ -513,11 +537,10 @@ const FacilityTypeList = () => {
             <>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="body2" color="textSecondary">
-                  {searchKeyword ? (
-                    `총 ${facilities.length}개 시설물 중 ${filteredFacilities.length}개 표시`
-                  ) : (
-                    `총 ${totalItems}개 시설물 중 ${filteredFacilities.length}개 표시 ${isActiveFilter ? '(사용중인 시설물)' : '(폐기/분실 시설물)'}`
-                  )}
+                  총 {totalItems}개 시설물 중 {facilities.length}개 표시 {isActiveFilter ? '(사용중인 시설물)' : '(폐기/분실 시설물)'}
+                  {searchKeyword && ` - "${searchKeyword}" 검색 결과`}
+                  {isInstallationDateFilterActive && installationStartDate && installationEndDate && 
+                    ` - 설치일자: ${format(installationStartDate, 'yyyy-MM-dd')} ~ ${format(installationEndDate, 'yyyy-MM-dd')}`}
                 </Typography>
               </Box>
               <TableContainer sx={{ maxHeight: '60vh', overflow: 'auto' }}>
@@ -534,8 +557,8 @@ const FacilityTypeList = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredFacilities.length > 0 ? (
-                      filteredFacilities.map((facility, index) => (
+                    {facilities.length > 0 ? (
+                      facilities.map((facility, index) => (
                         <TableRow 
                           key={facility.facilityId}
                           hover
@@ -575,7 +598,7 @@ const FacilityTypeList = () => {
               </TableContainer>
 
               {/* 페이지네이션 */}
-              {filteredFacilities.length > 0 && (
+              {totalItems > 0 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                   <Pagination
                     count={totalPages}
@@ -601,6 +624,17 @@ const FacilityTypeList = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* 설치일자 필터 캘린더 */}
+      <DateRangeCalendar
+        startDate={installationStartDate}
+        endDate={installationEndDate}
+        onDateChange={handleInstallationDateChange}
+        open={showInstallationDatePicker}
+        onClose={() => setShowInstallationDatePicker(false)}
+        onApply={handleApplyInstallationDateFilter}
+        onReset={handleResetInstallationDateFilter}
+      />
     </Box>
   );
 };

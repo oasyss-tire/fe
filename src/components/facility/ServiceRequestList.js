@@ -67,11 +67,13 @@ const ServiceRequestList = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const isUserRole = authUser?.role === 'USER';
+  const baseUrl = 'http://localhost:8080'; // API 기본 URL
   const [loading, setLoading] = useState(false);
-  const [allServiceRequests, setAllServiceRequests] = useState([]); // 모든 데이터를 저장할 상태
+  const [serviceRequests, setServiceRequests] = useState([]); // 현재 페이지의 데이터만 저장
   const [serviceStatusCodes, setServiceStatusCodes] = useState([]); // AS 상태 코드 (002010)
   const [departmentCodes, setDepartmentCodes] = useState([]); // 담당 부서 코드 (003001)
   const [branchGroupCodes, setBranchGroupCodes] = useState([]); // 지부별 그룹 코드 (003002)
+  const [statistics, setStatistics] = useState({ total: 0, pending: 0, completed: 0 }); // 통계 데이터
   
   // 검색 필터 상태
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -105,88 +107,22 @@ const ServiceRequestList = () => {
   // 완료 처리 관련 상태
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   
-  // 데이터 필터링 처리
-  const filteredServiceRequests = useMemo(() => {
-    // 먼저 USER 권한이면 자신의 회사 ID와 일치하는 데이터만 필터링
-    let filteredData = [...allServiceRequests];
-    
-    // USER 권한인 경우 originalLocationCompanyId와 사용자의 companyId가 일치하는 항목만 필터링
-    if (isUserRole && authUser?.companyId) {
-      const userCompanyId = String(authUser.companyId);
-      filteredData = filteredData.filter(request => 
-        String(request.originalLocationCompanyId) === userCompanyId
-      );
-    }
-    
-    // 나머지 필터 적용
-    return filteredData.filter(request => {
-      // 검색어 필터링 (회사명, 시설물 유형, 브랜드명에서 검색)
-      const matchesKeyword = searchKeyword === '' || 
-        (request.companyName && request.companyName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
-        (request.facilityTypeName && request.facilityTypeName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
-        (request.brandName && request.brandName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
-        (request.serviceRequestId && request.serviceRequestId.toString().includes(searchKeyword));
-
-      // AS 상태 필터링
-      const matchesServiceStatus = selectedServiceStatusCode === '' || 
-        request.serviceStatusCode === selectedServiceStatusCode;
-
-      // 담당 부서 필터링
-      const matchesDepartment = selectedDepartmentCode === '' || 
-        request.departmentTypeCode === selectedDepartmentCode;
-        
-      // 지부별 그룹 필터링
-      const matchesBranchGroup = selectedBranchGroupCode === '' || 
-        request.branchGroupId === selectedBranchGroupCode;
-        
-      // 날짜 범위 필터링
-      let matchesDateRange = true;
-      if (isDateFilterActive && startDate && endDate) {
-        const requestDate = request.requestDate ? parseISO(request.requestDate) : null;
-        if (requestDate) {
-          matchesDateRange = 
-            (isBefore(requestDate, new Date(endDate.setHours(23, 59, 59))) || 
-             request.requestDate.split('T')[0] === endDate.toISOString().split('T')[0]) && 
-            (isAfter(requestDate, new Date(startDate.setHours(0, 0, 0))) || 
-             request.requestDate.split('T')[0] === startDate.toISOString().split('T')[0]);
-        } else {
-          matchesDateRange = false;
-        }
-      }
-
-      return matchesKeyword && matchesServiceStatus && matchesDepartment && matchesBranchGroup && matchesDateRange;
-    });
-  }, [allServiceRequests, searchKeyword, selectedServiceStatusCode, selectedDepartmentCode, selectedBranchGroupCode, startDate, endDate, isDateFilterActive, isUserRole, authUser]);
-
-  // 현재 페이지에 표시할 데이터
-  const paginatedServiceRequests = useMemo(() => {
-    const startIndex = page * 10;
-    const endIndex = startIndex + 10;
-    return filteredServiceRequests.slice(startIndex, endIndex);
-  }, [filteredServiceRequests, page]);
-  
   // 초기 데이터 로딩
   useEffect(() => {
     fetchCodes();
-    fetchAllServiceRequests();
-  }, []); // 컴포넌트가 마운트될 때만 데이터를 로드
+    fetchStatistics(); // 통계 데이터 로딩
+  }, []); // 컴포넌트가 마운트될 때만 한번 로드
   
-  // 필터링된 데이터가 변경될 때마다 페이지네이션 정보 업데이트
+  // 필터나 페이지가 변경될 때마다 데이터 다시 로딩
   useEffect(() => {
-    setTotalItems(filteredServiceRequests.length);
-    setTotalPages(Math.ceil(filteredServiceRequests.length / 10));
-    
-    // 현재 페이지가 전체 페이지 수보다 크면 첫 페이지로 이동
-    if (page >= Math.ceil(filteredServiceRequests.length / 10)) {
-      setPage(0);
-    }
-  }, [filteredServiceRequests, page]);
+    fetchServiceRequests();
+  }, [page, searchKeyword, selectedServiceStatusCode, selectedDepartmentCode, selectedBranchGroupCode, startDate, endDate, isDateFilterActive]);
   
   // 코드 데이터 로드
   const fetchCodes = async () => {
     try {
       // AS 상태 코드 조회 (002010)
-      const serviceStatusResponse = await fetch('http://localhost:8080/api/codes/groups/002010/codes/active', {
+      const serviceStatusResponse = await fetch(`${baseUrl}/api/codes/groups/002010/codes/active`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -197,7 +133,7 @@ const ServiceRequestList = () => {
       }
       
       // 담당 부서 코드 조회 (003001)
-      const departmentResponse = await fetch('http://localhost:8080/api/codes/groups/003001/codes/active', {
+      const departmentResponse = await fetch(`${baseUrl}/api/codes/groups/003001/codes/active`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -208,7 +144,7 @@ const ServiceRequestList = () => {
       }
       
       // 지부별 그룹 코드 조회 (003002)
-      const branchGroupResponse = await fetch('http://localhost:8080/api/codes/groups/003002/codes/active', {
+      const branchGroupResponse = await fetch(`${baseUrl}/api/codes/groups/003002/codes/active`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -223,13 +159,101 @@ const ServiceRequestList = () => {
     }
   };
   
-  // 모든 AS 요청 목록 조회 (필터링 없이)
-  const fetchAllServiceRequests = async () => {
+  // 통계 데이터 조회 (전체 데이터를 기반으로 계산)
+  const fetchStatistics = async () => {
+    if (isUserRole) return;
+    
+    try {
+      // 전체 통계를 위해 size=1, page=0으로 조회해서 totalElements만 확인
+      const totalResponse = await fetch(`${baseUrl}/api/service-requests/paged?page=0&size=1`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      
+      // 완료되지 않은 항목들 (002010_0001, 002010_0002)
+      const pendingResponse = await fetch(`${baseUrl}/api/service-requests/paged?page=0&size=1&serviceStatusCode=002010_0001`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      
+      const pending2Response = await fetch(`${baseUrl}/api/service-requests/paged?page=0&size=1&serviceStatusCode=002010_0002`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      
+      // 완료된 항목들 (002010_0003)
+      const completedResponse = await fetch(`${baseUrl}/api/service-requests/paged?page=0&size=1&serviceStatusCode=002010_0003`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      
+      if (totalResponse.ok && pendingResponse.ok && pending2Response.ok && completedResponse.ok) {
+        const totalData = await totalResponse.json();
+        const pendingData = await pendingResponse.json();
+        const pending2Data = await pending2Response.json();
+        const completedData = await completedResponse.json();
+        
+        setStatistics({
+          total: totalData.totalElements || 0,
+          pending: (pendingData.totalElements || 0) + (pending2Data.totalElements || 0),
+          completed: completedData.totalElements || 0
+        });
+      }
+    } catch (error) {
+      console.error('통계 데이터 조회 실패:', error);
+    }
+  };
+  
+  // AS 요청 목록 조회 (실제 페이지네이션과 필터링 적용)
+  const fetchServiceRequests = async () => {
     setLoading(true);
     try {
-      // 페이지네이션 없이 모든 데이터 요청 (또는 백엔드에서 허용하는 최대 크기로 요청)
-      const url = `http://localhost:8080/api/service-requests/paged?page=0&size=1000&sort=serviceRequestId,desc`;
+      // URL 파라미터 구성
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: '10', // 실제 필요한 10개만 요청
+        sort: 'serviceRequestId,desc'
+      });
       
+      // 검색어가 있으면 통합 검색(OR 조건) 사용
+      if (searchKeyword.trim()) {
+        // 백엔드에서 매장명, 시설물 유형, 브랜드명을 OR 조건으로 검색
+        params.append('search', searchKeyword.trim());
+      }
+      
+      // AS 상태 필터 추가
+      if (selectedServiceStatusCode) {
+        params.append('serviceStatusCode', selectedServiceStatusCode);
+      }
+      
+      // 담당 부서 필터 추가
+      if (selectedDepartmentCode) {
+        params.append('departmentTypeCode', selectedDepartmentCode);
+      }
+      
+      // 지부별 그룹 필터 추가
+      if (selectedBranchGroupCode) {
+        params.append('branchGroupId', selectedBranchGroupCode);
+      }
+      
+      // 날짜 범위 필터 추가
+      if (isDateFilterActive && startDate && endDate) {
+        // LocalDateTime 형식으로 변환
+        params.append('requestDateStart', format(startDate, 'yyyy-MM-dd\'T\'00:00:00'));
+        params.append('requestDateEnd', format(endDate, 'yyyy-MM-dd\'T\'23:59:59'));
+      }
+      
+      // USER 권한인 경우 회사 ID 필터 추가 (백엔드에서 지원하는 경우)
+      if (isUserRole && authUser?.companyId) {
+        // 백엔드 API에서 companyId 파라미터를 지원한다면 추가
+        // params.append('originalLocationCompanyId', authUser.companyId.toString());
+      }
+      
+      const url = `${baseUrl}/api/service-requests/paged?${params.toString()}`;
       
       const response = await fetch(url, {
         headers: {
@@ -243,7 +267,9 @@ const ServiceRequestList = () => {
       
       const data = await response.json();
       
-      setAllServiceRequests(data.content || []);
+      setServiceRequests(data.content || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalItems(data.totalElements || 0);
     } catch (error) {
       console.error('AS 요청 목록 조회 실패:', error);
       showSnackbar('AS 요청 목록을 불러오는데 실패했습니다.', 'error');
@@ -257,9 +283,10 @@ const ServiceRequestList = () => {
     setSearchKeyword(e.target.value);
   };
   
-  // 검색 실행
+  // 검색 실행 (Enter 키 또는 버튼 클릭 시)
   const handleSearch = () => {
     setPage(0); // 페이지 초기화
+    // fetchServiceRequests는 useEffect에서 자동으로 호출됨
   };
   
   // 상태 필터 변경 처리
@@ -325,7 +352,7 @@ const ServiceRequestList = () => {
   // AS 요청 상세 조회
   const fetchRequestDetail = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/service-requests/${id}`, {
+      const response = await fetch(`${baseUrl}/api/service-requests/${id}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
@@ -353,7 +380,7 @@ const ServiceRequestList = () => {
   // AS 요청 승인 제출
   const submitApproval = async (formattedDateTime) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/receive`, {
+      const response = await fetch(`${baseUrl}/api/service-requests/${currentRequestId}/receive`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -370,7 +397,8 @@ const ServiceRequestList = () => {
       
       showSnackbar('AS 요청이 성공적으로 승인되었습니다.', 'success');
       setApproveDialogOpen(false);
-      fetchAllServiceRequests(); // 목록 새로고침
+      fetchServiceRequests(); // 현재 페이지 데이터만 새로고침
+      fetchStatistics(); // 통계 데이터 새로고침
     } catch (error) {
       console.error('AS 요청 승인 실패:', error);
       showSnackbar('AS 요청 승인 처리에 실패했습니다.', 'error');
@@ -408,7 +436,7 @@ const ServiceRequestList = () => {
         });
         
         // 이미지를 포함한 API 호출
-        response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/complete-with-images`, {
+        response = await fetch(`${baseUrl}/api/service-requests/${currentRequestId}/complete-with-images`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`
@@ -418,7 +446,7 @@ const ServiceRequestList = () => {
         });
       } else {
         // 이미지가 없는 경우 기존 API 호출
-        response = await fetch(`http://localhost:8080/api/service-requests/${currentRequestId}/complete`, {
+        response = await fetch(`${baseUrl}/api/service-requests/${currentRequestId}/complete`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
@@ -437,7 +465,8 @@ const ServiceRequestList = () => {
       
       showSnackbar('AS 요청이 성공적으로 완료 처리되었습니다.', 'success');
       setCompleteDialogOpen(false);
-      fetchAllServiceRequests(); // 목록 새로고침
+      fetchServiceRequests(); // 현재 페이지 데이터만 새로고침
+      fetchStatistics(); // 통계 데이터 새로고침
     } catch (error) {
       console.error('AS 요청 완료 처리 실패:', error);
       showSnackbar('AS 요청 완료 처리에 실패했습니다.', 'error');
@@ -538,7 +567,7 @@ const ServiceRequestList = () => {
                   lineHeight: 1 
                 }}
               >
-                {allServiceRequests.length} 건
+                {statistics.total} 건
               </Typography>
             </Box>
             <Box sx={{ 
@@ -569,7 +598,7 @@ const ServiceRequestList = () => {
                   lineHeight: 1 
                 }}
               >
-                {allServiceRequests.filter(req => req.serviceStatusCode !== '002010_0003').length} 건
+                {statistics.pending} 건
               </Typography>
             </Box>
             <Box sx={{ 
@@ -600,7 +629,7 @@ const ServiceRequestList = () => {
                   lineHeight: 1 
                 }}
               >
-                {allServiceRequests.filter(req => req.serviceStatusCode === '002010_0003').length} 건
+                {statistics.completed} 건
               </Typography>
             </Box>
           </Box>
@@ -821,14 +850,14 @@ const ServiceRequestList = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedServiceRequests.length === 0 ? (
+                {serviceRequests.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={isUserRole ? 9 : 10} align="center" sx={{ py: 3 }}>
                       AS 접수 내역이 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedServiceRequests.map((request, index) => (
+                  serviceRequests.map((request, index) => (
                     <TableRow 
                       key={request.serviceRequestId} 
                       hover
@@ -899,7 +928,7 @@ const ServiceRequestList = () => {
           </TableContainer>
           
           {/* 페이지네이션 */}
-          {filteredServiceRequests.length > 0 && (
+          {totalItems > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
               <Pagination 
                 count={totalPages} 
