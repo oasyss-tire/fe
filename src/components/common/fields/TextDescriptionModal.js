@@ -38,6 +38,7 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
   const MONTH_FORMAT_CODE = '001004_0006';
   const DAY_FORMAT_CODE = '001004_0007';
   const ADDRESS_FORMAT_CODE = '001004_0008';
+  const NAME_FORMAT_CODE = '001004_0009';
 
   // field 정보가 변경될 때마다 상태 초기화
   useEffect(() => {
@@ -128,6 +129,8 @@ const TextDescriptionModal = ({ open, onClose, onSave, field }) => {
       setDescription('일');
     } else if (formatValue === ADDRESS_FORMAT_CODE) {
       setDescription('주소');
+    } else if (formatValue === NAME_FORMAT_CODE) {
+      setDescription('이름');
     } else if (formatValue === DEFAULT_TEXT_FORMAT) {
       // 기본 텍스트로 변경 시 이전이 특수 형식이었다면 텍스트 초기화
       const wasSpecialFormat = previousFormat !== DEFAULT_TEXT_FORMAT;

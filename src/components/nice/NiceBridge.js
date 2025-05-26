@@ -17,15 +17,17 @@ const NiceBridge = () => {
     const tokenVersionId = searchParams.get('token_version_id');
     const integrityValue = searchParams.get('integrity_value');
 
-
-
     if (encData && tokenVersionId && integrityValue) {
-      // localStorage에는 완료 플래그만 저장 (개인정보 없음)
+      // localStorage에 완료 플래그와 암호화된 데이터를 임시 저장 (복호화 전 상태)
       const authResult = {
         type: 'NICE_AUTH_COMPLETE',
         timestamp: Date.now(),
-        // URL 파라미터는 부모창으로 직접 전달
-        callbackUrl: `/nice-callback?enc_data=${encodeURIComponent(encData)}&token_version_id=${encodeURIComponent(tokenVersionId)}&integrity_value=${encodeURIComponent(integrityValue)}`
+        // 암호화된 데이터 저장 (개인정보 아님, 여전히 암호화됨)
+        encryptedData: {
+          enc_data: encData,
+          token_version_id: tokenVersionId,
+          integrity_value: integrityValue
+        }
       };
 
       localStorage.setItem('nice_auth_result', JSON.stringify(authResult));
@@ -36,7 +38,7 @@ const NiceBridge = () => {
           window.close();
         } else {
           // opener가 없으면 직접 콜백으로 이동
-          window.location.href = `/nice-callback${location.search}`;
+          window.location.href = `/nice-callback?enc_data=${encodeURIComponent(encData)}&token_version_id=${encodeURIComponent(tokenVersionId)}&integrity_value=${encodeURIComponent(integrityValue)}`
         }
       }, 2000);
     } else {

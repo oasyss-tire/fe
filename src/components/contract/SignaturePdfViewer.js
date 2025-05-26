@@ -126,6 +126,9 @@ const SignaturePdfViewer = () => {
   const [niceLoading, setNiceLoading] = useState(false);
   const formRef = useRef(null);
   
+  // NICE 인증 데이터 저장 상태 추가
+  const [niceAuthData, setNiceAuthData] = useState(null);
+  
   // 확인 텍스트 필드를 위한 상태 추가
   const [confirmTextModalOpen, setConfirmTextModalOpen] = useState(false);
   
@@ -968,7 +971,7 @@ const SignaturePdfViewer = () => {
     // 이전 인증 결과 정리
     localStorage.removeItem('nice_auth_result');
     
-    const pollingInterval = setInterval(() => {
+    const pollingInterval = setInterval(async () => {
       const authResult = localStorage.getItem('nice_auth_result');
       if (authResult) {
         try {
@@ -982,8 +985,73 @@ const SignaturePdfViewer = () => {
           clearInterval(pollingInterval);
           
           // 인증 완료 처리
-          if (result.type === 'NICE_AUTH_COMPLETE') {
-            console.log('✅ NICE 인증 성공! 서명 페이지로 이동');
+          if (result.type === 'NICE_AUTH_COMPLETE' && result.encryptedData) {
+            console.log('✅ NICE 인증 성공! 복호화 데이터 요청 중...');
+            
+            // 백엔드 API 호출하여 복호화된 데이터 가져오기
+            try {
+              const formData = new URLSearchParams();
+              formData.append('token_version_id', result.encryptedData.token_version_id);
+              formData.append('enc_data', result.encryptedData.enc_data);
+              formData.append('integrity_value', result.encryptedData.integrity_value);
+              
+              // request_no는 sessionStorage에서 가져오기
+              const requestNo = sessionStorage.getItem('nice_request_no') || '';
+              formData.append('request_no', requestNo);
+              
+              const response = await fetch(`${BACKEND_URL}/api/nice/certification/callback/contract/${contractId}/participant/${participantId}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+              });
+              
+              if (response.ok) {
+                const decryptedData = await response.json();
+                
+                if (decryptedData.success && decryptedData.authSuccess) {
+                  console.log('🎊 NICE 인증 로그 저장 완료:', {
+                    contractId: decryptedData.contractId,
+                    participantId: decryptedData.participantId,
+                    logId: decryptedData.logId,
+                    authType: decryptedData.authType,
+                    encTime: decryptedData.encTime
+                  });
+                  
+                  // 개인정보는 personalInfo 객체에서 추출
+                  const personalInfo = decryptedData.personalInfo || {};
+                  
+                  console.log('🎊 NICE 인증 복호화된 실제 데이터:', {
+                    이름: personalInfo.name,
+                    생년월일: personalInfo.birthDate,
+                    성별: personalInfo.gender === "1" ? "남성" : "여성",
+                    휴대폰번호: personalInfo.mobileNo,
+                    통신사: personalInfo.mobileCo,
+                    내외국인: decryptedData.nationalInfo === "0" ? "내국인" : "외국인",
+                    DI: personalInfo.di,
+                    CI: decryptedData.ci
+                  });
+                  
+                  // 인증 데이터 저장 (이름, 생년월일만 필요)
+                  setNiceAuthData({
+                    name: personalInfo.name,
+                    birthDate: personalInfo.birthDate
+                  });
+                  
+                  // sessionStorage 정리
+                  sessionStorage.removeItem('nice_request_no');
+                } else {
+                  console.error('❌ NICE 데이터 복호화 실패:', decryptedData.message);
+                }
+              } else {
+                console.error('❌ NICE 복호화 API 호출 실패');
+              }
+            } catch (error) {
+              console.error('💥 NICE 데이터 복호화 오류:', error);
+            }
+            
+            // 인증 상태 업데이트
             setIsAuthenticated(true);
             setShowAuthDialog(false);
             setAuthError('');
@@ -1814,21 +1882,24 @@ const SignaturePdfViewer = () => {
                           flexShrink: 0 // 아이콘은 크기 고정
                         }} />
                         <Box sx={{ minWidth: 0, flex: 1 }}> {/* 텍스트 컨테이너 */}
-                          <Typography variant="body2" sx={{ 
+                          <Typography variant="body2" component="div" sx={{ 
                             fontWeight: 500,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             color: '#333',
-                            fontSize: '0.85rem'
+                            fontSize: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center'
                           }}>
-                            {doc.documentCodeName}
+                            <Box component="span" sx={{ mr: 1 }}>
+                              {doc.documentCodeName}
+                            </Box>
                             {(doc.required === 1 || doc.required === '1' || doc.required === true) && (
                               <Chip
                                 label="필수"
                                 size="small"
                                 sx={{
-                                  ml: 1,
                                   backgroundColor: '#FFFFFF',
                                   color: '#FF9800',
                                   fontSize: '0.65rem',
@@ -2262,6 +2333,7 @@ const SignaturePdfViewer = () => {
         }}
         initialValue={selectedField?.value || ''}
         field={selectedField}
+        niceAuthData={niceAuthData}
       />
 
       {/* 확인 텍스트 모달 추가 */}

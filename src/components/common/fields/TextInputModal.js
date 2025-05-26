@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography, Box, Alert, CircularProgress } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
-const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => {
+const TextInputModal = ({ open, onClose, onSave, initialValue = '', field, niceAuthData }) => {
   const [text, setText] = useState(initialValue);
   const [error, setError] = useState('');
   const [isValid, setIsValid] = useState(true);
@@ -90,6 +90,21 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
         setIsValid(true);
         return true;
       }
+      
+      // NICE 인증 데이터와 비교 (인증이 완료되고 13자리가 입력된 경우에만)
+      if (niceAuthData && numbersOnly.length === 13) {
+        // 주민등록번호 앞 6자리 (생년월일)와 인증 데이터의 생년월일 비교
+        const inputBirthDate = numbersOnly.substring(0, 6);
+        
+        // NICE 인증 데이터에서 앞 2자리 제거 (19960726 -> 960726)
+        const authBirthDate = niceAuthData.birthDate.substring(2);
+        
+        if (inputBirthDate !== authBirthDate) {
+          setError('본인인증 시 확인된 생년월일과 일치하지 않습니다.');
+          setIsValid(false);
+          return false;
+        }
+      }
     }
     
     // 핸드폰 번호 유효성 검사
@@ -99,6 +114,25 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
         setError('핸드폰 번호는 11자리(하이픈 포함 13자리)여야 합니다.');
         setIsValid(false);
         return false;
+      }
+    }
+    
+    // 이름 유효성 검사 (간단하게)
+    if (field?.formatCodeId === '001004_0009') {
+      // 최소 2글자 이상만 체크
+      if (value.trim().length > 0 && value.trim().length < 2) {
+        setError('이름은 최소 2글자 이상 입력해주세요.');
+        setIsValid(false);
+        return false;
+      }
+      
+      // NICE 인증 데이터와 비교 (인증이 완료된 경우에만)
+      if (niceAuthData && value.trim().length >= 2) {
+        if (value.trim() !== niceAuthData.name) {
+          setError('본인인증 시 확인된 이름과 일치하지 않습니다.');
+          setIsValid(false);
+          return false;
+        }
       }
     }
     
@@ -191,6 +225,11 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
       return value; // 주소는 특별한 포맷팅 없이 입력 그대로 사용
     }
     
+    // 이름 형식 - 그대로 반환 (포맷팅 없음)
+    if (formatCodeId === '001004_0009') {
+      return value; // 이름은 특별한 포맷팅 없이 입력 그대로 사용
+    }
+    
     // 다른 형식 코드에 대한 처리를 여기에 추가할 수 있음
     
     return value;
@@ -237,6 +276,7 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
     if (field?.formatCodeId === '001004_0006') return 2;  // 월(MM)
     if (field?.formatCodeId === '001004_0007') return 2;  // 일(DD)
     if (field?.formatCodeId === '001004_0008') return 100; // 주소는 넉넉하게 100자 제한
+    if (field?.formatCodeId === '001004_0009') return 20; // 이름은 20자 제한
     return undefined; // 제한 없음
   };
 
@@ -251,7 +291,9 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
       return '핸드폰 번호 형식 (예: 010-1234-5678)';
     }
     if (field?.formatCodeId === '001004_0002') {
-      return '주민등록번호 형식 (예: 123456-1234567)';
+      return niceAuthData 
+        ? '주민등록번호 형식 (예: 123456-1234567) - 본인인증 시 확인된 정보와 일치해야 합니다'
+        : '주민등록번호 형식 (예: 123456-1234567)';
     }
     if (field?.formatCodeId === '001004_0003') {
       return '금액 형식 (예: 1,000,000)';
@@ -270,6 +312,11 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field }) => 
     }
     if (field?.formatCodeId === '001004_0008') {
       return '주소 검색 버튼을 클릭하여 주소를 검색하거나 직접 입력해 주세요';
+    }
+    if (field?.formatCodeId === '001004_0009') {
+      return niceAuthData 
+        ? '이름 입력 (최소 2글자 이상) - 본인인증 시 확인된 이름과 일치해야 합니다'
+        : '이름 입력 (최소 2글자 이상)';
     }
     return null;
   };
