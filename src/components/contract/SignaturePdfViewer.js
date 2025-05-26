@@ -939,14 +939,11 @@ const SignaturePdfViewer = () => {
       // 폼 정리
       document.body.removeChild(form);
 
+      console.log('✅ NICE 폼 제출 완료');
       
-      // 임시로 인증 완료 처리 (실제로는 NICE 콜백에서 처리)
-      // TODO: 나중에 NICE 콜백 처리 로직으로 변경
-      setTimeout(() => {
-        setIsAuthenticated(true);
-        setShowAuthDialog(false);
-        setNiceLoading(false);
-      }, 3000);
+      // 3초 자동 완료 제거하고 localStorage 폴링 시작
+      setNiceLoading(false);
+      startPollingForAuthResult();
       
     } catch (error) {
       console.error('💥 NICE 본인인증 오류:', error);
@@ -958,6 +955,50 @@ const SignaturePdfViewer = () => {
       setAuthError(error.message || '본인인증 준비 중 오류가 발생했습니다.');
       setNiceLoading(false);
     }
+  };
+
+  // localStorage 폴링 시작 함수 추가
+  const startPollingForAuthResult = () => {
+    console.log('🔄 NICE 인증 결과 폴링 시작');
+    
+    // 이전 인증 결과 정리
+    localStorage.removeItem('nice_auth_result');
+    
+    const pollingInterval = setInterval(() => {
+      const authResult = localStorage.getItem('nice_auth_result');
+      if (authResult) {
+        try {
+          const result = JSON.parse(authResult);
+          console.log('🎉 NICE 인증 완료 감지:', result);
+          
+          // localStorage 정리
+          localStorage.removeItem('nice_auth_result');
+          
+          // 폴링 중단
+          clearInterval(pollingInterval);
+          
+          // 인증 완료 처리
+          if (result.type === 'NICE_AUTH_COMPLETE') {
+            console.log('✅ NICE 인증 성공! 서명 페이지로 이동');
+            setIsAuthenticated(true);
+            setShowAuthDialog(false);
+            setAuthError('');
+          }
+          
+        } catch (error) {
+          console.error('NICE 인증 결과 파싱 오류:', error);
+          localStorage.removeItem('nice_auth_result');
+          clearInterval(pollingInterval);
+          setAuthError('인증 결과 처리 중 오류가 발생했습니다.');
+        }
+      }
+    }, 1000); // 1초마다 체크
+    
+    // 30초 후 타임아웃 (선택사항)
+    setTimeout(() => {
+      clearInterval(pollingInterval);
+      console.log('⏰ NICE 인증 폴링 타임아웃');
+    }, 30000);
   };
 
   // 클릭하여 템플릿 변경 시 필드도 함께 업데이트하는 함수 추가
