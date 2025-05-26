@@ -21,12 +21,11 @@ import ConfirmTextInputModal from '../common/fields/ConfirmTextInputModal';
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-// AuthenticationDialog를 메인 컴포넌트 밖으로 분리하고 React.memo로 감싸기
-const AuthenticationDialog = React.memo(({ 
+// AuthenticationDialog를 NiceAuthenticationDialog로 변경
+const NiceAuthenticationDialog = React.memo(({ 
   open, 
-  phoneInput, 
   authError, 
-  onPhoneChange, 
+  loading,
   onVerify 
 }) => (
   <Dialog 
@@ -53,38 +52,15 @@ const AuthenticationDialog = React.memo(({
     </DialogTitle>
     <DialogContent sx={{ p: 3 }}>
       <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" sx={{ mb: 2, mt: 2, color: '#666' }}>
+        <Typography variant="body2" sx={{ mb: 3, mt: 1, color: '#666', textAlign: 'center' }}>
           계약서 서명을 위해 본인 인증이 필요합니다.<br />
-          등록된 휴대폰 번호의 뒷자리 4자리를 입력해주세요.
+          NICE 본인인증 서비스를 통해 인증해주세요.
         </Typography>
-        <TextField
-          fullWidth
-          label="휴대폰 번호 뒷자리 4자리"
-          value={phoneInput}
-          onChange={(e) => {
-            const value = e.target.value.replace(/[^0-9]/g, '');
-            if (value.length <= 4) {
-              onPhoneChange(value);
-            }
-          }}
-          error={!!authError}
-          helperText={authError}
-          size="small"
-          autoFocus
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: !!authError ? '#FF4D4F' : '#E0E0E0',
-              },
-              '&:hover fieldset': {
-                borderColor: !!authError ? '#FF4D4F' : '#BDBDBD',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: !!authError ? '#FF4D4F' : '#3182F6',
-              },
-            },
-          }}
-        />
+        {authError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {authError}
+          </Alert>
+        )}
       </Box>
     </DialogContent>
     <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'center' }}>
@@ -92,6 +68,7 @@ const AuthenticationDialog = React.memo(({
         onClick={onVerify}
         variant="contained"
         fullWidth
+        disabled={loading}
         sx={{ 
           bgcolor: '#3182F6', 
           '&:hover': {
@@ -105,7 +82,14 @@ const AuthenticationDialog = React.memo(({
           py: 1
         }}
       >
-        인증하기
+        {loading ? (
+          <>
+            <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} />
+            인증 준비 중...
+          </>
+        ) : (
+          'NICE 본인인증 시작'
+        )}
       </Button>
     </DialogActions>
   </Dialog>
@@ -117,6 +101,7 @@ const SignaturePdfViewer = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const token = queryParams.get('token');
+  
   
   const navigate = useNavigate();
   const [numPages, setNumPages] = useState(null);
@@ -130,9 +115,12 @@ const SignaturePdfViewer = () => {
   const [participant, setParticipant] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(true);
-  const [phoneInput, setPhoneInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // NICE 인증 관련 상태 추가
+  const [niceLoading, setNiceLoading] = useState(false);
+  const formRef = useRef(null);
   
   // 확인 텍스트 필드를 위한 상태 추가
   const [confirmTextModalOpen, setConfirmTextModalOpen] = useState(false);
@@ -173,20 +161,22 @@ const SignaturePdfViewer = () => {
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) return;
+
       
       try {
         setLoading(true);
         const response = await fetch(`http://localhost:8080/api/signature/verify-token?token=${token}`);
+
         
         if (response.ok) {
           const data = await response.json();
           
           if (!data.isValid) {
+            console.error('❌ 토큰이 유효하지 않음');
             alert('유효하지 않은 토큰입니다. 다시 시도해주세요.');
             return;
           }
           
-          // 토큰에서 계약ID와 참여자ID 설정
           setContractId(data.contractId);
           setParticipantId(data.participantId);
           setTokenVerified(true);
@@ -199,10 +189,12 @@ const SignaturePdfViewer = () => {
             return;
           }
         } else {
+          const errorData = await response.json().catch(() => ({ message: '토큰 검증 실패' }));
+          console.error('❌ 토큰 검증 실패:', errorData);
           alert('토큰 검증에 실패했습니다. 유효하지 않은 링크입니다.');
         }
       } catch (error) {
-        console.error('토큰 검증 오류:', error);
+        console.error('💥 토큰 검증 오류:', error);
         alert('토큰 검증 중 오류가 발생했습니다.');
       } finally {
         setLoading(false);
@@ -854,62 +846,119 @@ const SignaturePdfViewer = () => {
     }
   };
 
-  // 전화번호 입력 핸들러를 useCallback으로 감싸기
-  const handlePhoneInputChange = React.useCallback((value) => {
-    setPhoneInput(value);
-  }, []);
-
-  // 인증 핸들러를 useCallback으로 감싸기
-  const handlePhoneVerification = React.useCallback(async () => {
+  // NICE 본인인증 시작 함수 (NiceAuth.js의 handleVerification과 동일한 로직)
+  const handleNiceVerification = async () => {
+    
     try {
-      if (phoneInput.length !== 4) {
-        setAuthError('휴대폰 번호 뒷자리 4자리를 입력해주세요.');
-        return;
-      }
-
-      // 토큰이 있는 경우와 없는 경우를 구분하여 처리
-      let response;
+      setNiceLoading(true);
+      setAuthError('');
       
-      if (token) {
-        // 토큰이 있는 경우 새로운 API 사용
-        response = await fetch(`http://localhost:8080/api/signature/verify-phone?contractId=${contractId}&participantId=${participantId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phoneLastDigits: phoneInput
-          })
-        });
-      } else {
-        // 기존 방식 유지
-        response = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/verify`, 
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              phoneLastDigits: phoneInput
-            })
-          }
-        );
+      // 토큰 우선순위: URL 쿼리 파라미터 > sessionStorage
+      const authToken = token || sessionStorage.getItem('token');
+      
+      
+      // contractId나 participantId가 없는 경우 처리
+      if (!contractId || !participantId) {
+        console.error('❌ contractId 또는 participantId가 없습니다.');
+        throw new Error('계약 정보를 확인할 수 없습니다. 페이지를 새로고침해주세요.');
+      }
+      
+      // 요청 바디 구성
+      const requestBody = {
+        returnUrl: 'http://localhost:3001/nice-bridge',
+        methodType: 'GET'
+      };
+      
+      
+      // 백엔드 API 호출 - 토큰 없이 시도
+      const response = await fetch('http://localhost:8080/api/nice/certification/window', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ API 응답 오류:', errorData);
+        throw new Error(errorData.message || '본인인증 준비 실패');
       }
 
-      if (response.ok) {
+      const data = await response.json();
+      
+      if (!data.success) {
+        console.error('❌ API 성공 플래그 false:', data.message);
+        throw new Error(data.message || '본인인증 준비 실패');
+      }
+
+      // 응답에서 필요한 데이터 추출
+      const requestNo = data.requestNo || '';
+      const tokenVersionId = data.tokenVersionId || '';
+      const encData = data.encData || '';
+      const integrityValue = data.integrityValue || '';
+
+
+      // requestNo를 sessionStorage에 저장 (콜백에서 사용)
+      sessionStorage.setItem('nice_request_no', requestNo);
+
+      // 동적으로 폼 생성 및 제출
+      const form = document.createElement('form');
+      form.name = 'niceForm';
+      form.action = 'https://nice.checkplus.co.kr/CheckPlusSafeModel/service.cb';
+      form.method = 'post';
+      form.target = 'niceWindow';
+      form.style.display = 'none';
+
+      // 폼 필드 추가
+      const fields = {
+        'm': 'service',
+        'token_version_id': tokenVersionId,
+        'enc_data': encData,
+        'integrity_value': integrityValue
+      };
+
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+
+      
+      // 새 창 열기
+      window.open('', 'niceWindow', 'width=500, height=800, top=100, left=100, fullscreen=no, menubar=no, status=no, toolbar=no, titlebar=yes, location=no, scrollbar=no');
+      
+      // 폼 제출
+      form.submit();
+      
+      // 폼 정리
+      document.body.removeChild(form);
+
+      
+      // 임시로 인증 완료 처리 (실제로는 NICE 콜백에서 처리)
+      // TODO: 나중에 NICE 콜백 처리 로직으로 변경
+      setTimeout(() => {
         setIsAuthenticated(true);
         setShowAuthDialog(false);
-        setAuthError('');
-      } else {
-        const errorData = await response.json();
-        setAuthError(errorData.message || '인증에 실패했습니다.');
-      }
+        setNiceLoading(false);
+      }, 3000);
+      
     } catch (error) {
-      console.error('인증 처리 중 오류:', error);
-      setAuthError('인증 처리 중 오류가 발생했습니다.');
+      console.error('💥 NICE 본인인증 오류:', error);
+      console.error('오류 상세:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      setAuthError(error.message || '본인인증 준비 중 오류가 발생했습니다.');
+      setNiceLoading(false);
     }
-  }, [phoneInput, contractId, participantId, token]);
+  };
 
   // 클릭하여 템플릿 변경 시 필드도 함께 업데이트하는 함수 추가
   const handleTemplateChange = async (index) => {
@@ -1195,16 +1244,15 @@ const SignaturePdfViewer = () => {
     }
   };
 
-  // 인증되지 않은 경우의 렌더링
+  // 인증되지 않은 경우의 렌더링 수정
   if (!isAuthenticated) {
     return (
       <Box sx={{ p: 3 }}>
-        <AuthenticationDialog 
+        <NiceAuthenticationDialog 
           open={showAuthDialog}
-          phoneInput={phoneInput}
           authError={authError}
-          onPhoneChange={handlePhoneInputChange}
-          onVerify={handlePhoneVerification}
+          loading={niceLoading}
+          onVerify={handleNiceVerification}
         />
       </Box>
     );
