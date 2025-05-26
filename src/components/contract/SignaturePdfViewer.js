@@ -18,6 +18,10 @@ import CheckIcon from '@mui/icons-material/Check';
 // 새로운 ConfirmTextInputModal 컴포넌트 추가 (나중에 구현)
 import ConfirmTextInputModal from '../common/fields/ConfirmTextInputModal';
 
+// URL 상수 정의
+const FRONTEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'http://localhost:8080';
+
 // PDF.js 워커 설정
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
@@ -165,7 +169,7 @@ const SignaturePdfViewer = () => {
       
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:8080/api/signature/verify-token?token=${token}`);
+        const response = await fetch(`${BACKEND_URL}/api/signature/verify-token?token=${token}`);
 
         
         if (response.ok) {
@@ -216,13 +220,13 @@ const SignaturePdfViewer = () => {
         setLoading(true);
         
         // 1. 계약 전체 정보 조회
-        const contractResponse = await fetch(`http://localhost:8080/api/contracts/${contractId}`);
+        const contractResponse = await fetch(`${BACKEND_URL}/api/contracts/${contractId}`);
         if (!contractResponse.ok) throw new Error('계약 정보 조회 실패');
         const contractData = await contractResponse.json();
         
         // 2. 참여자 정보 조회
         const participantResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}`
+          `${BACKEND_URL}/api/contracts/${contractId}/participants/${participantId}`
         );
         if (!participantResponse.ok) throw new Error('참여자 정보 조회 실패');
         const participantData = await participantResponse.json();
@@ -298,7 +302,7 @@ const SignaturePdfViewer = () => {
   const fetchFields = async (pdfId) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${pdfId}`);
+      const response = await fetch(`${BACKEND_URL}/api/contract-pdf/fields/${pdfId}`);
       if (!response.ok) throw new Error('Failed to fetch fields');
       const data = await response.json();
       setFields(data);
@@ -388,7 +392,7 @@ const SignaturePdfViewer = () => {
       const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        `${BACKEND_URL}/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -418,7 +422,7 @@ const SignaturePdfViewer = () => {
       const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        `${BACKEND_URL}/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -469,7 +473,7 @@ const SignaturePdfViewer = () => {
       const originalPdfId = getOriginalPdfId(currentTemplate.pdfId);
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
+        `${BACKEND_URL}/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${selectedField.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -514,7 +518,7 @@ const SignaturePdfViewer = () => {
       const newValue = field.value === 'true' ? 'false' : 'true';
       
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${field.fieldName}`,
+        `${BACKEND_URL}/api/contract-pdf/fields/${originalPdfId}/value?fieldName=${field.fieldName}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -658,7 +662,7 @@ const SignaturePdfViewer = () => {
       }
       
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/template-status`
+        `${BACKEND_URL}/api/contracts/${contractId}/participants/${participantId}/template-status`
       );
       
       if (!response.ok) throw new Error('템플릿 상태 조회 실패');
@@ -769,7 +773,7 @@ const SignaturePdfViewer = () => {
         
         // 서명 완료
         const response = await fetch(
-          `http://localhost:8080/api/contract-pdf/download-signed/${template.pdfId}`,
+          `${BACKEND_URL}/api/contract-pdf/download-signed/${template.pdfId}`,
           { 
             method: 'POST',
             headers: {
@@ -795,13 +799,13 @@ const SignaturePdfViewer = () => {
       if (token) {
         // 비회원 서명의 경우 - 장기 토큰 발급 API 사용
         finalizeResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/complete-signing?token=${token}`, 
+          `${BACKEND_URL}/api/contracts/${contractId}/participants/${participantId}/complete-signing?token=${token}`, 
           { method: 'POST' }
         );
       } else {
         // 로그인한 회원의 경우도 complete-signing API 사용하도록 변경
         finalizeResponse = await fetch(
-          `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/complete-signing`, 
+          `${BACKEND_URL}/api/contracts/${contractId}/participants/${participantId}/complete-signing`, 
           { method: 'POST' }
         );
       }
@@ -865,13 +869,13 @@ const SignaturePdfViewer = () => {
       
       // 요청 바디 구성
       const requestBody = {
-        returnUrl: 'http://localhost:3001/nice-bridge',
+        returnUrl: `${FRONTEND_URL}/nice-bridge`,
         methodType: 'GET'
       };
       
       
       // 백엔드 API 호출 - 토큰 없이 시도
-      const response = await fetch('http://localhost:8080/api/nice/certification/window', {
+      const response = await fetch(`${BACKEND_URL}/api/nice/certification/window`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1014,7 +1018,7 @@ const SignaturePdfViewer = () => {
         
         // 각 중간 계약서의 필드 정보를 가져옴
         try {
-          const response = await fetch(`http://localhost:8080/api/contract-pdf/fields/${intermediatePdfId}`);
+          const response = await fetch(`${BACKEND_URL}/api/contract-pdf/fields/${intermediatePdfId}`);
           if (response.ok) {
             const intermediateFields = await response.json();
             // 필드가 전부 비어있는지 확인
@@ -1069,7 +1073,7 @@ const SignaturePdfViewer = () => {
   // 첨부파일 정보 조회 함수
   const fetchParticipantDocuments = async (participantId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents`);
+      const response = await fetch(`${BACKEND_URL}/api/contracts/${contractId}/participants/${participantId}/documents`);
       if (!response.ok) throw new Error('첨부파일 정보 조회 실패');
       const data = await response.json();
       setParticipantDocuments(data);
@@ -1124,7 +1128,7 @@ const SignaturePdfViewer = () => {
       
       // 백엔드 API 경로에 맞게 수정
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents/${doc.documentCodeId}`,
+        `${BACKEND_URL}/api/contracts/${contractId}/participants/${participantId}/documents/${doc.documentCodeId}`,
         {
           method: 'POST',
           headers: {
@@ -1160,7 +1164,7 @@ const SignaturePdfViewer = () => {
   const handleDocumentDownload = async (documentId, filename) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/participants/${participantId}/documents/${documentId}/download`
+        `${BACKEND_URL}/api/contracts/${contractId}/participants/${participantId}/documents/${documentId}/download`
       );
       
       if (!response.ok) throw new Error('파일 다운로드 실패');
@@ -1258,7 +1262,7 @@ const SignaturePdfViewer = () => {
       setUploadError('');
       
       const response = await fetch(
-        `http://localhost:8080/api/contracts/documents/${documentId}/file`,
+        `${BACKEND_URL}/api/contracts/documents/${documentId}/file`,
         {
           method: 'DELETE'
         }
@@ -1345,7 +1349,7 @@ const SignaturePdfViewer = () => {
         </Typography>
         <Document
           file={currentTemplate?.pdfId ? 
-            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` : 
+            `${BACKEND_URL}/api/contract-pdf/view/${currentTemplate.pdfId}` : 
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}
@@ -1390,7 +1394,7 @@ const SignaturePdfViewer = () => {
       >
         <Document
           file={currentTemplate?.pdfId ? 
-            `http://localhost:8080/api/contract-pdf/view/${currentTemplate.pdfId}` : 
+            `${BACKEND_URL}/api/contract-pdf/view/${currentTemplate.pdfId}` : 
             null
           }
           onLoadSuccess={handleDocumentLoadSuccess}
