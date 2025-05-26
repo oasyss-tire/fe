@@ -52,95 +52,101 @@ const FacilitySelectDialog = ({
   const [error, setError] = useState(null);
   const [selectedFacilities, setSelectedFacilities] = useState([]);
   
-  // 페이징 상태
+  // 페이징 상태 - 서버 사이드 페이징으로 변경
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10); // 고정값으로 변경
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로딩 상태 추가
 
-  // 시설물 목록 조회
-  useEffect(() => {
-    const fetchFacilities = async () => {
-      if (!companyId) return;
-      
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const response = await fetch(`http://localhost:8080/api/facilities?companyId=${companyId}&isActive=true`, {
-          headers: {
-            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('시설물 목록을 불러오는데 실패했습니다.');
-        }
-        
-        const data = await response.json();
-        
-        // 폐기 상태가 아닌 시설물만 필터링
-        const availableFacilities = (data.content || []).filter(facility => {
-          return facility.statusCode !== "002003_0003" && facility.statusCode !== "002003_0004";
-        });
-          
-        setFacilities(availableFacilities);
-        setFilteredFacilities(availableFacilities);
-        
-        // 페이징 처리
-        updatePageData(availableFacilities, 1);
-      } catch (error) {
-        console.error('시설물 목록 조회 오류:', error);
-        setError(error.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // 시설물 목록 조회 - 서버 사이드 페이징으로 변경
+  const fetchFacilities = async (page = 1, search = '') => {
+    if (!companyId) return;
     
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // 쿼리 파라미터 구성
+      const params = new URLSearchParams({
+        companyId: companyId,
+        isActive: 'true',
+        page: page - 1, // 서버는 0부터 시작
+        size: pageSize
+      });
+      
+      // 검색어가 있으면 추가
+      if (search.trim()) {
+        params.append('search', search.trim());
+      }
+      
+      const response = await fetch(`http://localhost:8080/api/facilities?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('시설물 목록을 불러오는데 실패했습니다.');
+      }
+      
+      const data = await response.json();
+      
+      // 폐기 상태가 아닌 시설물만 필터링
+      const availableFacilities = (data.content || []).filter(facility => {
+        return facility.statusCode !== "002003_0003" && facility.statusCode !== "002003_0004";
+      });
+      
+      // 서버 응답 데이터로 상태 업데이트
+      setDisplayFacilities(availableFacilities);
+      setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
+      setCurrentPage(page);
+      setIsInitialLoad(false); // 초기 로딩 완료
+      
+    } catch (error) {
+      console.error('시설물 목록 조회 오류:', error);
+      setError(error.message);
+      setDisplayFacilities([]);
+      setTotalPages(0);
+      setTotalElements(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 다이얼로그가 열릴 때 초기 데이터 로드
+  useEffect(() => {
     if (open && companyId) {
-      fetchFacilities();
-      setCurrentPage(1);
+      fetchFacilities(1, '');
       setSelectedFacilities([]);
+      setSearchTerm('');
+      setIsInitialLoad(true);
     }
   }, [open, companyId]);
-  
-  // 페이징 데이터 업데이트 함수
-  const updatePageData = (data, page) => {
-    const totalItems = data.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-    setTotalPages(totalPages);
-    
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, totalItems);
-    setDisplayFacilities(data.slice(startIndex, endIndex));
-  };
 
-  // 검색어 변경 시 시설물 필터링
+  // 검색 실행 (디바운스 적용) - 초기 로딩 제외
+  useEffect(() => {
+    // 초기 로딩 중이거나 다이얼로그가 닫혀있으면 실행하지 않음
+    if (isInitialLoad || !open || !companyId) return;
+    
+    // 검색어 변경 시에만 디바운스 검색 실행
+    const timer = setTimeout(() => {
+      fetchFacilities(1, searchTerm);
+    }, 300); // 300ms 디바운스
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]); // 의존성을 searchTerm만으로 제한
+
+  // 검색어 변경 시 시설물 필터링 - 서버 사이드 페이징으로 변경
   const handleSearchChange = (e) => {
-    const term = e.target.value.toLowerCase();
+    const term = e.target.value;
     setSearchTerm(term);
-    
-    if (!term.trim()) {
-      setFilteredFacilities(facilities);
-      updatePageData(facilities, 1);
-      setCurrentPage(1);
-      return;
-    }
-    
-    const filtered = facilities.filter(facility => 
-      (facility.facilityTypeName && facility.facilityTypeName.toLowerCase().includes(term)) ||
-      (facility.managementNumber && facility.managementNumber.toLowerCase().includes(term)) ||
-      (facility.serialNumber && facility.serialNumber.toLowerCase().includes(term))
-    );
-    
-    setFilteredFacilities(filtered);
-    updatePageData(filtered, 1);
-    setCurrentPage(1);
   };
   
-  // 페이지 변경 핸들러
+  // 페이지 변경 핸들러 - 서버 사이드 페이징으로 변경
   const handlePageChange = (event, newPage) => {
-    setCurrentPage(newPage);
-    updatePageData(filteredFacilities, newPage);
+    fetchFacilities(newPage, searchTerm);
   };
 
   // 시설물 선택 핸들러
@@ -180,6 +186,10 @@ const FacilitySelectDialog = ({
     setSearchTerm('');
     setSelectedFacilities([]);
     setCurrentPage(1);
+    setIsInitialLoad(true); // 초기 로딩 상태 초기화
+    setDisplayFacilities([]); // 데이터도 초기화
+    setTotalPages(0);
+    setTotalElements(0);
     onClose();
   };
   
@@ -230,9 +240,7 @@ const FacilitySelectDialog = ({
                       size="small" 
                       onClick={() => {
                         setSearchTerm('');
-                        setFilteredFacilities(facilities);
-                        updatePageData(facilities, 1);
-                        setCurrentPage(1);
+                        fetchFacilities(1, '');
                       }}
                     >
                       <CloseIcon fontSize="small" />
@@ -259,9 +267,9 @@ const FacilitySelectDialog = ({
             <Box sx={{ p: 3, textAlign: 'center', color: 'error.main', flexGrow: 1 }}>
               {error}
             </Box>
-          ) : filteredFacilities.length === 0 ? (
+          ) : totalElements === 0 ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary', flexGrow: 1 }}>
-              검색 결과가 없습니다
+              {searchTerm ? '검색 결과가 없습니다' : '등록된 시설물이 없습니다'}
             </Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
@@ -344,7 +352,7 @@ const FacilitySelectDialog = ({
                 backgroundColor: '#F9F9FA',
               }}>
                 <Typography variant="caption" sx={{ color: '#666' }}>
-                  전체 {filteredFacilities.length}건 중 {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredFacilities.length)}건 표시
+                  전체 {totalElements}건 중 {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalElements)}건 표시
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <IconButton 

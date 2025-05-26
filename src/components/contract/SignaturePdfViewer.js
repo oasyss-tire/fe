@@ -716,24 +716,49 @@ const SignaturePdfViewer = () => {
   };
 
   // 모든 PDF의 모든 필드가 작성되었는지 확인하는 함수 추가
-  const areAllPdfsFieldsCompleted = () => {
+  const areAllPdfsFieldsCompleted = async () => {
     if (!participant?.templatePdfs) return false;
     
-    // 템플릿 완료율이 계산되지 않은 경우 원래 로직 사용
-    if (!completionRatesCalculated) {
-      return participant.templatePdfs.every(template => 
-        areAllFieldsCompleted(template.pdfId)
-      );
+    try {
+      // 각 템플릿별로 개별적으로 필드 상태 조회
+      for (const template of participant.templatePdfs) {
+        // 현재 선택된 템플릿인 경우 현재 fields 상태 사용
+        if (template.pdfId === participant.templatePdfs[currentTemplateIndex]?.pdfId) {
+          const currentFields = fields.filter(field => field.pdfId === template.pdfId);
+          const allCompleted = currentFields.every(field => field.value !== null && field.value !== '');
+          
+          if (!allCompleted) {
+            console.log(`❌ 현재 템플릿(${template.templateName}) 미완료`);
+            return false;
+          }
+        } else {
+          // 다른 템플릿인 경우 API를 통해 필드 상태 조회
+          const response = await fetch(`${BACKEND_URL}/api/contract-pdf/fields/${template.pdfId}`);
+          if (!response.ok) {
+            console.error(`템플릿 ${template.templateName} 필드 조회 실패`);
+            return false;
+          }
+          
+          const templateFields = await response.json();
+          const allCompleted = templateFields.every(field => field.value !== null && field.value !== '');
+          
+          if (!allCompleted) {
+            console.log(`❌ 템플릿(${template.templateName}) 미완료`);
+            return false;
+          }
+        }
+      }
+      
+      console.log('✅ 모든 템플릿 완료 확인됨');
+      return true;
+    } catch (error) {
+      console.error('템플릿 완료 상태 확인 중 오류:', error);
+      return false;
     }
-    
-    // 모든 템플릿의 완료율이 100%인지 확인
-    return participant.templatePdfs.every((_, index) => 
-      templateCompletionRates[index] === 100
-    );
   };
   
   // 서명 완료 확인 다이얼로그 열기
-  const handleConfirmComplete = () => {
+  const handleConfirmComplete = async () => {
     // 필수 첨부파일 업로드 확인
     const requiredUploaded = areRequiredDocumentsUploaded();
     
@@ -743,15 +768,11 @@ const SignaturePdfViewer = () => {
       return;
     }
     
-    // 모든 PDF의 모든 필드가 작성되었는지 확인
-    const allFieldsCompleted = areAllPdfsFieldsCompleted();
+    // 모든 PDF의 모든 필드가 작성되었는지 확인 (비동기로 변경)
+    const allFieldsCompleted = await areAllPdfsFieldsCompleted();
     if (!allFieldsCompleted) {
-      // 작성되지 않은 PDF 목록 생성
-      const incompleteTemplates = participant.templatePdfs
-        .filter(template => !areAllFieldsCompleted(template.pdfId))
-        .map(template => template.templateName);
-      
-      alert(`모든 계약서의 필드를 작성해야 서명을 완료할 수 있습니다.`);
+      // 미완료 템플릿 정보를 더 구체적으로 표시
+      alert('모든 계약서의 필드를 작성해야 서명을 완료할 수 있습니다.\n각 계약서를 확인하여 모든 필드를 작성해주세요.');
       return;
     }
     
