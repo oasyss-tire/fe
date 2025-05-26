@@ -176,7 +176,6 @@ const FacilityTypeList = () => {
       });
       
       const url = `${baseUrl}/api/facilities?${urlParams.toString()}`;
-      console.log('요청 URL:', url); // 디버깅용
       
       const response = await fetch(url, {
         headers: {
@@ -189,7 +188,6 @@ const FacilityTypeList = () => {
       }
 
       const data = await response.json();
-      console.log('응답 데이터:', data); // 디버깅용
       
       setFacilities(data.content || []);
       setTotalPages(data.totalPages || 1);

@@ -17,6 +17,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 // 새로운 ConfirmTextInputModal 컴포넌트 추가 (나중에 구현)
 import ConfirmTextInputModal from '../common/fields/ConfirmTextInputModal';
+import AuthMismatchPage from '../common/AuthMismatchPage';
 
 // URL 상수 정의
 const FRONTEND_URL = 'http://localhost:3001';
@@ -131,6 +132,10 @@ const SignaturePdfViewer = () => {
   
   // 확인 텍스트 필드를 위한 상태 추가
   const [confirmTextModalOpen, setConfirmTextModalOpen] = useState(false);
+  
+  // 인증 불일치 상태 추가
+  const [authMismatch, setAuthMismatch] = useState(false);
+  const [authMismatchInfo, setAuthMismatchInfo] = useState(null);
   
   // 실제 사용할 계약ID와 참여자ID 상태 추가
   const [contractId, setContractId] = useState(urlContractId);
@@ -860,9 +865,6 @@ const SignaturePdfViewer = () => {
       setNiceLoading(true);
       setAuthError('');
       
-      // 토큰 우선순위: URL 쿼리 파라미터 > sessionStorage
-      const authToken = token || sessionStorage.getItem('token');
-      
       
       // contractId나 participantId가 없는 경우 처리
       if (!contractId || !participantId) {
@@ -945,8 +947,6 @@ const SignaturePdfViewer = () => {
       
       // 폼 정리
       document.body.removeChild(form);
-
-      console.log('✅ NICE 폼 제출 완료');
       
       // 3초 자동 완료 제거하고 localStorage 폴링 시작
       setNiceLoading(false);
@@ -966,7 +966,6 @@ const SignaturePdfViewer = () => {
 
   // localStorage 폴링 시작 함수 추가
   const startPollingForAuthResult = () => {
-    console.log('🔄 NICE 인증 결과 폴링 시작');
     
     // 이전 인증 결과 정리
     localStorage.removeItem('nice_auth_result');
@@ -976,7 +975,6 @@ const SignaturePdfViewer = () => {
       if (authResult) {
         try {
           const result = JSON.parse(authResult);
-          console.log('🎉 NICE 인증 완료 감지:', result);
           
           // localStorage 정리
           localStorage.removeItem('nice_auth_result');
@@ -986,7 +984,6 @@ const SignaturePdfViewer = () => {
           
           // 인증 완료 처리
           if (result.type === 'NICE_AUTH_COMPLETE' && result.encryptedData) {
-            console.log('✅ NICE 인증 성공! 복호화 데이터 요청 중...');
             
             // 백엔드 API 호출하여 복호화된 데이터 가져오기
             try {
@@ -1011,27 +1008,36 @@ const SignaturePdfViewer = () => {
                 const decryptedData = await response.json();
                 
                 if (decryptedData.success && decryptedData.authSuccess) {
-                  console.log('🎊 NICE 인증 로그 저장 완료:', {
-                    contractId: decryptedData.contractId,
-                    participantId: decryptedData.participantId,
-                    logId: decryptedData.logId,
-                    authType: decryptedData.authType,
-                    encTime: decryptedData.encTime
-                  });
                   
                   // 개인정보는 personalInfo 객체에서 추출
                   const personalInfo = decryptedData.personalInfo || {};
                   
-                  console.log('🎊 NICE 인증 복호화된 실제 데이터:', {
-                    이름: personalInfo.name,
-                    생년월일: personalInfo.birthDate,
-                    성별: personalInfo.gender === "1" ? "남성" : "여성",
-                    휴대폰번호: personalInfo.mobileNo,
-                    통신사: personalInfo.mobileCo,
-                    내외국인: decryptedData.nationalInfo === "0" ? "내국인" : "외국인",
-                    DI: personalInfo.di,
-                    CI: decryptedData.ci
-                  });
+                  // 계약 참여자와 실제 인증한 사람이 일치하는지 확인
+                  if (participant && participant.name && personalInfo.name) {
+                    if (participant.name !== personalInfo.name) {
+                      console.error('❌ 계약 참여자와 인증자 불일치:');
+                      console.error('계약참여자:', participant.name);
+                      console.error('실제인증자:', personalInfo.name);
+                      console.error('전체 participant 객체:', participant);
+                      console.error('전체 personalInfo 객체:', personalInfo);
+                      
+                      // 인증 불일치 상태 설정
+                      setAuthMismatch(true);
+                      setAuthMismatchInfo({
+                        participantName: participant.name,
+                        authName: personalInfo.name,
+                        contractId: contractId,
+                        participantId: participantId
+                      });
+                      
+                      // 다른 상태들 정리
+                      setAuthError('');
+                      setNiceLoading(false);
+                      return;
+                    } else {
+                      console.log('✅ 계약 참여자와 인증자 일치 확인:', participant.name);
+                    }
+                  }
                   
                   // 인증 데이터 저장 (이름, 생년월일만 필요)
                   setNiceAuthData({
@@ -1069,7 +1075,6 @@ const SignaturePdfViewer = () => {
     // 30초 후 타임아웃 (선택사항)
     setTimeout(() => {
       clearInterval(pollingInterval);
-      console.log('⏰ NICE 인증 폴링 타임아웃');
     }, 30000);
   };
 
@@ -1356,6 +1361,19 @@ const SignaturePdfViewer = () => {
       setUploadLoading(false);
     }
   };
+
+  // 인증 불일치인 경우 별도 페이지 렌더링 (인증 상태보다 우선 체크)
+  if (authMismatch && authMismatchInfo) {
+    return (
+      <AuthMismatchPage 
+        participantName={authMismatchInfo.participantName}
+        authName={authMismatchInfo.authName}
+        contractId={authMismatchInfo.contractId}
+        participantId={authMismatchInfo.participantId}
+        pageType="signature"
+      />
+    );
+  }
 
   // 인증되지 않은 경우의 렌더링 수정
   if (!isAuthenticated) {

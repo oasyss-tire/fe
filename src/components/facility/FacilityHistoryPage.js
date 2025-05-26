@@ -272,8 +272,6 @@ const FacilityHistoryPage = () => {
       
       const data = await response.json();
       
-      // API 응답 구조 확인
-      console.log('API 응답 데이터 구조:', data);
       
       // 데이터 구조 변환 - API 응답을 기존 코드와 호환되는 형태로 변환
       let transformedData = [];
