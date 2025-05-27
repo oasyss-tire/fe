@@ -47,7 +47,7 @@ const FacilitiesRegister = () => {
     installationTypeCode: '', // 설치 유형 (선택적)
     usefulLifeMonths: 12,     // 사용연한(개월), 기본값 12개월
     statusCode: '',           // 상태코드
-    depreciationMethodCode: '',// 감가상각 방법 (선택적)
+    depreciationMethodCode: '002004_0001',// 감가상각 방법 (선택적)
     locationCompanyId: 1,     // 설치 매장 ID (본사로 고정, 항상 1)
     ownerCompanyId: 1,        // 소유 매장 ID (본점 소유, 항상 1)
     quantity: 1               // 수량 (배치 등록용)
@@ -743,7 +743,7 @@ const FacilitiesRegister = () => {
                   />
                 </Grid>
                 
-                <Grid item xs={12} md={6}>
+                {/* <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>
                     감가상각 방법
                   </Typography>
@@ -768,7 +768,7 @@ const FacilitiesRegister = () => {
                       ))}
                     </Select>
                   </FormControl>
-                </Grid>
+                </Grid> */}
                 
                 <Grid item xs={12} md={6}>
                   <Typography variant="caption" sx={{ mb: 1, color: '#666', display: 'block' }}>

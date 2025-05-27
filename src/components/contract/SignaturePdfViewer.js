@@ -118,7 +118,8 @@ const SignaturePdfViewer = () => {
   const [signatureModalOpen, setSignatureModalOpen] = useState(false);
   const [textModalOpen, setTextModalOpen] = useState(false);
   const [participant, setParticipant] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [contract, setContract] = useState(null); // 계약 정보 상태 추가
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // 개발용: NICE 인증 건너뛰기  실제사용할떄는 false
   const [showAuthDialog, setShowAuthDialog] = useState(true);
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -169,6 +170,10 @@ const SignaturePdfViewer = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  // 핵심 필드 검증 관련 상태 추가
+  const [validationResult, setValidationResult] = useState(null);
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  
   // 토큰이 있는 경우 토큰 검증 추가
   useEffect(() => {
     const verifyToken = async () => {
@@ -231,6 +236,9 @@ const SignaturePdfViewer = () => {
         const contractResponse = await fetch(`${BACKEND_URL}/api/contracts/${contractId}`);
         if (!contractResponse.ok) throw new Error('계약 정보 조회 실패');
         const contractData = await contractResponse.json();
+        
+        // 계약 정보 상태 설정
+        setContract(contractData);
         
         // 2. 참여자 정보 조회
         const participantResponse = await fetch(
@@ -728,7 +736,6 @@ const SignaturePdfViewer = () => {
           const allCompleted = currentFields.every(field => field.value !== null && field.value !== '');
           
           if (!allCompleted) {
-            console.log(`❌ 현재 템플릿(${template.templateName}) 미완료`);
             return false;
           }
         } else {
@@ -743,13 +750,10 @@ const SignaturePdfViewer = () => {
           const allCompleted = templateFields.every(field => field.value !== null && field.value !== '');
           
           if (!allCompleted) {
-            console.log(`❌ 템플릿(${template.templateName}) 미완료`);
             return false;
           }
         }
       }
-      
-      console.log('✅ 모든 템플릿 완료 확인됨');
       return true;
     } catch (error) {
       console.error('템플릿 완료 상태 확인 중 오류:', error);
@@ -776,12 +780,36 @@ const SignaturePdfViewer = () => {
       return;
     }
     
-    setConfirmDialogOpen(true);
+    // 핵심 필드 일관성 검증 실행
+    const validation = await validateKeyFields();
+    setValidationResult(validation);
+    
+    // 검증 다이얼로그 표시 (불일치 여부와 관계없이)
+    setShowValidationDialog(true);
   };
 
   // 서명 완료 확인 다이얼로그 닫기
   const handleCloseConfirmDialog = () => {
     setConfirmDialogOpen(false);
+  };
+  
+  // 검증 다이얼로그 닫기
+  const handleCloseValidationDialog = () => {
+    setShowValidationDialog(false);
+    setValidationResult(null);
+  };
+  
+  // 불일치 페이지로 이동
+  const goToConflictPage = (pageNumber) => {
+    scrollToPage(pageNumber);
+    setCurrentPage(pageNumber);
+    setShowValidationDialog(false);
+  };
+  
+  // 검증 무시하고 진행
+  const proceedDespiteValidation = () => {
+    setShowValidationDialog(false);
+    setConfirmDialogOpen(true);
   };
   
   // 서명 완료 처리 실행
@@ -1056,7 +1084,6 @@ const SignaturePdfViewer = () => {
                       setNiceLoading(false);
                       return;
                     } else {
-                      console.log('✅ 계약 참여자와 인증자 일치 확인:', participant.name);
                     }
                   }
                   
@@ -1427,6 +1454,122 @@ const SignaturePdfViewer = () => {
 
   const currentTemplate = participant.templatePdfs[currentTemplateIndex];
 
+  // 핵심 필드 일관성 검증 함수 추가
+  const validateKeyFields = async () => {
+    const keyFormats = {
+      '001004_0009': '이름',
+      '001004_0002': '주민등록번호', 
+      '001004_0001': '핸드폰 번호'
+    };
+    
+    const validation = {};
+    
+    // 모든 템플릿의 필드 데이터 수집 (템플릿 정보도 함께)
+    const allFieldsWithTemplate = [];
+    
+    for (const template of participant.templatePdfs) {
+      try {
+        let templateFields = [];
+        
+        // 현재 템플릿이면 현재 fields 사용, 아니면 API 호출
+        if (template.pdfId === participant.templatePdfs[currentTemplateIndex]?.pdfId) {
+          templateFields = fields;
+        } else {
+          const response = await fetch(`${BACKEND_URL}/api/contract-pdf/fields/${template.pdfId}`);
+          if (response.ok) {
+            templateFields = await response.json();
+          }
+        }
+        
+        // 템플릿 정보를 각 필드에 추가
+        templateFields.forEach(field => {
+          allFieldsWithTemplate.push({
+            ...field,
+            templateName: template.templateName,
+            templateIndex: participant.templatePdfs.findIndex(t => t.pdfId === template.pdfId)
+          });
+        });
+        
+      } catch (error) {
+        console.error(`템플릿 ${template.templateName} 필드 조회 오류:`, error);
+      }
+    }
+    
+    // 각 포맷코드별 검증
+    Object.entries(keyFormats).forEach(([formatCode, fieldName]) => {
+      // 해당 포맷코드의 모든 필드 찾기
+      const targetFields = allFieldsWithTemplate.filter(f => f.formatCodeId === formatCode && f.value);
+      
+      if (targetFields.length === 0) {
+        validation[formatCode] = {
+          fieldName,
+          status: 'empty',
+          message: `${fieldName}이 입력되지 않았습니다.`,
+          details: []
+        };
+        return;
+      }
+      
+      // 값들 수집 및 정규화 (템플릿 정보 포함)
+      const normalizedValues = targetFields.map(f => ({
+        original: f.value,
+        normalized: normalizeValue(f.value, formatCode),
+        page: f.page,
+        templateName: f.templateName,
+        templateIndex: f.templateIndex,
+        field: f
+      }));
+      
+      // 고유한 정규화된 값들 확인
+      const uniqueNormalizedValues = [...new Set(normalizedValues.map(v => v.normalized))];
+      
+      if (uniqueNormalizedValues.length === 1) {
+        // ✅ 모든 값이 일치
+        validation[formatCode] = {
+          fieldName,
+          status: 'consistent',
+          value: normalizedValues[0].original,
+          message: `${fieldName} 일치 확인`,
+          details: normalizedValues
+        };
+      } else {
+        // ❌ 불일치 발견
+        validation[formatCode] = {
+          fieldName,
+          status: 'inconsistent', 
+          message: `${fieldName}에 불일치가 발견되었습니다.`,
+          details: normalizedValues
+        };
+      }
+    });
+    
+    return validation;
+  };
+  
+  // 값 정규화 함수 (형식 차이 무시)
+  const normalizeValue = (value, formatCode) => {
+    if (!value) return '';
+    
+    const str = value.toString().trim();
+    
+    // 핸드폰 번호: 숫자만 추출
+    if (formatCode === '001004_0001') {
+      return str.replace(/\D/g, '');
+    }
+    
+    // 주민등록번호: 숫자만 추출
+    if (formatCode === '001004_0002') {
+      return str.replace(/\D/g, '');
+    }
+    
+    // 이름: 공백 제거, 소문자 변환
+    if (formatCode === '001004_0009') {
+      return str.replace(/\s/g, '').toLowerCase();
+    }
+    
+    return str;
+  };
+  
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -2449,6 +2592,240 @@ const SignaturePdfViewer = () => {
           >
             확인
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 핵심 필드 검증 다이얼로그 추가 */}
+      <Dialog
+        open={showValidationDialog}
+        onClose={handleCloseValidationDialog}
+        aria-labelledby="validation-dialog-title"
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogTitle id="validation-dialog-title" sx={{ 
+          borderBottom: '1px solid #F0F0F0', 
+          py: 2, 
+          px: 3, 
+          fontSize: '1rem', 
+          fontWeight: 600 
+        }}>
+          {validationResult && Object.values(validationResult).some(v => v.status === 'inconsistent') 
+            ? '📋 최종 확인 - 입력 정보 검증' 
+            : '📋 최종 확인 - 입력 정보 확인'
+          }
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="body2" sx={{ mb: 3, color: '#505050', mt: 2 }}>
+            {validationResult && Object.values(validationResult).some(v => v.status === 'inconsistent')
+              ? '기본 정보의 일관성을 확인해주세요. 불일치가 발견된 항목은 수정이 필요합니다.'
+              : '입력하신 기본 정보가 맞는지 확인해주세요.'
+            }
+          </Typography>
+          
+          {/* 계약 정보 섹션 추가 */}
+          {contract && (
+            <Box sx={{ mb: 3, p: 2, bgcolor: '#F8F9FA', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#3A3A3A', display: 'flex', alignItems: 'center' }}>
+                📄 계약 정보
+              </Typography>
+              
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#666', fontWeight: 500, display: 'block', mb: 0.5 }}>
+                    계약명
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#333', fontWeight: 500 }}>
+                    {contract.title || '-'}
+                  </Typography>
+                </Box>
+                
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#666', fontWeight: 500, display: 'block', mb: 0.5 }}>
+                    계약번호
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#333', fontFamily: 'monospace' }}>
+                    {contract.contractNumber || '-'}
+                  </Typography>
+                </Box>
+                
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#666', fontWeight: 500, display: 'block', mb: 0.5 }}>
+                    보험 시작일
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#333' }}>
+                    {contract.insuranceStartDate || '-'}
+                  </Typography>
+                </Box>
+                
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#666', fontWeight: 500, display: 'block', mb: 0.5 }}>
+                    보험 종료일
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#333' }}>
+                    {contract.insuranceEndDate || '-'}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          )}
+          
+          {/* 핵심 필드 정보 섹션 */}
+          {validationResult && (
+            <Box sx={{ mb: 3, p: 2, bgcolor: '#F8F8FE', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#3A3A3A', display: 'flex', alignItems: 'center' }}>
+                👤 입력하신 기본 정보
+              </Typography>
+              
+              {Object.entries(validationResult).map(([formatCode, result]) => (
+                <Box key={formatCode} sx={{ mb: 2, p: 1.5, border: '1px solid #E0E0E0', borderRadius: 1, bgcolor: 'white' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    {result.status === 'consistent' ? (
+                      <CheckIcon sx={{ color: '#4CAF50', mr: 1, fontSize: '1.2rem' }} />
+                    ) : (
+                      <Box sx={{ 
+                        width: 20, 
+                        height: 20, 
+                        borderRadius: '50%', 
+                        bgcolor: '#F44336',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 1
+                      }}>
+                        <Typography sx={{ color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>!</Typography>
+                      </Box>
+                    )}
+                    <Typography variant="subtitle2" sx={{ 
+                      fontWeight: 600,
+                      color: result.status === 'consistent' ? '#4CAF50' : '#F44336'
+                    }}>
+                      {result.fieldName}
+                    </Typography>
+                  </Box>
+                  
+                  {result.status === 'consistent' ? (
+                    <Typography variant="body2" sx={{ color: '#666', ml: 3 }}>
+                      ✅ {formatCode === '001004_0002' ? 
+                          result.value.substring(0, 8) + '******' : 
+                          result.value
+                        } (모든 입력값 일치)
+                    </Typography>
+                  ) : (
+                    <Box sx={{ ml: 3 }}>
+                      <Typography variant="body2" sx={{ color: '#F44336', mb: 1 }}>
+                        ❌ {result.message}
+                      </Typography>
+                      {result.details.map((detail, index) => (
+                        <Box key={index} sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          py: 0.5,
+                          px: 1,
+                          mb: 0.5,
+                          bgcolor: '#FFF3E0',
+                          borderRadius: 1
+                        }}>
+                          <Typography variant="body2" sx={{ color: '#E65100' }}>
+                            📍 {detail.templateName} - {detail.page}페이지: "{detail.original}"
+                          </Typography>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => {
+                              // 해당 템플릿으로 이동 후 페이지 이동
+                              if (detail.templateIndex !== currentTemplateIndex) {
+                                handleTemplateChange(detail.templateIndex).then(() => {
+                                  setTimeout(() => goToConflictPage(detail.page), 100);
+                                });
+                              } else {
+                                goToConflictPage(detail.page);
+                              }
+                            }}
+                            sx={{
+                              fontSize: '0.7rem',
+                              py: 0.3,
+                              px: 1,
+                              borderColor: '#FF9800',
+                              color: '#FF9800',
+                              '&:hover': { borderColor: '#F57C00' }
+                            }}
+                          >
+                            수정하기
+                          </Button>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F0F0F0', justifyContent: 'space-between' }}>
+          <Button 
+            onClick={handleCloseValidationDialog} 
+            sx={{ 
+              color: '#666',
+              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+              fontWeight: 500
+            }}
+          >
+            취소
+          </Button>
+          
+          {validationResult && Object.values(validationResult).some(v => v.status === 'inconsistent') ? (
+            // 불일치가 있는 경우
+            <Box>
+              <Button 
+                onClick={proceedDespiteValidation}
+                variant="outlined"
+                sx={{ 
+                  mr: 1,
+                  borderColor: '#FF9800',
+                  color: '#FF9800',
+                  '&:hover': { borderColor: '#F57C00' },
+                  fontWeight: 500
+                }}
+              >
+                무시하고 진행
+              </Button>
+              <Button 
+                onClick={handleCloseValidationDialog}
+                variant="contained"
+                sx={{ 
+                  bgcolor: '#3182F6', 
+                  '&:hover': { bgcolor: '#1565C0' },
+                  fontWeight: 500,
+                  boxShadow: 'none'
+                }}
+              >
+                수정하러 가기
+              </Button>
+            </Box>
+          ) : (
+            // 모든 값이 일치하는 경우
+            <Button 
+              onClick={proceedDespiteValidation}
+              variant="contained"
+              sx={{ 
+                bgcolor: '#3182F6', 
+                '&:hover': { bgcolor: '#1565C0' },
+                fontWeight: 500,
+                boxShadow: 'none'
+              }}
+            >
+              확인
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

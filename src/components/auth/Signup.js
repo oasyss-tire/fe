@@ -483,10 +483,10 @@ const Signup = () => {
       {/* 로고 영역 */}
       <Box 
         component="img"
-        src="/images/header_logo.png"
+        src="/images/logo.png"
         alt="타이어뱅크 로고"
         sx={{
-          height: '60px',
+          height: '100px',
           mb: 5
         }}
       />

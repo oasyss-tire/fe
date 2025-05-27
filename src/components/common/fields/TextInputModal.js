@@ -12,6 +12,30 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field, niceA
   const [isKakaoMapScriptLoaded, setIsKakaoMapScriptLoaded] = useState(false);
 
   useEffect(() => {
+    // 날짜 관련 필드일 경우 오늘 날짜 자동 설정
+    if (field?.formatCodeId && !initialValue) {
+      const today = new Date();
+      let autoValue = '';
+      
+      if (field.formatCodeId === '001004_0005') {
+        // 연도 (YYYY)
+        autoValue = today.getFullYear().toString();
+      } else if (field.formatCodeId === '001004_0006') {
+        // 월 (MM) - 1~12월을 01~12로 포맷
+        autoValue = (today.getMonth() + 1).toString().padStart(2, '0');
+      } else if (field.formatCodeId === '001004_0007') {
+        // 일 (DD) - 1~31일을 01~31로 포맷
+        autoValue = today.getDate().toString().padStart(2, '0');
+      }
+      
+      if (autoValue) {
+        setText(autoValue);
+        validateInput(autoValue);
+        return;
+      }
+    }
+    
+    // 기존 로직
     setText(initialValue);
     validateInput(initialValue);
     

@@ -95,10 +95,10 @@ const Login = () => {
       {/* 로고 영역 - 중앙 상단에 배치 */}
       <Box
         component="img"
-        src="/images/header_logo.png"
+        src="/images/logo.png"
         alt="타이어뱅크 로고"
         sx={{
-          height: "60px",
+          height: "100px",
           mb: 5,
         }}
       />

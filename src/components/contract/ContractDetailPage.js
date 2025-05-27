@@ -42,6 +42,9 @@ import {
 const ContractDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+  
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
   const [approveLoading, setApproveLoading] = useState(false);
@@ -94,13 +97,17 @@ const ContractDetailPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // 핵심 필드 검증 관련 상태 추가
+  const [participantKeyInfo, setParticipantKeyInfo] = useState(null);
+  const [keyInfoLoading, setKeyInfoLoading] = useState(false);
+
   // 계약 상세 정보 조회
   useEffect(() => {
     const fetchContractDetail = async () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `http://localhost:8080/api/contracts/${id}/with-trustee`
+          `${BACKEND_URL}/api/contracts/${id}/with-trustee`
         );
         
         if (!response.ok) throw new Error("계약 조회 실패");
@@ -151,7 +158,7 @@ const ContractDetailPage = () => {
     try {
       setDocLoading(true);
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contractId}/documents`
+        `${BACKEND_URL}/api/contracts/${contractId}/documents`
       );
       if (!response.ok) throw new Error("첨부파일 조회 실패");
       const data = await response.json();
@@ -167,7 +174,7 @@ const ContractDetailPage = () => {
   const handleDocumentDownload = async (documentId, fileName) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/contracts/documents/${documentId}/download`
+        `${BACKEND_URL}/api/contracts/documents/${documentId}/download`
       );
       if (!response.ok) {
         throw new Error("문서 다운로드 실패");
@@ -193,7 +200,7 @@ const ContractDetailPage = () => {
   const handleDocumentPreview = async (documentId, fileName) => {
     try {
       // 미리보기 URL 생성
-      const previewUrl = `http://localhost:8080/api/contracts/documents/${documentId}/preview`;
+      const previewUrl = `${BACKEND_URL}/api/contracts/documents/${documentId}/preview`;
 
       // 새 창에서 미리보기 열기
       window.open(previewUrl, "_blank", "noopener,noreferrer");
@@ -330,7 +337,7 @@ const ContractDetailPage = () => {
       formData.append("file", file);
 
       const response = await fetch(
-        `http://localhost:8080/api/contracts/${contract.id}/participants/${participant.id}/documents/${doc.documentCodeId}`,
+        `${BACKEND_URL}/api/contracts/${contract.id}/participants/${participant.id}/documents/${doc.documentCodeId}`,
         {
           method: "POST",
           body: formData,
@@ -381,9 +388,35 @@ const ContractDetailPage = () => {
   };
 
   // 승인 다이얼로그 열기
-  const handleOpenApproveDialog = (participant) => {
+  const handleOpenApproveDialog = async (participant) => {
     setSelectedParticipant(participant);
     setApproveComment("");
+    setParticipantKeyInfo(null);
+    
+    // 핵심 필드 정보 조회 - 상세한 participant 정보 별도 조회
+    try {
+      setKeyInfoLoading(true);
+      
+      const participantResponse = await fetch(
+        `${BACKEND_URL}/api/contracts/${contract.id}/participants/${participant.id}`
+      );
+      
+      if (!participantResponse.ok) {
+        console.error('❌ participant 정보 조회 실패:', participantResponse.status);
+        throw new Error('참여자 정보 조회 실패');
+      }
+      
+      const detailedParticipant = await participantResponse.json();
+      
+      // 상세한 participant 정보로 핵심 필드 검증 실행
+      const keyInfo = await validateParticipantKeyFields(detailedParticipant);
+      setParticipantKeyInfo(keyInfo);
+    } catch (error) {
+      console.error('💥 핵심 필드 조회 오류:', error);
+    } finally {
+      setKeyInfoLoading(false);
+    }
+    
     setApproveDialogOpen(true);
   };
 
@@ -429,7 +462,7 @@ const ContractDetailPage = () => {
     try {
       setResignApproveLoading(true);
 
-      const url = `http://localhost:8080/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve-resign`;
+      const url = `${BACKEND_URL}/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve-resign`;
       const response = await fetch(
         `${url}?approver=${encodeURIComponent(approver)}`,
         {
@@ -457,7 +490,7 @@ const ContractDetailPage = () => {
       const fetchContractDetail = async () => {
         try {
           const response = await fetch(
-            `http://localhost:8080/api/contracts/${id}`
+            `${BACKEND_URL}/api/contracts/${id}`
           );
           if (!response.ok) throw new Error("계약 조회 실패");
           const data = await response.json();
@@ -482,7 +515,7 @@ const ContractDetailPage = () => {
 
     try {
       setApproveLoading(true);
-      const url = `http://localhost:8080/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve`;
+      const url = `${BACKEND_URL}/api/contracts/${contract.id}/participants/${selectedParticipant.id}/approve`;
       const queryParams = approveComment
         ? `?comment=${encodeURIComponent(approveComment)}`
         : "";
@@ -510,7 +543,7 @@ const ContractDetailPage = () => {
       const fetchContractDetail = async () => {
         try {
           const response = await fetch(
-            `http://localhost:8080/api/contracts/${id}`
+            `${BACKEND_URL}/api/contracts/${id}`
           );
           if (!response.ok) throw new Error("계약 조회 실패");
           const data = await response.json();
@@ -538,7 +571,7 @@ const ContractDetailPage = () => {
 
     try {
       setRejectLoading(true);
-      const url = `http://localhost:8080/api/contracts/${contract.id}/participants/${selectedParticipant.id}/reject`;
+      const url = `${BACKEND_URL}/api/contracts/${contract.id}/participants/${selectedParticipant.id}/reject`;
       const queryParams = `?reason=${encodeURIComponent(rejectReason)}`;
 
       const response = await fetch(`${url}${queryParams}`, {
@@ -564,7 +597,7 @@ const ContractDetailPage = () => {
       const fetchContractDetail = async () => {
         try {
           const response = await fetch(
-            `http://localhost:8080/api/contracts/${id}`
+            `${BACKEND_URL}/api/contracts/${id}`
           );
           if (!response.ok) throw new Error("계약 조회 실패");
           const data = await response.json();
@@ -587,7 +620,7 @@ const ContractDetailPage = () => {
   const handleDownloadSignedPdf = async (pdfId) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/download-signed-pdf/${pdfId}`,
+        `${BACKEND_URL}/api/contract-pdf/download-signed-pdf/${pdfId}`,
         { method: "GET" }
       );
 
@@ -625,7 +658,7 @@ const ContractDetailPage = () => {
         await new Promise((resolve) => setTimeout(resolve, 300)); // 다운로드 간격 설정
 
         const downloadResponse = await fetch(
-          `http://localhost:8080${pdfInfo.downloadUrl}`,
+          `${BACKEND_URL}${pdfInfo.downloadUrl}`,
           { method: "GET" }
         );
 
@@ -810,7 +843,7 @@ const ContractDetailPage = () => {
       // 비밀번호 API 호출
       const token = sessionStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/password/${encodeURIComponent(pdfId)}?token=${encodeURIComponent(token)}`,
+        `${BACKEND_URL}/api/contract-pdf/password/${encodeURIComponent(pdfId)}?token=${encodeURIComponent(token)}`,
         {
           method: 'GET',
           headers: {
@@ -872,7 +905,7 @@ const ContractDetailPage = () => {
     try {
       // 서명된 모든 PDF 목록 조회
       const response = await fetch(
-        `http://localhost:8080/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
+        `${BACKEND_URL}/api/contract-pdf/download-all-signed-pdfs/${participantId}`,
         { 
           method: "GET",
           headers: {
@@ -908,6 +941,139 @@ const ContractDetailPage = () => {
       console.error("Error fetching PDF IDs:", error);
       throw error;
     }
+  };
+
+  // 핵심 필드 검증 함수 추가 (SignaturePdfViewer와 동일)
+  const validateParticipantKeyFields = async (participant) => {
+    
+    const keyFormats = {
+      '001004_0009': '이름',
+      '001004_0002': '주민등록번호', 
+      '001004_0001': '핸드폰 번호'
+    };
+    
+    const validation = {};
+    
+    // 참여자의 모든 템플릿 필드 데이터 수집
+    const allFieldsWithTemplate = [];
+    
+    if (participant.templatePdfs && participant.templatePdfs.length > 0) {
+      
+      for (const template of participant.templatePdfs) {
+        try {
+       
+          // PDF ID 정규화 - _with_fields.pdf 접미사 처리
+          const normalizedPdfId = template.pdfId.replace('_with_fields.pdf', '.pdf');
+       
+          const response = await fetch(`${BACKEND_URL}/api/contract-pdf/fields/${normalizedPdfId}`);
+      
+          if (response.ok) {
+            const templateFields = await response.json();       
+            // 포맷코드가 있는 필드만 필터링해서 확인
+            const formatFields = templateFields.filter(f => f.formatCodeId);
+         
+            // 핵심 필드만 필터링해서 확인
+            const keyFields = templateFields.filter(f => 
+              ['001004_0009', '001004_0002', '001004_0001'].includes(f.formatCodeId)
+            );
+           
+            // 템플릿 정보를 각 필드에 추가
+            templateFields.forEach(field => {
+              allFieldsWithTemplate.push({
+                ...field,
+                templateName: template.templateName
+              });
+            });
+          } else {
+            const errorText = await response.text();
+            console.error(`❌ ${template.templateName} API 호출 실패:`, response.status, errorText);
+          }
+        } catch (error) {
+          console.error(`💥 템플릿 ${template.templateName} 필드 조회 오류:`, error);
+        }
+      }
+    } else {
+      console.warn('⚠️ templatePdfs가 없거나 비어있음:', {
+        exists: !!participant.templatePdfs,
+        length: participant.templatePdfs?.length || 0,
+        participantKeys: Object.keys(participant)
+      });
+    }
+
+    
+    // 각 포맷코드별 검증
+    Object.entries(keyFormats).forEach(([formatCode, fieldName]) => {
+      
+      // 해당 포맷코드의 모든 필드 찾기
+      const targetFields = allFieldsWithTemplate.filter(f => f.formatCodeId === formatCode && f.value);
+      
+      if (targetFields.length === 0) {
+        // 값이 없는 필드도 확인
+        const emptyFields = allFieldsWithTemplate.filter(f => f.formatCodeId === formatCode);
+        
+        validation[formatCode] = {
+          fieldName,
+          status: 'empty',
+          value: '미입력',
+          details: []
+        };
+        return;
+      }
+      
+      // 값들 수집 및 정규화
+      const normalizedValues = targetFields.map(f => ({
+        original: f.value,
+        normalized: normalizeValue(f.value, formatCode),
+        templateName: f.templateName
+      }));
+
+      // 고유한 정규화된 값들 확인
+      const uniqueNormalizedValues = [...new Set(normalizedValues.map(v => v.normalized))];
+      
+      if (uniqueNormalizedValues.length === 1) {
+        // ✅ 모든 값이 일치
+        validation[formatCode] = {
+          fieldName,
+          status: 'consistent',
+          value: normalizedValues[0].original,
+          details: normalizedValues
+        };
+      } else {
+        // ❌ 불일치 발견
+        validation[formatCode] = {
+          fieldName,
+          status: 'inconsistent', 
+          value: '불일치',
+          details: normalizedValues
+        };
+      }
+    });
+
+    return validation;
+  };
+  
+  // 값 정규화 함수 (SignaturePdfViewer와 동일)
+  const normalizeValue = (value, formatCode) => {
+    if (!value) return '';
+    
+    const str = value.toString().trim();
+    
+    // 핸드폰 번호: 숫자만 추출
+    if (formatCode === '001004_0001') {
+      return str.replace(/\D/g, '');
+    }
+    
+    // 주민등록번호: 숫자만 추출
+    if (formatCode === '001004_0002') {
+      return str.replace(/\D/g, '');
+    }
+    
+    // 이름: 공백 제거, 소문자 변환
+    if (formatCode === '001004_0009') {
+      return str.replace(/\s/g, '').toLowerCase();
+    }
+    
+    return str;
   };
 
   if (loading) return <Box>로딩중...</Box>;
@@ -1871,6 +2037,67 @@ const ContractDetailPage = () => {
           <Typography variant="body2" sx={{ mb: 2, mt: 2, color: "#505050" }}>
             {selectedParticipant?.name} 님의 서명을 승인하시겠습니까?
           </Typography>
+          
+          {/* 핵심 필드 정보 표시 */}
+          {keyInfoLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} sx={{ color: '#3182F6' }} />
+              <Typography variant="body2" sx={{ ml: 1, color: '#666' }}>
+                계약자 정보 조회 중...
+              </Typography>
+            </Box>
+          ) : participantKeyInfo ? (
+            <Box sx={{ mb: 3, p: 2, bgcolor: '#F8F8FE', borderRadius: 1, border: '1px solid #E0E0E0' }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#3A3A3A' }}>
+                📋 계약자가 작성한 기본 정보
+              </Typography>
+              
+              {Object.entries(participantKeyInfo).map(([formatCode, info]) => (
+                <Box key={formatCode} sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 1,
+                  borderBottom: formatCode === '001004_0001' ? 'none' : '1px solid #F0F0F0'
+                }}>
+                  <Typography variant="body2" sx={{ color: '#666', fontWeight: 500 }}>
+                    {info.fieldName}:
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {info.status === 'consistent' ? (
+                      <Typography variant="body2" sx={{ color: '#333' }}>
+                        {formatCode === '001004_0002' ? 
+                          info.value.substring(0, 8) + '******' : 
+                          info.value
+                        }
+                      </Typography>
+                    ) : info.status === 'inconsistent' ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ color: '#F44336', mr: 1 }}>
+                          불일치 발견
+                        </Typography>
+                        <Chip 
+                          label="확인 필요" 
+                          size="small"
+                          sx={{ 
+                            backgroundColor: '#FFEBEE',
+                            color: '#F44336',
+                            fontSize: '0.7rem',
+                            height: '20px'
+                          }}
+                        />
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#666' }}>
+                        미입력
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          ) : null}
+          
           <TextField
             fullWidth
             label="승인 코멘트 (선택사항)"
