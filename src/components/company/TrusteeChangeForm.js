@@ -19,7 +19,6 @@ import koLocale from 'date-fns/locale/ko';
 const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     trustee: '',
-    trusteeCode: '',
     representativeName: '',
     managerName: '',
     email: '',
@@ -175,10 +174,6 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
     // 필수 필드 검사
     if (!formData.trustee) {
       errors.trustee = '수탁자 이름은 필수 입력 항목입니다.';
-    }
-    
-    if (!formData.trusteeCode) {
-      errors.trusteeCode = '수탁코드는 필수 입력 항목입니다.';
     }
     
     if (!formData.companyName) {
@@ -343,16 +338,16 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
-                label="수탁코드"
-                name="trusteeCode"
-                value={formData.trusteeCode}
+                label="상호"
+                name="companyName"
+                value={formData.companyName}
                 onChange={handleFormChange}
                 fullWidth
                 size="small"
-                placeholder="2600"
                 required
-                error={!!formErrors.trusteeCode}
-                helperText={formErrors.trusteeCode}
+                error={!!formErrors.companyName}
+                helperText={formErrors.companyName}
+                placeholder="정재현타이어(창원점)"
               />
             </Grid>
           </Grid>
@@ -393,20 +388,6 @@ const TrusteeChangeForm = ({ companyId, onSave, onCancel }) => {
                 required
                 error={!!formErrors.subBusinessNumber}
                 helperText={formErrors.subBusinessNumber}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="상호"
-                name="companyName"
-                value={formData.companyName}
-                onChange={handleFormChange}
-                fullWidth
-                size="small"
-                required
-                error={!!formErrors.companyName}
-                helperText={formErrors.companyName}
-                placeholder="정재현타이어(창원점)"
               />
             </Grid>
             <Grid item xs={12} md={6}>

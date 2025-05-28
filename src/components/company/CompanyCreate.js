@@ -88,7 +88,6 @@ const CompanyCreate = () => {
     storeCode: '',
     storeName: '',
     trustee: '',
-    trusteeCode: '',
     businessNumber: '',
     companyName: '',
     representativeName: '',
@@ -359,10 +358,6 @@ const CompanyCreate = () => {
     
     if (!companyData.trustee) {
       newErrors.trustee = '수탁사업자명을 입력해주세요.';
-    }
-    
-    if (!companyData.trusteeCode) {
-      newErrors.trusteeCode = '수탁코드를 입력해주세요.';
     }
     
     if (!companyData.businessNumber) {
@@ -650,19 +645,6 @@ const CompanyCreate = () => {
             businessNumberElement.focus();
             businessNumberElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-        } else if (errorMessage.includes('이미 사용 중인 수탁코드')) {
-          // 수탁코드 필드에 오류 표시
-          setErrors(prev => ({
-            ...prev,
-            trusteeCode: '이미 사용 중인 수탁코드입니다. 다른 코드를 입력해주세요.'
-          }));
-          
-          // 수탁코드 필드로 스크롤
-          const trusteeCodeElement = document.querySelector('input[name="trusteeCode"]');
-          if (trusteeCodeElement) {
-            trusteeCodeElement.focus();
-            trusteeCodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
         } else if (errorMessage.includes('이미 사용 중인 종사업장번호')) {
           // 종사업장번호 필드에 오류 표시
           setErrors(prev => ({
@@ -713,7 +695,6 @@ const CompanyCreate = () => {
       // 특정 필드 오류가 아닌 경우에만 저장 버튼으로 스크롤
       if (!errorMessage.includes('이미 사용 중인 매장코드') && 
           !errorMessage.includes('이미 사용 중인 사업자번호') &&
-          !errorMessage.includes('이미 사용 중인 수탁코드') &&
           !errorMessage.includes('이미 사용 중인 종사업장번호')) {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       }
@@ -979,21 +960,6 @@ const CompanyCreate = () => {
                 error={!!errors.trustee}
                 helperText={errors.trustee}
                 placeholder="예: 타이어 뱅크(본점)"
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="수탁코드 *"
-                name="trusteeCode"
-                value={companyData.trusteeCode}
-                onChange={handleChange}
-                fullWidth
-                size="small"
-                required
-                error={!!errors.trusteeCode}
-                helperText={errors.trusteeCode}
-                placeholder="예: 0001"
               />
             </Grid>
             
