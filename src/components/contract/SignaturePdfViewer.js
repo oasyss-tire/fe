@@ -1019,6 +1019,27 @@ const SignaturePdfViewer = () => {
     // 이전 인증 결과 정리
     localStorage.removeItem('nice_auth_result');
     
+    // postMessage 이벤트 리스너 추가 (새로운 방식)
+    const handlePostMessage = async (event) => {
+      // 보안: 메시지 유형 확인
+      if (event.data && event.data.type === 'NICE_AUTH_COMPLETE') {
+        
+        try {
+          await processNiceAuthResult(event.data);
+        } catch (error) {
+          console.error('💥 postMessage 처리 오류:', error);
+        }
+      } else if (event.data && event.data.type === 'NICE_AUTH_ERROR') {
+        console.error('❌ NICE 인증 에러 수신:', event.data.message);
+        setAuthError(event.data.message || '인증 중 오류가 발생했습니다.');
+        setNiceLoading(false);
+      }
+    };
+    
+    // 이벤트 리스너 등록
+    window.addEventListener('message', handlePostMessage);
+    
+    // localStorage 폴링 (기존 방식 - 호환성)
     const pollingInterval = setInterval(async () => {
       const authResult = localStorage.getItem('nice_auth_result');
       if (authResult) {
@@ -1028,102 +1049,116 @@ const SignaturePdfViewer = () => {
           // localStorage 정리
           localStorage.removeItem('nice_auth_result');
           
-          // 폴링 중단
+          // 폴링 중단 및 이벤트 리스너 제거
           clearInterval(pollingInterval);
+          window.removeEventListener('message', handlePostMessage);
           
           // 인증 완료 처리
           if (result.type === 'NICE_AUTH_COMPLETE' && result.encryptedData) {
-            
-            // 백엔드 API 호출하여 복호화된 데이터 가져오기
-            try {
-              const formData = new URLSearchParams();
-              formData.append('token_version_id', result.encryptedData.token_version_id);
-              formData.append('enc_data', result.encryptedData.enc_data);
-              formData.append('integrity_value', result.encryptedData.integrity_value);
-              
-              // request_no는 sessionStorage에서 가져오기
-              const requestNo = sessionStorage.getItem('nice_request_no') || '';
-              formData.append('request_no', requestNo);
-              
-              const response = await fetch(`${BACKEND_URL}/api/nice/certification/callback/contract/${contractId}/participant/${participantId}`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: formData
-              });
-              
-              if (response.ok) {
-                const decryptedData = await response.json();
-                
-                if (decryptedData.success && decryptedData.authSuccess) {
-                  
-                  // 개인정보는 personalInfo 객체에서 추출
-                  const personalInfo = decryptedData.personalInfo || {};
-                  
-                  // 계약 참여자와 실제 인증한 사람이 일치하는지 확인
-                  if (participant && participant.name && personalInfo.name) {
-                    if (participant.name !== personalInfo.name) {
-                      console.error('❌ 계약 참여자와 인증자 불일치:');
-                      console.error('계약참여자:', participant.name);
-                      console.error('실제인증자:', personalInfo.name);
-                      console.error('전체 participant 객체:', participant);
-                      console.error('전체 personalInfo 객체:', personalInfo);
-                      
-                      // 인증 불일치 상태 설정
-                      setAuthMismatch(true);
-                      setAuthMismatchInfo({
-                        participantName: participant.name,
-                        authName: personalInfo.name,
-                        contractId: contractId,
-                        participantId: participantId
-                      });
-                      
-                      // 다른 상태들 정리
-                      setAuthError('');
-                      setNiceLoading(false);
-                      return;
-                    } else {
-                    }
-                  }
-                  
-                  // 인증 데이터 저장 (이름, 생년월일만 필요)
-                  setNiceAuthData({
-                    name: personalInfo.name,
-                    birthDate: personalInfo.birthDate
-                  });
-                  
-                  // sessionStorage 정리
-                  sessionStorage.removeItem('nice_request_no');
-                } else {
-                  console.error('❌ NICE 데이터 복호화 실패:', decryptedData.message);
-                }
-              } else {
-                console.error('❌ NICE 복호화 API 호출 실패');
-              }
-            } catch (error) {
-              console.error('💥 NICE 데이터 복호화 오류:', error);
-            }
-            
-            // 인증 상태 업데이트
-            setIsAuthenticated(true);
-            setShowAuthDialog(false);
-            setAuthError('');
+            await processNiceAuthResult(result);
           }
           
         } catch (error) {
           console.error('NICE 인증 결과 파싱 오류:', error);
           localStorage.removeItem('nice_auth_result');
           clearInterval(pollingInterval);
+          window.removeEventListener('message', handlePostMessage);
           setAuthError('인증 결과 처리 중 오류가 발생했습니다.');
         }
       }
     }, 1000); // 1초마다 체크
     
-    // 30초 후 타임아웃 (선택사항)
+    // 30초 후 타임아웃
     setTimeout(() => {
       clearInterval(pollingInterval);
+      window.removeEventListener('message', handlePostMessage);
     }, 30000);
+  };
+
+  // NICE 인증 결과 처리 함수 (공통)
+  const processNiceAuthResult = async (result) => {
+    
+    // 백엔드 API 호출하여 복호화된 데이터 가져오기
+    try {
+      const formData = new URLSearchParams();
+      formData.append('token_version_id', result.encryptedData.token_version_id);
+      formData.append('enc_data', result.encryptedData.enc_data);
+      formData.append('integrity_value', result.encryptedData.integrity_value);
+      
+      // request_no는 sessionStorage에서 가져오기
+      const requestNo = sessionStorage.getItem('nice_request_no') || '';
+      formData.append('request_no', requestNo);
+      
+      const response = await fetch(`${BACKEND_URL}/api/nice/certification/callback/contract/${contractId}/participant/${participantId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData
+      });
+      
+      if (response.ok) {
+        const decryptedData = await response.json();
+        
+        if (decryptedData.success && decryptedData.authSuccess) {
+          
+          // 개인정보는 personalInfo 객체에서 추출
+          const personalInfo = decryptedData.personalInfo || {};
+          
+          // 계약 참여자와 실제 인증한 사람이 일치하는지 확인
+          if (participant && participant.name && personalInfo.name) {
+            if (participant.name !== personalInfo.name) {
+              console.error('❌ 계약 참여자와 인증자 불일치:');
+              console.error('계약참여자:', participant.name);
+              console.error('실제인증자:', personalInfo.name);
+              console.error('전체 participant 객체:', participant);
+              console.error('전체 personalInfo 객체:', personalInfo);
+              
+              // 인증 불일치 상태 설정
+              setAuthMismatch(true);
+              setAuthMismatchInfo({
+                participantName: participant.name,
+                authName: personalInfo.name,
+                contractId: contractId,
+                participantId: participantId
+              });
+              
+              // 다른 상태들 정리
+              setAuthError('');
+              setNiceLoading(false);
+              return;
+            } else {
+            }
+          }
+          
+          // 인증 데이터 저장 (이름, 생년월일만 필요)
+          setNiceAuthData({
+            name: personalInfo.name,
+            birthDate: personalInfo.birthDate
+          });
+          
+          // sessionStorage 정리
+          sessionStorage.removeItem('nice_request_no');
+          
+          // 인증 상태 업데이트
+          setIsAuthenticated(true);
+          setShowAuthDialog(false);
+          setAuthError('');
+          
+        } else {
+          console.error('❌ NICE 데이터 복호화 실패:', decryptedData.message);
+          setAuthError(decryptedData.message || '인증 처리 중 오류가 발생했습니다.');
+        }
+      } else {
+        console.error('❌ NICE 복호화 API 호출 실패');
+        setAuthError('인증 서버와의 통신에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('💥 NICE 데이터 복호화 오류:', error);
+      setAuthError('인증 처리 중 시스템 오류가 발생했습니다.');
+    } finally {
+      setNiceLoading(false);
+    }
   };
 
   // 클릭하여 템플릿 변경 시 필드도 함께 업데이트하는 함수 추가
