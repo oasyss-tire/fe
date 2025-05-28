@@ -1010,21 +1010,7 @@ const CompanyCreate = () => {
                 placeholder="예: 타이어 뱅크(본점)"
               />
             </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="대표자명 *"
-                name="representativeName"
-                value={companyData.representativeName}
-                onChange={handleChange}
-                fullWidth
-                size="small"
-                required
-                error={!!errors.representativeName}
-                helperText={errors.representativeName}
-                placeholder="예: 대표자"
-              />
-            </Grid>
+          
             
             <Grid item xs={12} md={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
@@ -1100,6 +1086,21 @@ const CompanyCreate = () => {
                   }}
                 />
               </LocalizationProvider>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="대표자명 *"
+                name="representativeName"
+                value={companyData.representativeName}
+                onChange={handleChange}
+                fullWidth
+                size="small"
+                required
+                error={!!errors.representativeName}
+                helperText={errors.representativeName}
+                placeholder="예: 대표자"
+              />
             </Grid>
             
             <Grid item xs={12}>
