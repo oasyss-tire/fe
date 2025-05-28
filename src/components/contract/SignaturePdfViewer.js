@@ -174,6 +174,104 @@ const SignaturePdfViewer = () => {
   const [validationResult, setValidationResult] = useState(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   
+  // PDF 표준 A4 크기 (포인트 단위)
+  const PDF_A4_WIDTH_POINTS = 595.28;
+  const PDF_A4_HEIGHT_POINTS = 841.89;
+
+  // 동적 폰트 크기 계산 헬퍼 함수
+  const calculateDynamicFontSize = (text, containerWidth, containerHeight) => {
+    if (!text || !containerWidth || !containerHeight || containerWidth <= 0 || containerHeight <= 0) return 12; // 유효성 검사 강화
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const maxFontSize = 14;
+    const minFontSize = 8;
+    const padding = 4; // CSS padding 2px * 2 (양쪽)
+    const lineHeight = 1.2;
+    const safetyMargin = 2; // 텍스트 잘림 방지를 위한 안전 여백 (픽셀 단위)
+    
+    for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize -= 0.5) {
+      ctx.font = `${fontSize}px Pretendard, Arial, sans-serif`;
+      
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      const availableTextWidth = containerWidth - padding;
+      if (availableTextWidth <= 0) continue; // 사용 가능한 너비가 없으면 다음 폰트 크기로
+
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const testWidth = ctx.measureText(testLine).width;
+        
+        if (testWidth <= availableTextWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+          }
+          // 현재 단어가 너무 길어서 한 줄에 들어가지 않는 경우 처리
+          // (여기서는 일단 다음 줄로 넘기지만, 필요시 단어 강제 줄바꿈 로직 추가 가능)
+          currentLine = word;
+          // 만약 현재 단어 자체가 availableTextWidth보다 길다면, 한 글자씩 끊어서라도 넣어야 함
+          // 이 로직은 현재 백엔드와 유사하게 일단 단어 단위로 유지
+          if (ctx.measureText(currentLine).width > availableTextWidth && currentLine.length > 0) {
+            // 매우 긴 단어에 대한 처리: 일단 lines에 추가하고, 다음 단어로 넘어감
+            // (좀 더 정교하게 하려면, 이 긴 단어를 availableTextWidth에 맞게 쪼개야 함)
+            lines.push(currentLine); 
+            currentLine = ''; // 다음 단어를 위해 초기화
+          }
+        }
+      }
+      
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      
+      const totalHeight = lines.length * fontSize * lineHeight;
+      const availableTextHeight = containerHeight - padding - safetyMargin;
+
+      if (totalHeight <= availableTextHeight && availableTextHeight > 0) {
+        return fontSize;
+      }
+    }
+    
+    return minFontSize;
+  };
+  
+  // 동적 텍스트 스타일 생성 함수
+  const getDynamicTextStyle = (field, text) => {
+    if (!text) return {}; // 텍스트가 없으면 기본 스타일 (또는 빈 객체)
+    
+    const currentPdfScale = pdfScale || 1; // pdfScale이 아직 설정되지 않았을 수 있으므로 기본값 사용
+
+    // 필드의 실제 렌더링된 픽셀 크기 계산
+    const fieldPixelWidth = field.relativeWidth * PDF_A4_WIDTH_POINTS * currentPdfScale;
+    const fieldPixelHeight = field.relativeHeight * PDF_A4_HEIGHT_POINTS * currentPdfScale;
+    
+    const fontSize = calculateDynamicFontSize(text, fieldPixelWidth, fieldPixelHeight);
+    
+    return {
+      fontSize: `${fontSize}px`,
+      fontFamily: 'Pretendard, Arial, sans-serif',
+      lineHeight: 1.2,
+      wordWrap: 'break-word', // CSS가 긴 단어를 줄바꿈하도록 함
+      wordBreak: 'keep-all',   // 한국어의 경우 단어 중간 줄바꿈 방지 (공백 기준)
+      overflowWrap: 'break-word', // word-wrap의 표준 속성명
+      overflow: 'visible',     // 영역을 벗어나는 텍스트도 보이도록 변경
+      height: '100%',          // 부모 Box 컴포넌트의 높이를 채움
+      width: '100%',           // 부모 Box 컴포넌트의 너비를 채움
+      display: 'flex',         // 내부 텍스트 정렬을 위해 flex 사용
+      alignItems: 'flex-start', // 텍스트를 상단에 정렬
+      justifyContent: 'flex-start',// 텍스트를 좌측에 정렬
+      padding: '2px',          // 필드 내부 여백
+      color: '#333',
+      fontWeight: 400,
+      whiteSpace: 'pre-wrap'   // 공백과 명시적 줄바꿈('\n')을 유지
+    };
+  };
+  
   // 토큰이 있는 경우 토큰 검증 추가
   useEffect(() => {
     const verifyToken = async () => {
@@ -365,12 +463,18 @@ const SignaturePdfViewer = () => {
           <img src={field.value} alt="서명" style={{ maxWidth: '100%', maxHeight: '100%' }} />
         )}
         {field.value && field.type === 'text' && (
-          <Typography variant="body2">{field.value}</Typography>
+          <Box sx={getDynamicTextStyle(field, field.value)}>
+            {field.value}
+          </Box>
         )}
         {field.value && field.type === 'confirmText' && (
-          <Typography variant="body2" sx={{ color: 'text.primary', fontStyle: 'italic' }}>
+          <Box sx={{
+            ...getDynamicTextStyle(field, field.value),
+            fontStyle: 'italic',
+            color: '#2E5BBA'
+          }}>
             {field.value}
-          </Typography>
+          </Box>
         )}
       </Box>
     );

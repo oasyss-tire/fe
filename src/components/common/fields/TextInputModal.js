@@ -299,7 +299,7 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field, niceA
     if (field?.formatCodeId === '001004_0005') return 4;  // 년도(YYYY)
     if (field?.formatCodeId === '001004_0006') return 2;  // 월(MM)
     if (field?.formatCodeId === '001004_0007') return 2;  // 일(DD)
-    if (field?.formatCodeId === '001004_0008') return 100; // 주소는 넉넉하게 100자 제한
+    if (field?.formatCodeId === '001004_0008') return 50; // 주소 제한 (사용자 요청 글자수)
     if (field?.formatCodeId === '001004_0009') return 20; // 이름은 20자 제한
     return undefined; // 제한 없음
   };
@@ -335,7 +335,7 @@ const TextInputModal = ({ open, onClose, onSave, initialValue = '', field, niceA
       return '일 입력 (01~31)';
     }
     if (field?.formatCodeId === '001004_0008') {
-      return '주소 검색 버튼을 클릭하여 주소를 검색하거나 직접 입력해 주세요';
+      return '주소 검색 버튼을 클릭하여 주소를 검색하거나 직접 입력해 주세요 (최대 50자)';
     }
     if (field?.formatCodeId === '001004_0009') {
       return niceAuthData 
